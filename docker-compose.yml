@@ -1,0 +1,118 @@
+services:
+  db:
+    image: postgres:17
+    restart: always
+    environment:
+      - POSTGRES_DB=jitsi
+      - POSTGRES_USER=jitsi
+      - POSTGRES_PASSWORD=${DB_PASSWD}
+    volumes:
+      - ./api/database/02-create-jitsi-tables.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jitsi -d jitsi"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - intranet
+
+  api-adm:
+    build:
+      context: .
+      dockerfile: docker/adm.Dockerfile
+    restart: always
+    environment:
+      - ALLOW_UNSECURE_CERT
+      - API_SECRET
+      - API_TIMEOUT
+      - AUTH_LOCAL
+      - CONTACT_EMAIL
+      - DB_HOST=db
+      - DB_PASSWD
+      - APP_FQDN
+      - LANG_UI
+      - OIDC_CLIENT_ID
+      - OIDC_CLIENT_SECRET
+      - OIDC_ISSUER_URL
+      - OIDC_SCOPES
+      - SUPERADMIN_ROLE
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - intranet
+
+  api-pri:
+    build:
+      context: .
+      dockerfile: docker/pri.Dockerfile
+    restart: always
+    environment:
+      - API_SECRET
+      - DB_HOST=db
+      - DB_PASSWD
+      - APP_FQDN
+      - MAILER_HOST
+      - MAILER_PORT
+      - MAILER_SECURE
+      - MAILER_USER
+      - MAILER_PASS
+      - MAILER_FROM
+    volumes:
+      - uploads:/data
+    depends_on:
+      db:
+        condition: service_healthy
+      api-adm:
+        condition: service_started
+    networks:
+      - intranet
+
+  api-pub:
+    build:
+      context: .
+      dockerfile: docker/pub.Dockerfile
+    restart: always
+    environment:
+      - DB_HOST=db
+      - DB_PASSWD
+    volumes:
+      - uploads:/data
+    depends_on:
+      db:
+        condition: service_healthy
+      api-adm:
+        condition: service_started
+    networks:
+      - intranet
+
+  ui:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      - APP_FQDN
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api-adm
+      - api-pri
+      - api-pub
+    networks:
+      - intranet
+
+volumes:
+  data:
+  uploads:
+  caddy_data:
+  caddy_config:
+
+networks:
+  intranet:

@@ -1,0 +1,8 @@
+ignore:
+  - DL3008  # apt-get without --no-install-recommends (already handled)
+  - DL3018  # apk without --no-cache (alpine)
+  - DL3007  # latest tag (denoland/deno, nginx:alpine — acceptable for self-hosted)
+  - DL3006  # always tag image explicitly — we use :alpine which is fine
+trustedRegistries:
+  - docker.io
+  - ghcr.io

@@ -1,0 +1,676 @@
+-- -----------------------------------------------------------------------------
+-- 02-CREATE-JITSI-TABLES.SQL
+-- -----------------------------------------------------------------------------
+-- This script creates the database tables.
+-- Tested on Postgresql 15.
+--
+-- Update "lib/adm/migration.ts" when schema changes.
+--
+-- Usage:
+--     psql -l postgres -c \
+--             "psql -d jitsi -e -f /tmp/02-create-jitsi-tables.sql"
+--
+--     psql -U jitsi -h postgres -d jitsi -e -f 02-create-jitsi-tables.sql
+--
+-- -----------------------------------------------------------------------------
+
+BEGIN;
+
+-- -----------------------------------------------------------------------------
+-- METADATA
+-- -----------------------------------------------------------------------------
+-- When the schema is updated:
+--   - Increment database_version in this table.
+--   - Update DB_VERSION in config.ts
+--   - Update lib/adm/migration.ts according to changes.
+--
+-- API services don't start if the database version doesn't match.
+-- -----------------------------------------------------------------------------
+CREATE TABLE metadata (
+    "mkey" varchar(250) NOT NULL PRIMARY KEY,
+    "mvalue" varchar(250) NOT NULL
+);
+ALTER TABLE metadata OWNER TO jitsi;
+
+-- database version
+INSERT INTO metadata VALUES ('database_version', '20260323.05');
+
+-- -----------------------------------------------------------------------------
+-- IDENTITY
+--
+-- - Email comes from Kratos (after verification) or the OIDC provider
+--   depending on the selected identity provider. This is the valid email
+--   address for sending messages. Email in the profile table is only for
+--   meeting sessions and is not trustable.
+--
+-- identity_attr {
+--   email: string,
+-- }
+-- -----------------------------------------------------------------------------
+CREATE TABLE identity (
+    "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    "identity_attr" jsonb NOT NULL DEFAULT '{}'::jsonb,
+    "is_superadmin" boolean NOT NULL DEFAULT false,
+    "enabled" boolean NOT NULL DEFAULT true,
+    "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "updated_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "seen_at" timestamp with time zone NOT NULL DEFAULT now()
+);
+ALTER TABLE identity OWNER TO jitsi;
+
+-- system account
+INSERT INTO identity VALUES (
+    '00000000-0000-0000-0000-000000000000', '{}'::jsonb, true, default, default
+);
+
+-- -----------------------------------------------------------------------------
+-- PROFILE
+-- -----------------------------------------------------------------------------
+-- - Don't allow to delete the default profile.
+-- -----------------------------------------------------------------------------
+CREATE TABLE profile (
+    "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+    "name" varchar(250) NOT NULL,
+    "email" varchar(250) NOT NULL,
+    "avatar_url" varchar(500) NOT NULL DEFAULT '',
+    "is_default" boolean NOT NULL DEFAULT false,
+    "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "updated_at" timestamp with time zone NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX ON profile("identity_id", "name", "email");
+ALTER TABLE profile OWNER TO jitsi;
+
+-- -----------------------------------------------------------------------------
+-- CONTACT
+-- -----------------------------------------------------------------------------
+-- - Allow contact if both parties agree to be in touch. If one party deletes
+--   the contact, delete the other party's contact too.
+-- - Deleting contact works like blocking. A user cannot offer partnership to a
+--   registered user or call her if she is not in their contact list.
+-- - Browser extension lists only visible contacts.
+-- -----------------------------------------------------------------------------
+CREATE TABLE contact (
+    "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+    "remote_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+    "name" varchar(250) NOT NULL,
+    "visible" boolean NOT NULL DEFAULT true,
+    "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "updated_at" timestamp with time zone NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX ON contact("identity_id", "remote_id");
+CREATE INDEX ON contact("identity_id", "name");
+ALTER TABLE contact OWNER TO jitsi;
+
+-- -----------------------------------------------------------------------------
+-- CONTACT_INVITE
+-- -----------------------------------------------------------------------------
+-- - The contact invite can be shared with multiple candidates and can be used
+--   multiple times before the expire time if it is not disposable.
+-- -----------------------------------------------------------------------------
+CREATE TABLE contact_invite (
+    "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+    "name" varchar(250) NOT NULL,
+    "code" varchar(250) NOT NULL
+        DEFAULT md5(random()::text) || md5(gen_random_uuid()::text),
+    "disposable" boolean NOT NULL DEFAULT true,
+    "enabled" boolean NOT NULL DEFAULT true,
+    "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "updated_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "expired_at" timestamp with time zone NOT NULL
+        DEFAULT now() + interval '3 days'
+);
+CREATE UNIQUE INDEX ON contact_invite("code");
+CREATE INDEX ON contact_invite("identity_id", "expired_at");
+CREATE INDEX ON contact_invite("expired_at");
+ALTER TABLE contact_invite OWNER TO jitsi;
+
+-- -----------------------------------------------------------------------------
+-- DOMAIN
+-- -----------------------------------------------------------------------------
+-- - Public domains can only be added by the system account.
+-- - auth_type of public domains must be 'none' (to decrease complexity).
+-- - Only none, token and jaas are supported as auth_type.
+-- - URLs are in domain_attr depending on auth_type.
+-- - Allow only string values in domain_attr
+--
+-- domain_attr {
+--   url: string,
+--   app_id: string,
+--   app_secret: string,
+--   app_alg: string = "HS256",
+--   jaas_url: string = "https://8x8.vc",
+--   jaas_app_id: string,
+--   jaas_kid: string,
+--   jaas_key: string,
+--   jaas_alg: string = "RS256",
+--   jaas_aud: string = "jitsi",
+--   jaas_iss: string = "chat",
+-- }
+-- -----------------------------------------------------------------------------
+CREATE TYPE domain_auth_type AS ENUM ('none', 'token', 'jaas');
+CREATE TABLE domain (
+    "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+    "name" varchar(250) NOT NULL,
+    "auth_type" domain_auth_type NOT NULL DEFAULT 'none',
+    "domain_attr" jsonb NOT NULL DEFAULT '{}'::jsonb,
+    "public" boolean NOT NULL DEFAULT false,
+    "enabled" boolean NOT NULL DEFAULT true,
+    "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "updated_at" timestamp with time zone NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX ON domain("identity_id", "name");
+CREATE INDEX ON domain("public");
+ALTER TABLE domain OWNER TO jitsi;
+
+INSERT INTO domain VALUES (
+    default, '00000000-0000-0000-0000-000000000000', 'meet.jit.si', 'none',
+    '{"url": "https://meet.jit.si"}'::jsonb, true, true, default, default
+);
+INSERT INTO domain VALUES (
+    default, '00000000-0000-0000-0000-000000000000', 'meet.element.io', 'none',
+    '{"url": "https://meet.element.io"}'::jsonb, true, true, default, default
+);
+
+-- -----------------------------------------------------------------------------
+-- DOMAIN_INVITE
+-- -----------------------------------------------------------------------------
+-- - The domain invite can only be used once, then it will be deleted.
+-- - A unique invite is needed for each partner.
+-- -----------------------------------------------------------------------------
+CREATE TABLE domain_invite (
+    "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+    "domain_id" uuid NOT NULL REFERENCES domain(id) ON DELETE CASCADE,
+    "name" varchar(250) NOT NULL,
+    "code" varchar(250) NOT NULL
+        DEFAULT md5(random()::text) || md5(gen_random_uuid()::text),
+    "enabled" boolean NOT NULL DEFAULT true,
+    "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "updated_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "expired_at" timestamp with time zone NOT NULL
+        DEFAULT now() + interval '3 days'
+);
+CREATE UNIQUE INDEX ON domain_invite("code");
+CREATE INDEX ON domain_invite("identity_id", "domain_id", "expired_at");
+CREATE INDEX ON domain_invite("expired_at");
+ALTER TABLE domain_invite OWNER TO jitsi;
+
+-- -----------------------------------------------------------------------------
+-- DOMAIN_PARTNER
+-- -----------------------------------------------------------------------------
+-- - The partner cannot update enabled but she can delete her partnership.
+-- - The domain owner can update enabled or delete the partnership.
+-- -----------------------------------------------------------------------------
+CREATE TABLE domain_partner (
+    "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+    "domain_id" uuid NOT NULL REFERENCES domain(id) ON DELETE CASCADE,
+    "enabled" boolean NOT NULL DEFAULT true,
+    "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "updated_at" timestamp with time zone NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX ON domain_partner("identity_id", "domain_id");
+CREATE INDEX ON domain_partner("domain_id");
+ALTER TABLE domain_partner OWNER TO jitsi;
+
+-- -----------------------------------------------------------------------------
+-- DOMAIN_PARTNER_CANDIDATE
+-- -----------------------------------------------------------------------------
+-- - The candidate can be added if she is already in the domain owner's contact
+--   list.
+-- - The domain owner can delete the candidate only if its status is pending.
+-- - The candidate cannot delete the candidacy but may reject it.
+-- - When rejected, expired_at will be updated as now() + interval '7 days'.
+-- - The candidate can accept an already rejected candidacy if it is not
+--   expired (deleted) yet.
+-- - Delete all candidates which have expired_at older than now().
+-- - Delete expired candidates before listing.
+-- -----------------------------------------------------------------------------
+CREATE TYPE candidate_status AS ENUM ('pending', 'rejected');
+CREATE TABLE domain_partner_candidate (
+    "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+    "domain_id" uuid NOT NULL REFERENCES domain(id) ON DELETE CASCADE,
+    "status" candidate_status NOT NULL DEFAULT 'pending',
+    "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "updated_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "expired_at" timestamp with time zone NOT NULL
+        DEFAULT now() + interval '7 days'
+);
+CREATE UNIQUE INDEX ON domain_partner_candidate("identity_id", "domain_id");
+CREATE INDEX ON domain_partner_candidate("expired_at");
+ALTER TABLE domain_partner_candidate OWNER TO jitsi;
+
+-- -----------------------------------------------------------------------------
+-- ROOM
+-- -----------------------------------------------------------------------------
+-- - Update suffix if accessed_at is older than 4 hours.
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION room_short_code() RETURNS text AS $$
+DECLARE
+  adj  text[] := ARRAY['swift','calm','bold','warm','clear','deep','fine','glad','kind','neat',
+                        'rare','soft','wise','cool','dark','fair','firm','free','full','keen',
+                        'lean','mild','new','odd','old','pure','rich','safe','true','wild',
+                        'bright','clean','crisp','eager','fresh','light','lush','open','proud','sharp',
+                        'sleek','slim','smart','still','strong','sure','tall','thin','tight','young'];
+  noun text[] := ARRAY['moon','star','wave','leaf','snow','rain','wind','fire','lake','peak',
+                        'reef','seed','tide','vine','dawn','dusk','mist','moss','oak','pine',
+                        'fog','dew','hill','pond','pool','rose','sage','sun','sky','stone',
+                        'fern','gust','haze','iris','isle','knoll','log','orb','path','rock',
+                        'rill','root','rush','sand','slope','stem','vale','brook','grove','creek'];
+  num  integer;
+BEGIN
+  num := 10 + floor(random() * 90)::integer;
+  RETURN adj[1 + floor(random() * array_length(adj, 1))::int] || '-' ||
+         noun[1 + floor(random() * array_length(noun, 1))::int] || '-' ||
+         num::text;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TABLE room (
+    "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+    "domain_id" uuid NOT NULL REFERENCES domain(id) ON DELETE CASCADE,
+    "name" varchar(250) NOT NULL
+        DEFAULT 'room-' || md5(gen_random_uuid()::text),
+    "label" varchar(250) NOT NULL DEFAULT '',
+    "short_code" varchar(50) NOT NULL DEFAULT room_short_code(),
+    "host_key" varchar(9) NOT NULL DEFAULT substr(md5(gen_random_uuid()::text), 1, 9),
+    "has_suffix" boolean NOT NULL DEFAULT false,
+    "suffix" varchar(250) NOT NULL DEFAULT md5(gen_random_uuid()::text),
+    "enabled" boolean NOT NULL DEFAULT true,
+    "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "updated_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "accessed_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "attendance" integer NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX ON room("identity_id", "domain_id", "name");
+CREATE UNIQUE INDEX ON room("short_code");
+ALTER TABLE room OWNER TO jitsi;
+
+-- -----------------------------------------------------------------------------
+-- ROOM_INVITE
+-- -----------------------------------------------------------------------------
+-- - The room invite can only be used once, then it will be deleted.
+-- - A unique invite is needed for each partner.
+-- -----------------------------------------------------------------------------
+CREATE TABLE room_invite (
+    "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+    "room_id" uuid NOT NULL REFERENCES room(id) ON DELETE CASCADE,
+    "name" varchar(250) NOT NULL,
+    "code" varchar(250) NOT NULL
+        DEFAULT md5(random()::text) || md5(gen_random_uuid()::text),
+    "enabled" boolean NOT NULL DEFAULT true,
+    "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "updated_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "expired_at" timestamp with time zone NOT NULL
+        DEFAULT now() + interval '3 days'
+);
+CREATE UNIQUE INDEX ON room_invite("code");
+CREATE INDEX ON room_invite("identity_id", "room_id", "expired_at");
+CREATE INDEX ON room_invite("expired_at");
+ALTER TABLE room_invite OWNER TO jitsi;
+
+-- -----------------------------------------------------------------------------
+-- ROOM_PARTNER
+-- -----------------------------------------------------------------------------
+-- - The partner cannot update enabled but she can delete her partnership.
+-- - The room owner can update enabled or delete the partnership.
+-- -----------------------------------------------------------------------------
+CREATE TABLE room_partner (
+    "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+    "room_id" uuid NOT NULL REFERENCES room(id) ON DELETE CASCADE,
+    "enabled" boolean NOT NULL DEFAULT true,
+    "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "updated_at" timestamp with time zone NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX ON room_partner("identity_id", "room_id");
+CREATE INDEX ON room_partner("room_id");
+ALTER TABLE room_partner OWNER TO jitsi;
+
+-- -----------------------------------------------------------------------------
+-- ROOM_PARTNER_CANDIDATE
+-- -----------------------------------------------------------------------------
+-- - The candidate can be added if she is already in the room owner's contact
+--   list.
+-- - The room owner can delete the candidate only if its status is pending.
+-- - The candidate cannot delete the candidacy but may reject it.
+-- - When rejected, expired_at will be updated as now() + interval '7 days'.
+-- - The candidate can accept an already rejected candidacy if it is not
+--   expired (deleted) yet.
+-- - Delete all candidates which have expired_at older than now().
+-- - Delete expired candidates before listing.
+-- -----------------------------------------------------------------------------
+CREATE TABLE room_partner_candidate (
+    "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+    "room_id" uuid NOT NULL REFERENCES room(id) ON DELETE CASCADE,
+    "status" candidate_status NOT NULL DEFAULT 'pending',
+    "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "updated_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "expired_at" timestamp with time zone NOT NULL
+        DEFAULT now() + interval '7 days'
+);
+CREATE UNIQUE INDEX ON room_partner_candidate("identity_id", "room_id");
+CREATE INDEX ON room_partner_candidate("expired_at");
+ALTER TABLE room_partner_candidate OWNER TO jitsi;
+
+-- -----------------------------------------------------------------------------
+-- MEETING
+-- -----------------------------------------------------------------------------
+-- - Dont show the ephemeral meeting if it's over.
+-- - The ephemeral meeting will be over 4 hours after the room's accessed_at.
+-- - Show the scheduled meeting although it's over. It may be added a new date
+--   later.
+-- - Allow to change the schedule type if it is not ephemeral.
+-- - Non-hidden meeting can be seen by everyone but permission will be needed to
+--   participate it if it is restricted.
+-- - Anybody can participate a restricted meeting if she has the audience key.
+-- - A non-restricted meeting may be hidden.
+-- - Profile will be the default one programatically if the selected one is
+--   deleted.
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION meeting_short_code() RETURNS text AS $$
+DECLARE
+  adj  text[] := ARRAY['swift','calm','bold','warm','clear','deep','fine','glad','kind','neat',
+                        'rare','soft','wise','cool','dark','fair','firm','free','full','keen',
+                        'lean','mild','new','odd','old','pure','rich','safe','true','wild',
+                        'bright','clean','crisp','eager','fresh','light','lush','open','proud','sharp',
+                        'sleek','slim','smart','still','strong','sure','tall','thin','tight','young'];
+  noun text[] := ARRAY['moon','star','wave','leaf','snow','rain','wind','fire','lake','peak',
+                        'reef','seed','tide','vine','dawn','dusk','mist','moss','oak','pine',
+                        'fog','dew','hill','pond','pool','rose','sage','sun','sky','stone',
+                        'fern','gust','haze','iris','isle','knoll','log','orb','path','rock',
+                        'rill','root','rush','sand','slope','stem','vale','brook','grove','creek'];
+  num  integer;
+BEGIN
+  num := 10 + floor(random() * 90)::integer;
+  RETURN adj[1 + floor(random() * array_length(adj, 1))::int] || '-' ||
+         noun[1 + floor(random() * array_length(noun, 1))::int] || '-' ||
+         num::text;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TABLE meeting (
+    "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+    "profile_id" uuid NOT NULL REFERENCES profile(id) ON DELETE NO ACTION,
+    "room_id" uuid NOT NULL REFERENCES room(id) ON DELETE CASCADE,
+    "name" varchar(250) NOT NULL,
+    "short_code" varchar(50) NOT NULL DEFAULT meeting_short_code(),
+    "info" varchar(2000) NOT NULL DEFAULT '',
+    "hidden" boolean NOT NULL DEFAULT true,
+    "restricted" boolean NOT NULL DEFAULT false,
+    "subscribable" boolean NOT NULL DEFAULT true,
+    "enabled" boolean NOT NULL DEFAULT true,
+    "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "updated_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "accessed_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "attendance" integer NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX ON meeting("short_code");
+CREATE INDEX ON meeting("identity_id");
+ALTER TABLE meeting OWNER TO jitsi;
+
+CREATE TYPE meeting_affiliation_type AS ENUM ('guest', 'host');
+
+-- -----------------------------------------------------------------------------
+-- MEETING_REQUEST
+-- -----------------------------------------------------------------------------
+-- - The request can only be created if the meeting is subscribable and
+--   restricted. If not restricted, no need the request, create membership
+--   immediately.
+-- - When rejected, expired_at will be updated as now() + interval '7 days'.
+-- - The request owner can update the profile only if its status is pending.
+-- - The request owner can delete the request only if its status is pending.
+-- - The meeting owner can delete the request anytimes.
+-- - Delete all records which have expired_at older than now().
+-- - Profile will be the default one programatically if the selected one is
+--   deleted.
+-- -----------------------------------------------------------------------------
+CREATE TYPE meeting_request_status AS ENUM ('pending', 'rejected');
+CREATE TABLE meeting_request (
+    "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+    "profile_id" uuid NOT NULL REFERENCES profile(id) ON DELETE NO ACTION,
+    "meeting_id" uuid NOT NULL REFERENCES meeting(id) ON DELETE CASCADE,
+    "status" meeting_request_status NOT NULL DEFAULT 'pending',
+    "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "updated_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "expired_at" timestamp with time zone NOT NULL
+        DEFAULT now() + interval '7 days'
+);
+CREATE UNIQUE INDEX ON meeting_request("identity_id", "meeting_id");
+CREATE INDEX ON meeting_request("meeting_id", "status");
+CREATE INDEX ON meeting_request("expired_at");
+ALTER TABLE meeting_request OWNER TO jitsi;
+
+-- -----------------------------------------------------------------------------
+-- MEETING_MEMBER
+-- -----------------------------------------------------------------------------
+-- - The member cannot update enabled but she can delete her membership.
+-- - The member cannot update join_as.
+-- - The meeting owner can update enabled or delete the membership.
+-- - The meeting owner can update join_as.
+-- - Profile will be the default one programatically if the selected one is
+--   deleted.
+-- -----------------------------------------------------------------------------
+CREATE TABLE meeting_member (
+    "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+    "meeting_id" uuid NOT NULL REFERENCES meeting(id) ON DELETE CASCADE,
+    "profile_id" uuid NOT NULL REFERENCES profile(id) ON DELETE NO ACTION,
+    "join_as" meeting_affiliation_type NOT NULL DEFAULT 'guest',
+    "enabled" boolean NOT NULL DEFAULT true,
+    "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "updated_at" timestamp with time zone NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX ON meeting_member("identity_id", "meeting_id", "join_as");
+ALTER TABLE meeting_member OWNER TO jitsi;
+
+-- -----------------------------------------------------------------------------
+-- MEETING_MEMBER_CANDIDATE
+-- -----------------------------------------------------------------------------
+-- - The candidate can be added if she is already in the meeting owner's contact
+--   list.
+-- - The meeting owner can delete the candidate only if its status is pending.
+-- - The candidate cannot delete the candidacy but may reject it.
+-- - When rejected, expired_at will be updated as now() + interval '7 days'.
+-- - The candidate can accept an already rejected candidacy if it is not
+--   expired (deleted) yet.
+-- - Delete all candidates which have expired_at older than now().
+-- - Delete expired candidates before listing.
+-- -----------------------------------------------------------------------------
+CREATE TABLE meeting_member_candidate (
+    "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+    "meeting_id" uuid NOT NULL REFERENCES meeting(id) ON DELETE CASCADE,
+    "join_as" meeting_affiliation_type NOT NULL DEFAULT 'guest',
+    "status" candidate_status NOT NULL DEFAULT 'pending',
+    "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "updated_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "expired_at" timestamp with time zone NOT NULL
+        DEFAULT now() + interval '7 days'
+);
+CREATE UNIQUE INDEX ON meeting_member_candidate(
+    "identity_id", "meeting_id", "join_as"
+);
+CREATE INDEX ON meeting_member_candidate("expired_at");
+ALTER TABLE meeting_member_candidate OWNER TO jitsi;
+
+-- -----------------------------------------------------------------------------
+-- MEETING_SCHEDULE
+-- -----------------------------------------------------------------------------
+-- - This table contains only scheduled meetings.
+-- - The schedule will be deleted if it doesn't have a session after
+--   updated_at + 10 min
+-- - Allow only string values in schedule_attr
+--
+-- schedule_attr {
+--   type: o | d | w             // once, daily, weekly
+--   started_at: string,         // datetime
+--   duration: string,           // minutes
+--   rep_end_type: at | x,
+--   rep_end_at: string,         // datetime, ended at 23:59:59 of the owner
+--   rep_end_x: string,          // ended after x sessions
+--   rep_every: string,          // default is 1
+--   rep_days: string,           // 0 for off, 1 for on
+--                               // Sunday is the first digit
+--                               // e.g. 0100100
+--   timezone_offset,            // difference as minutes from GMT
+--                               // e,g -180 for GMT+0300
+-- }
+--
+-- - All attributes are recorded as string even its value is a date or a number
+-- - Dates are UTC
+-- - If duration is 1440 and started_at is 00:00, this means all day event on UI
+-- -----------------------------------------------------------------------------
+CREATE TABLE meeting_schedule (
+    "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    "meeting_id" uuid NOT NULL REFERENCES meeting(id) ON DELETE CASCADE,
+    "schedule_attr" jsonb NOT NULL DEFAULT '{}'::jsonb,
+    "host_key" varchar(9) NOT NULL DEFAULT substr(md5(gen_random_uuid()::text), 1, 9),
+    "enabled" boolean NOT NULL DEFAULT true,
+    "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "updated_at" timestamp with time zone NOT NULL DEFAULT now()
+);
+CREATE INDEX ON meeting_schedule("meeting_id");
+CREATE INDEX ON meeting_schedule("updated_at");
+ALTER TABLE meeting_schedule OWNER TO jitsi;
+
+-- -----------------------------------------------------------------------------
+-- MEETING_SESSION
+-- -----------------------------------------------------------------------------
+-- - This table contains only scheduled meetings's session.
+-- - The session will be deleted after ended_at + 20 min.
+-- - ended_at = started_at + duration * interval '1 min'
+-- -----------------------------------------------------------------------------
+CREATE TABLE meeting_session (
+    "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    "meeting_schedule_id" uuid NOT NULL
+        REFERENCES meeting_schedule(id) ON DELETE CASCADE,
+    "started_at" timestamp with time zone NOT NULL,
+    "duration" integer NOT NULL,
+    "ended_at" timestamp with time zone NOT NULL,
+    "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "updated_at" timestamp with time zone NOT NULL DEFAULT now()
+);
+CREATE INDEX ON meeting_session("meeting_schedule_id", "started_at");
+CREATE INDEX ON meeting_session("meeting_schedule_id", "ended_at");
+CREATE INDEX ON meeting_session("started_at");
+CREATE INDEX ON meeting_session("ended_at");
+ALTER TABLE meeting_session OWNER TO jitsi;
+
+-- -----------------------------------------------------------------------------
+-- IDENTITY_KEY
+-- -----------------------------------------------------------------------------
+-- - Identity key allows users to access private data or to perform some
+--   actions without logging in.
+-- - Domain id points to the default domain for user actions performed with a
+--   private key that require a domain.
+-- -----------------------------------------------------------------------------
+CREATE TABLE identity_key (
+    "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+    "domain_id" uuid NOT NULL REFERENCES domain(id) ON DELETE CASCADE,
+    "name" varchar(250) NOT NULL,
+    "value" varchar(250) NOT NULL
+        DEFAULT md5(random()::text) || md5(gen_random_uuid()::text),
+    "enabled" boolean NOT NULL DEFAULT true,
+    "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "updated_at" timestamp with time zone NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX ON identity_key("value");
+CREATE INDEX ON identity_key("identity_id", "name");
+ALTER TABLE identity_key OWNER TO jitsi;
+
+-- -----------------------------------------------------------------------------
+-- PHONE
+-- -----------------------------------------------------------------------------
+-- - Profile will be the default one programatically if the selected one is
+--   deleted.
+-- -----------------------------------------------------------------------------
+CREATE TABLE phone (
+    "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+    "profile_id" uuid NOT NULL REFERENCES profile(id) ON DELETE NO ACTION,
+    "domain_id" uuid NOT NULL REFERENCES domain(id) ON DELETE CASCADE,
+    "name" varchar(250) NOT NULL,
+    "code" varchar(250) NOT NULL
+        DEFAULT md5(random()::text) || md5(gen_random_uuid()::text),
+    "email_enabled" boolean NOT NULL DEFAULT true,
+    "enabled" boolean NOT NULL DEFAULT true,
+    "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "updated_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "called_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "calls" integer NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX ON phone("code");
+CREATE INDEX ON phone("identity_id", "name");
+ALTER TABLE phone OWNER TO jitsi;
+
+-- -----------------------------------------------------------------------------
+-- INTERCOM
+-- -----------------------------------------------------------------------------
+-- - This table is for internal communication such as calls.
+-- - If inserted by an external user (such as in external phone calls) then
+--   identity_id is the system user ('00000000-0000-0000-0000-000000000000')
+-- - Only the remote peer can update the status.
+--
+-- intercom_attr {
+--   url: string,           // Meeting link for the callee of the direct call.
+--                          // It is a random room with a member token if needed
+--
+--   owner_url: string,     // Meeting link for the owner of the public phone
+--
+--   public_url: string,    // Meeting link for the caller of the public phone
+--                          // who is an anonymous user.
+--
+--   phone_name: string,    // Phone name
+-- }
+--
+-- intercom_message_type:
+--   - call
+--     Direct call from one user to another
+--
+--   - phone
+--     Call via a public phone from anonymous person
+--
+--   - text
+--     Text message from one user to another
+-- -----------------------------------------------------------------------------
+CREATE TYPE intercom_status_type AS ENUM (
+    'none',
+    'seen',
+    'accepted',
+    'rejected'
+);
+CREATE TYPE intercom_message_type AS ENUM (
+    'call',
+    'phone',
+    'text'
+);
+CREATE TABLE intercom (
+    "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+    "remote_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+    "status" intercom_status_type NOT NULL DEFAULT 'none',
+    "message_type" intercom_message_type NOT NULL DEFAULT 'call',
+    "intercom_attr" jsonb NOT NULL DEFAULT '{}'::jsonb,
+    "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "updated_at" timestamp with time zone NOT NULL DEFAULT now(),
+    "expired_at" timestamp with time zone NOT NULL
+        DEFAULT now() + interval '10 seconds'
+);
+CREATE INDEX ON intercom("remote_id", "expired_at");
+CREATE INDEX ON intercom("expired_at");
+ALTER TABLE intercom OWNER TO jitsi;
+
+-- -----------------------------------------------------------------------------
+COMMIT;

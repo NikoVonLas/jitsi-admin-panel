@@ -1,0 +1,35 @@
+name: Dockerfile lint
+
+on:
+  push:
+    paths:
+      - 'docker/**'
+      - 'Caddyfile'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docker/**'
+      - 'Caddyfile'
+
+jobs:
+  lint-dockerfiles:
+    name: Dockerfile lint (hadolint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: docker/adm.Dockerfile
+          config: .hadolint.yaml
+      - uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: docker/pri.Dockerfile
+          config: .hadolint.yaml
+      - uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: docker/pub.Dockerfile
+          config: .hadolint.yaml
+      - uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: docker/frontend.Dockerfile
+          config: .hadolint.yaml

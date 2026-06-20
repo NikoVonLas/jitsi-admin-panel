@@ -1,0 +1,21 @@
+{$APP_FQDN} {
+    handle /api/adm/* {
+        reverse_proxy api-adm:8000
+    }
+
+    handle /api/pri/* {
+        reverse_proxy api-pri:8001 {
+            flush_interval -1
+        }
+    }
+
+    handle /api/pub/* {
+        reverse_proxy api-pub:8002
+    }
+
+    handle {
+        root * /srv
+        try_files {path} /index.html
+        file_server
+    }
+}
