@@ -57,7 +57,9 @@ describe("pri/room", () => {
     const res = await routeRoom(req, "/api/pri/room/list", identityId);
     assertEquals(res.status, 200);
     const body = await res.json();
-    assertEquals(Array.isArray(body), true);
+    // listRoom returns { items: [...], total: N }
+    assertEquals(Array.isArray(body.items), true);
+    assertEquals(typeof body.total, "number");
   });
 
   it("adds a new room", async () => {
