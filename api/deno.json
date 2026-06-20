@@ -13,7 +13,7 @@
   "nodeModulesDir": "auto",
   "tasks": {
     "test": "deno test --allow-all --env=test/env.test --coverage=cov_profile test/",
-    "test:coverage": "deno task test && deno coverage cov_profile --lcov --output=coverage/lcov.info",
+    "test:coverage": "deno task test && mkdir -p coverage && deno coverage cov_profile --lcov --output=coverage/lcov.info",
     "migrate:test": "deno run --allow-all --env=test/env.test test/migrate.ts"
   }
 }
