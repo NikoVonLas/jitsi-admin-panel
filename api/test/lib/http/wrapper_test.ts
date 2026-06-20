@@ -4,7 +4,7 @@ import { adm, pri, pub } from "../../../lib/http/wrapper.ts";
 
 describe("pub wrapper", () => {
   it("returns 200 with serialised result on success", async () => {
-    const fn = async (_req: Request) => ({ value: 42 });
+    const fn = (_req: Request) => Promise.resolve({ value: 42 });
     const req = new Request("http://test/api/pub/hello");
     const res = await pub(fn, req);
     assertEquals(res.status, 200);
@@ -13,7 +13,7 @@ describe("pub wrapper", () => {
   });
 
   it("returns 500 when function throws", async () => {
-    const fn = async (_req: Request) => {
+    const fn = (_req: Request): Promise<unknown> => {
       throw new Error("boom");
     };
     const req = new Request("http://test/api/pub/fail");
@@ -22,7 +22,7 @@ describe("pub wrapper", () => {
   });
 
   it("serialises arrays", async () => {
-    const fn = async (_req: Request) => [1, 2, 3];
+    const fn = (_req: Request) => Promise.resolve([1, 2, 3]);
     const req = new Request("http://test/api/pub/list");
     const res = await pub(fn, req);
     const body = await res.json();
@@ -32,9 +32,8 @@ describe("pub wrapper", () => {
 
 describe("pri wrapper", () => {
   it("returns 200 with result on success", async () => {
-    const fn = async (_req: Request, identityId: string) => ({
-      id: identityId,
-    });
+    const fn = (_req: Request, identityId: string) =>
+      Promise.resolve({ id: identityId });
     const req = new Request("http://test/api/pri/test");
     const res = await pri(fn, req, "user-123");
     assertEquals(res.status, 200);
@@ -43,7 +42,7 @@ describe("pri wrapper", () => {
   });
 
   it("returns 500 when function throws", async () => {
-    const fn = async (_req: Request, _id: string) => {
+    const fn = (_req: Request, _id: string): Promise<unknown> => {
       throw new Error("db error");
     };
     const req = new Request("http://test/api/pri/fail");
@@ -54,7 +53,7 @@ describe("pri wrapper", () => {
 
 describe("adm wrapper", () => {
   it("delegates to pub wrapper (same behaviour)", async () => {
-    const fn = async (_req: Request) => ({ admin: true });
+    const fn = (_req: Request) => Promise.resolve({ admin: true });
     const req = new Request("http://test/api/adm/test");
     const res = await adm(fn, req);
     assertEquals(res.status, 200);

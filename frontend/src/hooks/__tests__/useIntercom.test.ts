@@ -20,6 +20,7 @@ function makeMsg(
     message_type: type,
     microsec_created_at: microsec,
     intercom_attr: {},
+    created_at: new Date().toISOString(),
     expired_at: new Date(Date.now() + 30000).toISOString(),
   };
 }

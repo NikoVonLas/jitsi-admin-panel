@@ -37,4 +37,4 @@ Object.defineProperty(globalThis, 'EventSource', {
 });
 
 // Silence act() warnings in React 19 tests
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;

@@ -65,10 +65,11 @@ describe("POST /api/adm/auth/local/register", () => {
   });
 
   it("rejects short password (< 14 chars)", async () => {
-    const res = await makeRequest("POST", "/api/adm/auth/local/register", {
+    const req = makeRequest("POST", "/api/adm/auth/local/register", {
       email: "user@test.example",
       password: "short",
-    }).then((r) => handleLocalRegister(r as unknown as Request));
+    });
+    const res = await handleLocalRegister(req);
     assertEquals(res.status, 401);
   });
 
