@@ -1,10 +1,5 @@
 import { assertEquals } from "@std/assert";
-import {
-  afterAll,
-  beforeAll,
-  describe,
-  it,
-} from "@std/testing/bdd";
+import { afterAll, beforeAll, describe, it } from "@std/testing/bdd";
 import { cleanDb, makeRequest } from "../../helpers/db.ts";
 import handleSetting from "../../../lib/adm/setting.ts";
 

@@ -8,7 +8,8 @@ export async function cleanDb(): Promise<void> {
   // Delete all non-system identities (cascades to profile, domain, room,
   // meeting, intercom, etc.)
   await query({
-    text: `DELETE FROM identity WHERE id != '00000000-0000-0000-0000-000000000000'`,
+    text:
+      `DELETE FROM identity WHERE id != '00000000-0000-0000-0000-000000000000'`,
   });
 
   // Clean standalone tables that are not owned by an identity

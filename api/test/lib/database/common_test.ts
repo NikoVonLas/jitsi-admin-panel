@@ -1,6 +1,10 @@
 import { assertEquals, assertThrows } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
-import { checkAttr, getLimit, getOffset } from "../../../lib/database/common.ts";
+import {
+  checkAttr,
+  getLimit,
+  getOffset,
+} from "../../../lib/database/common.ts";
 
 describe("getLimit", () => {
   it("returns DEFAULT_LIST_SIZE when 0 is passed", () => {

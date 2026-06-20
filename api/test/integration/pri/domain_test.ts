@@ -30,7 +30,8 @@ describe("pri/domain", () => {
     // Remove user domains between tests (keep system domains)
     const { query } = await import("../../../lib/database/common.ts");
     await query({
-      text: `DELETE FROM domain WHERE identity_id != '00000000-0000-0000-0000-000000000000'`,
+      text:
+        `DELETE FROM domain WHERE identity_id != '00000000-0000-0000-0000-000000000000'`,
     });
   });
 

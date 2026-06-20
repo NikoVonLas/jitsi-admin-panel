@@ -1,4 +1,4 @@
-import { badRequest, notFound, ok } from "../http/response.ts";
+import { badRequest, notFound } from "../http/response.ts";
 import { adm as wrapper } from "../http/wrapper.ts";
 import {
   addOidcProvider,
@@ -23,19 +23,19 @@ export default async function handleOidcProvider(
   if (req.method === "GET" && path === `${PRE}/list`) {
     return await wrapper(async () => {
       const providers = await listOidcProviders();
-      return ok(JSON.stringify(providers.map(sanitize)));
+      return providers.map(sanitize);
     }, req);
   }
 
   if (req.method === "POST" && path === `${PRE}/add`) {
+    const body = await req.json();
+    const { name, issuer_url, client_id, client_secret, scopes } = body;
+    if (!name || !issuer_url || !client_id || !client_secret) {
+      return badRequest(
+        "name, issuer_url, client_id and client_secret are required",
+      );
+    }
     return await wrapper(async () => {
-      const body = await req.json();
-      const { name, issuer_url, client_id, client_secret, scopes } = body;
-      if (!name || !issuer_url || !client_id || !client_secret) {
-        return badRequest(
-          "name, issuer_url, client_id and client_secret are required",
-        );
-      }
       await addOidcProvider(
         name,
         issuer_url,
@@ -43,17 +43,15 @@ export default async function handleOidcProvider(
         client_secret,
         scopes || "openid profile email",
       );
-      return ok(
-        JSON.stringify({ ok: true }),
-      );
+      return { ok: true };
     }, req);
   }
 
   if (req.method === "POST" && path === `${PRE}/update`) {
+    const body = await req.json();
+    const { id, name, issuer_url, client_id, client_secret, scopes } = body;
+    if (!id) return badRequest("id is required");
     return await wrapper(async () => {
-      const body = await req.json();
-      const { id, name, issuer_url, client_id, client_secret, scopes } = body;
-      if (!id) return badRequest("id is required");
       await updateOidcProvider(
         id,
         name,
@@ -62,34 +60,34 @@ export default async function handleOidcProvider(
         client_secret,
         scopes,
       );
-      return ok(JSON.stringify({ ok: true }));
+      return { ok: true };
     }, req);
   }
 
   if (req.method === "POST" && path === `${PRE}/enable`) {
+    const { id } = await req.json();
+    if (!id) return badRequest("id is required");
     return await wrapper(async () => {
-      const { id } = await req.json();
-      if (!id) return badRequest("id is required");
       await toggleOidcProvider(id, true);
-      return ok(JSON.stringify({ ok: true }));
+      return { ok: true };
     }, req);
   }
 
   if (req.method === "POST" && path === `${PRE}/disable`) {
+    const { id } = await req.json();
+    if (!id) return badRequest("id is required");
     return await wrapper(async () => {
-      const { id } = await req.json();
-      if (!id) return badRequest("id is required");
       await toggleOidcProvider(id, false);
-      return ok(JSON.stringify({ ok: true }));
+      return { ok: true };
     }, req);
   }
 
   if (req.method === "POST" && path === `${PRE}/del`) {
+    const { id } = await req.json();
+    if (!id) return badRequest("id is required");
     return await wrapper(async () => {
-      const { id } = await req.json();
-      if (!id) return badRequest("id is required");
       await deleteOidcProvider(id);
-      return ok(JSON.stringify({ ok: true }));
+      return { ok: true };
     }, req);
   }
 

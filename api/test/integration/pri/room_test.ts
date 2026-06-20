@@ -98,12 +98,12 @@ describe("pri/room", () => {
     const addRes = await routeRoom(addReq, "/api/pri/room/add", identityId);
     const roomId = (await addRes.json())[0].id;
 
-    const keyReq = makeRequest("POST", "/api/pri/room/host-key", {
+    const keyReq = makeRequest("POST", "/api/pri/room/get/hostkey", {
       id: roomId,
     });
     const keyRes = await routeRoom(
       keyReq,
-      "/api/pri/room/host-key",
+      "/api/pri/room/get/hostkey",
       identityId,
     );
     assertEquals(keyRes.status, 200);
