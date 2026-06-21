@@ -1,4 +1,10 @@
 {
+  "fmt": {
+    "exclude": ["cov_profile/", "coverage/"]
+  },
+  "lint": {
+    "exclude": ["cov_profile/", "coverage/"]
+  },
   "imports": {
     "@db/postgres": "jsr:@db/postgres@^0.19.5",
     "@emrahcom/jwt": "jsr:@emrahcom/jwt@^0.4.8",
