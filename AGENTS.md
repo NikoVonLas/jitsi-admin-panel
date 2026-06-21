@@ -76,7 +76,3 @@ flows, and decision rationale.
 
 - Before every push: run `deno fmt --check api/ && deno lint api/` and
   `npm run test:coverage` (frontend) locally; fix all failures before pushing.
-- Local Node.js is v16 — `npm run test:coverage` crashes with
-  `crypto.getRandomValues is not a function`; frontend tests are only
-  verifiable in CI (Node 18+). Still run `deno fmt --check` and `deno lint`
-  locally before every push.
