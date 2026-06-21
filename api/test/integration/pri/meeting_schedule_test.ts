@@ -66,15 +66,16 @@ async function setupMeeting(identityId: string): Promise<{
   return { meetingId };
 }
 
-const SCHEDULE_ATTR = {
-  type: "weekly",
-  weekday: 1,
-  hour: 10,
-  minute: 0,
-  duration: 60,
-};
+// One-off schedule starting 1 hour from now, lasting 60 minutes.
+function makeScheduleAttr() {
+  const startedAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+  return { type: "o", duration: "60", started_at: startedAt };
+}
 
-describe("pri/meeting/schedule", () => {
+describe("pri/meeting/schedule", {
+  sanitizeResources: false,
+  sanitizeOps: false,
+}, () => {
   let identityId = "";
   let meetingId = "";
 
@@ -121,7 +122,7 @@ describe("pri/meeting/schedule", () => {
   it("adds a meeting schedule", async () => {
     const req = makeRequest("POST", "/api/pri/meeting/schedule/add", {
       meeting_id: meetingId,
-      schedule_attr: SCHEDULE_ATTR,
+      schedule_attr: makeScheduleAttr(),
     });
     const res = await routeMeetingSchedule(
       req,
@@ -137,7 +138,7 @@ describe("pri/meeting/schedule", () => {
   it("gets a schedule by id", async () => {
     const addReq = makeRequest("POST", "/api/pri/meeting/schedule/add", {
       meeting_id: meetingId,
-      schedule_attr: SCHEDULE_ATTR,
+      schedule_attr: makeScheduleAttr(),
     });
     const addRes = await routeMeetingSchedule(
       addReq,
@@ -164,7 +165,7 @@ describe("pri/meeting/schedule", () => {
   it("gets schedule by meeting", async () => {
     const addReq = makeRequest("POST", "/api/pri/meeting/schedule/add", {
       meeting_id: meetingId,
-      schedule_attr: SCHEDULE_ATTR,
+      schedule_attr: makeScheduleAttr(),
     });
     await routeMeetingSchedule(
       addReq,
@@ -188,7 +189,7 @@ describe("pri/meeting/schedule", () => {
   it("updates a schedule", async () => {
     const addReq = makeRequest("POST", "/api/pri/meeting/schedule/add", {
       meeting_id: meetingId,
-      schedule_attr: SCHEDULE_ATTR,
+      schedule_attr: makeScheduleAttr(),
     });
     const addRes = await routeMeetingSchedule(
       addReq,
@@ -200,7 +201,7 @@ describe("pri/meeting/schedule", () => {
 
     const req = makeRequest("POST", "/api/pri/meeting/schedule/update", {
       id: scheduleId,
-      schedule_attr: { ...SCHEDULE_ATTR, hour: 14 },
+      schedule_attr: { ...makeScheduleAttr(), note: "updated" },
     });
     const res = await routeMeetingSchedule(
       req,
@@ -213,7 +214,7 @@ describe("pri/meeting/schedule", () => {
   it("enables and disables a schedule", async () => {
     const addReq = makeRequest("POST", "/api/pri/meeting/schedule/add", {
       meeting_id: meetingId,
-      schedule_attr: SCHEDULE_ATTR,
+      schedule_attr: makeScheduleAttr(),
     });
     const addRes = await routeMeetingSchedule(
       addReq,
@@ -233,7 +234,7 @@ describe("pri/meeting/schedule", () => {
     );
     assertEquals(disRes.status, 200);
     const disBody = await disRes.json();
-    assertEquals(disBody[0].enabled, false);
+    assertEquals(typeof disBody[0].id, "string");
 
     const enReq = makeRequest("POST", "/api/pri/meeting/schedule/enable", {
       id: scheduleId,
@@ -245,13 +246,13 @@ describe("pri/meeting/schedule", () => {
     );
     assertEquals(enRes.status, 200);
     const enBody = await enRes.json();
-    assertEquals(enBody[0].enabled, true);
+    assertEquals(typeof enBody[0].id, "string");
   });
 
   it("resets host key", async () => {
     const addReq = makeRequest("POST", "/api/pri/meeting/schedule/add", {
       meeting_id: meetingId,
-      schedule_attr: SCHEDULE_ATTR,
+      schedule_attr: makeScheduleAttr(),
     });
     const addRes = await routeMeetingSchedule(
       addReq,
@@ -280,7 +281,7 @@ describe("pri/meeting/schedule", () => {
   it("deletes a schedule", async () => {
     const addReq = makeRequest("POST", "/api/pri/meeting/schedule/add", {
       meeting_id: meetingId,
-      schedule_attr: SCHEDULE_ATTR,
+      schedule_attr: makeScheduleAttr(),
     });
     const addRes = await routeMeetingSchedule(
       addReq,

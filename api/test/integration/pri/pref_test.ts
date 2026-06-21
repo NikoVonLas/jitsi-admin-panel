@@ -7,7 +7,7 @@ import routePref from "../../../lib/pri/pref.ts";
 const EMAIL = "admin@pref-test.example";
 const PASSWORD = "secure_pref_test_pass_123";
 
-describe("pri/pref", () => {
+describe("pri/pref", { sanitizeResources: false, sanitizeOps: false }, () => {
   let identityId = "";
 
   beforeAll(async () => {

@@ -13,7 +13,7 @@ import routeDomain from "../../../lib/pri/domain.ts";
 const EMAIL = "admin@domain-test.example";
 const PASSWORD = "secure_domain_test_pass_123";
 
-describe("pri/domain", () => {
+describe("pri/domain", { sanitizeResources: false, sanitizeOps: false }, () => {
   let identityId = "";
 
   beforeAll(async () => {

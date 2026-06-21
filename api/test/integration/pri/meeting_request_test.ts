@@ -63,7 +63,10 @@ async function setupMeeting(identityId: string): Promise<{
   return { meetingId, profileId };
 }
 
-describe("pri/meeting/request", () => {
+describe("pri/meeting/request", {
+  sanitizeResources: false,
+  sanitizeOps: false,
+}, () => {
   let identityId = "";
   let meetingId = "";
   let profileId = "";

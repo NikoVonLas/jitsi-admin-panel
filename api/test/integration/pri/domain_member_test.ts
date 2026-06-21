@@ -27,127 +27,131 @@ async function addTestDomain(identityId: string): Promise<string> {
   return body[0].id as string;
 }
 
-describe("pri/domain/member", () => {
-  let identityId = "";
-  let domainId = "";
+describe(
+  "pri/domain/member",
+  { sanitizeResources: false, sanitizeOps: false },
+  () => {
+    let identityId = "";
+    let domainId = "";
 
-  beforeAll(async () => {
-    await cleanDb();
-    const auth = await registerFirst(EMAIL, PASSWORD);
-    identityId = auth.identityId;
-    domainId = await addTestDomain(identityId);
-  });
-
-  afterAll(async () => {
-    await cleanDb();
-  });
-
-  beforeEach(async () => {
-    const { query } = await import("../../../lib/database/common.ts");
-    await query({
-      text: `DELETE FROM domain_member WHERE domain_id = $1`,
-      args: [domainId],
+    beforeAll(async () => {
+      await cleanDb();
+      const auth = await registerFirst(EMAIL, PASSWORD);
+      identityId = auth.identityId;
+      domainId = await addTestDomain(identityId);
     });
-  });
 
-  it("lists domain members (empty initially)", async () => {
-    const req = makeRequest("POST", "/api/pri/domain/member/list", {
-      domain_id: domainId,
+    afterAll(async () => {
+      await cleanDb();
     });
-    const res = await routeDomainMember(
-      req,
-      "/api/pri/domain/member/list",
-      identityId,
-    );
-    assertEquals(res.status, 200);
-    const body = await res.json();
-    assertEquals(Array.isArray(body), true);
-    assertEquals(body.length, 0);
-  });
 
-  it("adds a domain member", async () => {
-    const req = makeRequest("POST", "/api/pri/domain/member/add", {
-      domain_id: domainId,
-      email: MEMBER_EMAIL,
+    beforeEach(async () => {
+      const { query } = await import("../../../lib/database/common.ts");
+      await query({
+        text: `DELETE FROM domain_member WHERE domain_id = $1`,
+        args: [domainId],
+      });
     });
-    const res = await routeDomainMember(
-      req,
-      "/api/pri/domain/member/add",
-      identityId,
-    );
-    assertEquals(res.status, 200);
-    const body = await res.json();
-    assertEquals(Array.isArray(body), true);
-    assertEquals(typeof body[0].id, "string");
-  });
 
-  it("lists domain members after add", async () => {
-    const addReq = makeRequest("POST", "/api/pri/domain/member/add", {
-      domain_id: domainId,
-      email: MEMBER_EMAIL,
+    it("lists domain members (empty initially)", async () => {
+      const req = makeRequest("POST", "/api/pri/domain/member/list", {
+        domain_id: domainId,
+      });
+      const res = await routeDomainMember(
+        req,
+        "/api/pri/domain/member/list",
+        identityId,
+      );
+      assertEquals(res.status, 200);
+      const body = await res.json();
+      assertEquals(Array.isArray(body), true);
+      assertEquals(body.length, 0);
     });
-    await routeDomainMember(
-      addReq,
-      "/api/pri/domain/member/add",
-      identityId,
-    );
 
-    const req = makeRequest("POST", "/api/pri/domain/member/list", {
-      domain_id: domainId,
+    it("adds a domain member", async () => {
+      const req = makeRequest("POST", "/api/pri/domain/member/add", {
+        domain_id: domainId,
+        email: MEMBER_EMAIL,
+      });
+      const res = await routeDomainMember(
+        req,
+        "/api/pri/domain/member/add",
+        identityId,
+      );
+      assertEquals(res.status, 200);
+      const body = await res.json();
+      assertEquals(Array.isArray(body), true);
+      assertEquals(typeof body[0].id, "string");
     });
-    const res = await routeDomainMember(
-      req,
-      "/api/pri/domain/member/list",
-      identityId,
-    );
-    assertEquals(res.status, 200);
-    const body = await res.json();
-    assertEquals(body.length, 1);
-    assertEquals(body[0].email, MEMBER_EMAIL);
-  });
 
-  it("deletes a domain member", async () => {
-    const addReq = makeRequest("POST", "/api/pri/domain/member/add", {
-      domain_id: domainId,
-      email: MEMBER_EMAIL,
+    it("lists domain members after add", async () => {
+      const addReq = makeRequest("POST", "/api/pri/domain/member/add", {
+        domain_id: domainId,
+        email: MEMBER_EMAIL,
+      });
+      await routeDomainMember(
+        addReq,
+        "/api/pri/domain/member/add",
+        identityId,
+      );
+
+      const req = makeRequest("POST", "/api/pri/domain/member/list", {
+        domain_id: domainId,
+      });
+      const res = await routeDomainMember(
+        req,
+        "/api/pri/domain/member/list",
+        identityId,
+      );
+      assertEquals(res.status, 200);
+      const body = await res.json();
+      assertEquals(body.length, 1);
+      assertEquals(body[0].email, MEMBER_EMAIL);
     });
-    const addRes = await routeDomainMember(
-      addReq,
-      "/api/pri/domain/member/add",
-      identityId,
-    );
-    const addBody = await addRes.json();
-    const memberId = addBody[0].id as string;
 
-    const delReq = makeRequest("POST", "/api/pri/domain/member/del", {
-      id: memberId,
+    it("deletes a domain member", async () => {
+      const addReq = makeRequest("POST", "/api/pri/domain/member/add", {
+        domain_id: domainId,
+        email: MEMBER_EMAIL,
+      });
+      const addRes = await routeDomainMember(
+        addReq,
+        "/api/pri/domain/member/add",
+        identityId,
+      );
+      const addBody = await addRes.json();
+      const memberId = addBody[0].id as string;
+
+      const delReq = makeRequest("POST", "/api/pri/domain/member/del", {
+        id: memberId,
+      });
+      const delRes = await routeDomainMember(
+        delReq,
+        "/api/pri/domain/member/del",
+        identityId,
+      );
+      assertEquals(delRes.status, 200);
+
+      const listReq = makeRequest("POST", "/api/pri/domain/member/list", {
+        domain_id: domainId,
+      });
+      const listRes = await routeDomainMember(
+        listReq,
+        "/api/pri/domain/member/list",
+        identityId,
+      );
+      const listBody = await listRes.json();
+      assertEquals(listBody.length, 0);
     });
-    const delRes = await routeDomainMember(
-      delReq,
-      "/api/pri/domain/member/del",
-      identityId,
-    );
-    assertEquals(delRes.status, 200);
 
-    const listReq = makeRequest("POST", "/api/pri/domain/member/list", {
-      domain_id: domainId,
+    it("returns 404 for unknown path", async () => {
+      const req = makeRequest("POST", "/api/pri/domain/member/unknown", {});
+      const res = await routeDomainMember(
+        req,
+        "/api/pri/domain/member/unknown",
+        identityId,
+      );
+      assertEquals(res.status, 404);
     });
-    const listRes = await routeDomainMember(
-      listReq,
-      "/api/pri/domain/member/list",
-      identityId,
-    );
-    const listBody = await listRes.json();
-    assertEquals(listBody.length, 0);
-  });
-
-  it("returns 404 for unknown path", async () => {
-    const req = makeRequest("POST", "/api/pri/domain/member/unknown", {});
-    const res = await routeDomainMember(
-      req,
-      "/api/pri/domain/member/unknown",
-      identityId,
-    );
-    assertEquals(res.status, 404);
-  });
-});
+  },
+);

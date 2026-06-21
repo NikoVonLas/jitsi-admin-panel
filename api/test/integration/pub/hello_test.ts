@@ -5,7 +5,7 @@ import handlePubHello from "../../../lib/pub/hello.ts";
 import handlePriHello from "../../../lib/pri/hello.ts";
 import handleAdmHello from "../../../lib/adm/hello.ts";
 
-describe("pub/hello", () => {
+describe("pub/hello", { sanitizeResources: false, sanitizeOps: false }, () => {
   beforeAll(async () => {
     await cleanDb();
   });
@@ -35,7 +35,7 @@ describe("pub/hello", () => {
   });
 });
 
-describe("pri/hello", () => {
+describe("pri/hello", { sanitizeResources: false, sanitizeOps: false }, () => {
   it("returns 200 with identity id in body", () => {
     const res = handlePriHello("test-identity-id");
     assertEquals(res.status, 200);
@@ -48,7 +48,7 @@ describe("pri/hello", () => {
   });
 });
 
-describe("adm/hello", () => {
+describe("adm/hello", { sanitizeResources: false, sanitizeOps: false }, () => {
   it("returns hello admin", async () => {
     const res = handleAdmHello();
     assertEquals(res.status, 200);

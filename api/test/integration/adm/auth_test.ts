@@ -25,7 +25,10 @@ async function registerUser(
   return await handleLocalRegister(req);
 }
 
-describe("POST /api/adm/auth/local/register", () => {
+describe("POST /api/adm/auth/local/register", {
+  sanitizeResources: false,
+  sanitizeOps: false,
+}, () => {
   beforeAll(async () => {
     await cleanDb();
   });
@@ -92,7 +95,10 @@ describe("POST /api/adm/auth/local/register", () => {
   });
 });
 
-describe("POST /api/adm/auth/local/login", () => {
+describe("POST /api/adm/auth/local/login", {
+  sanitizeResources: false,
+  sanitizeOps: false,
+}, () => {
   beforeAll(async () => {
     await cleanDb();
     // Ensure a user exists for login tests

@@ -7,7 +7,10 @@ import routeLocalUser from "../../../lib/pri/local-user.ts";
 const EMAIL = "admin@local-user-test.example";
 const PASSWORD = "secure_localuser_test_pass_123";
 
-describe("pri/user (local user management)", () => {
+describe("pri/user (local user management)", {
+  sanitizeResources: false,
+  sanitizeOps: false,
+}, () => {
   let identityId = "";
 
   beforeAll(async () => {

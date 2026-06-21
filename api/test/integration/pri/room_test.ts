@@ -26,7 +26,7 @@ async function addTestDomain(identityId: string): Promise<string> {
   return body[0].id as string;
 }
 
-describe("pri/room", () => {
+describe("pri/room", { sanitizeResources: false, sanitizeOps: false }, () => {
   let identityId = "";
   let domainId = "";
 

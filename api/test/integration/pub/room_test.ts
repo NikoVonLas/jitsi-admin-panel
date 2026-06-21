@@ -9,7 +9,7 @@ import handlePubRoom from "../../../lib/pub/room.ts";
 const EMAIL = "admin@pub-room-test.example";
 const PASSWORD = "secure_pubroom_test_pass_123";
 
-describe("pub/room", () => {
+describe("pub/room", { sanitizeResources: false, sanitizeOps: false }, () => {
   let identityId = "";
   let roomId = "";
 

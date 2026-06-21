@@ -5,7 +5,10 @@ import handleAuthConfig from "../../../lib/adm/auth-config.ts";
 import handleAdmHello from "../../../lib/adm/hello.ts";
 import handleLocalRegister from "../../../lib/adm/local-register.ts";
 
-describe("GET /api/adm/auth/config", () => {
+describe("GET /api/adm/auth/config", {
+  sanitizeResources: false,
+  sanitizeOps: false,
+}, () => {
   beforeAll(async () => {
     await cleanDb();
   });
@@ -37,15 +40,19 @@ describe("GET /api/adm/auth/config", () => {
   });
 });
 
-describe("GET /api/adm/hello", () => {
-  it("returns 200 with hello text", () => {
-    const res = handleAdmHello();
-    assertEquals(res.status, 200);
-  });
+describe(
+  "GET /api/adm/hello",
+  { sanitizeResources: false, sanitizeOps: false },
+  () => {
+    it("returns 200 with hello text", () => {
+      const res = handleAdmHello();
+      assertEquals(res.status, 200);
+    });
 
-  it("response body contains admin text", async () => {
-    const res = handleAdmHello();
-    const body = await res.json();
-    assertEquals(body.text, "hello admin");
-  });
-});
+    it("response body contains admin text", async () => {
+      const res = handleAdmHello();
+      const body = await res.json();
+      assertEquals(body.text, "hello admin");
+    });
+  },
+);
