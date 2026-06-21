@@ -21,10 +21,10 @@ services:
       - intranet
 
   api-adm:
-    image: ghcr.io/nikovonlas/jitsi-admin-panel/api-adm:latest
+    build:
+      context: .
+      dockerfile: docker/adm.Dockerfile
     restart: always
-    labels:
-      - "com.centurylinklabs.watchtower.enable=true"
     environment:
       - ALLOW_UNSECURE_CERT
       - API_SECRET
@@ -47,10 +47,10 @@ services:
       - intranet
 
   api-pri:
-    image: ghcr.io/nikovonlas/jitsi-admin-panel/api-pri:latest
+    build:
+      context: .
+      dockerfile: docker/pri.Dockerfile
     restart: always
-    labels:
-      - "com.centurylinklabs.watchtower.enable=true"
     environment:
       - API_SECRET
       - DB_HOST=db
@@ -73,10 +73,10 @@ services:
       - intranet
 
   api-pub:
-    image: ghcr.io/nikovonlas/jitsi-admin-panel/api-pub:latest
+    build:
+      context: .
+      dockerfile: docker/pub.Dockerfile
     restart: always
-    labels:
-      - "com.centurylinklabs.watchtower.enable=true"
     environment:
       - DB_HOST=db
       - DB_PASSWD
@@ -91,10 +91,10 @@ services:
       - intranet
 
   ui:
-    image: ghcr.io/nikovonlas/jitsi-admin-panel/ui:latest
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
     restart: always
-    labels:
-      - "com.centurylinklabs.watchtower.enable=true"
     ports:
       - "80:80"
       - "443:443"
@@ -110,17 +110,6 @@ services:
       - api-pub
     networks:
       - intranet
-
-  watchtower:
-    image: containrrr/watchtower
-    restart: always
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      - WATCHTOWER_POLL_INTERVAL=300
-      - WATCHTOWER_CLEANUP=true
-      - WATCHTOWER_LABEL_ENABLE=true
-    command: --label-enable --cleanup --interval 300
 
 volumes:
   data:
