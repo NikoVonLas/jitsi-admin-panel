@@ -19,15 +19,15 @@ async function update(req: Request, identityId: string): Promise<unknown> {
 }
 
 // -----------------------------------------------------------------------------
-export default async function routePref(
+export default function routePref(
   req: Request,
   path: string,
   identityId: string,
 ): Promise<Response> {
   if (path === `${PRE}/get`) {
-    return await wrapper(get, req, identityId);
+    return wrapper(get, req, identityId);
   } else if (path === `${PRE}/update`) {
-    return await wrapper(update, req, identityId);
+    return wrapper(update, req, identityId);
   } else {
     return notFound();
   }

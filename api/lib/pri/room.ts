@@ -39,7 +39,7 @@ async function get(req: Request, identityId: string): Promise<unknown> {
 
   const isSuperAdmin = await getIsSuperAdmin(identityId);
 
-  return await getRoom(identityId, roomId, isSuperAdmin);
+  return getRoom(identityId, roomId, isSuperAdmin);
 }
 
 // -----------------------------------------------------------------------------
@@ -51,8 +51,12 @@ async function getLink(req: Request, identityId: string): Promise<unknown> {
 
   const room = await getRoomLinkset(identityId, roomId, isSuperAdmin)
     .then((rows) => rows[0]);
+  if (!room) return [];
+
   const profile = await getDefaultProfile(identityId)
     .then((rows) => rows[0]);
+  if (!profile) return [];
+
   const url = await generateRoomUrl(room, profile, "host");
   const guestUrl = await generateRoomUrl(room, profile, "guest");
 
@@ -71,7 +75,7 @@ async function getHostKey(req: Request, identityId: string): Promise<unknown> {
 
   const isSuperAdmin = await getIsSuperAdmin(identityId);
 
-  return await getRoomHostKey(identityId, roomId, isSuperAdmin);
+  return getRoomHostKey(identityId, roomId, isSuperAdmin);
 }
 
 // -----------------------------------------------------------------------------
@@ -84,7 +88,7 @@ async function resetHostKey(
 
   const isSuperAdmin = await getIsSuperAdmin(identityId);
 
-  return await resetRoomHostKey(identityId, roomId, isSuperAdmin);
+  return resetRoomHostKey(identityId, roomId, isSuperAdmin);
 }
 
 // -----------------------------------------------------------------------------
@@ -105,16 +109,24 @@ async function getLinkByName(
   const domainUrl = trimTrailingSlashes(rawDomainUrl);
   const roomIds = await getRoomIdByName(identityId, domainUrl, rawRoomName)
     .then((rows) => rows[0])
-    .catch(() => null);
+    .catch((e) => {
+      console.error("getRoomIdByName failed:", e);
+      return null;
+    });
   if (!roomIds) return [];
 
   const room = await getRoomLinkset(identityId, roomIds.id)
     .then((rows) => rows[0])
-    .catch(() => null);
+    .catch((e) => {
+      console.error("getRoomLinkset failed:", e);
+      return null;
+    });
   if (!room) return [];
 
   const profile = await getDefaultProfile(identityId)
     .then((rows) => rows[0]);
+  if (!profile) return [];
+
   const url = await generateRoomUrl(room, profile);
 
   const link = [{
@@ -140,7 +152,7 @@ async function list(req: Request, identityId: string): Promise<unknown> {
 
   const isSuperAdmin = await getIsSuperAdmin(identityId);
 
-  return await listRoom({
+  return listRoom({
     identityId,
     isSuperAdmin,
     limit,
@@ -162,7 +174,7 @@ async function add(req: Request, identityId: string): Promise<unknown> {
 
   const isSuperAdmin = await getIsSuperAdmin(identityId);
 
-  return await addRoom(
+  return addRoom(
     identityId,
     domainId,
     name,
@@ -179,7 +191,7 @@ async function del(req: Request, identityId: string): Promise<unknown> {
 
   const isSuperAdmin = await getIsSuperAdmin(identityId);
 
-  return await delRoom(identityId, roomId, isSuperAdmin);
+  return delRoom(identityId, roomId, isSuperAdmin);
 }
 
 // -----------------------------------------------------------------------------
@@ -193,7 +205,7 @@ async function update(req: Request, identityId: string): Promise<unknown> {
 
   const isSuperAdmin = await getIsSuperAdmin(identityId);
 
-  return await updateRoom(
+  return updateRoom(
     identityId,
     roomId,
     domainId,
@@ -211,7 +223,7 @@ async function enable(req: Request, identityId: string): Promise<unknown> {
 
   const isSuperAdmin = await getIsSuperAdmin(identityId);
 
-  return await updateRoomEnabled(identityId, roomId, true, isSuperAdmin);
+  return updateRoomEnabled(identityId, roomId, true, isSuperAdmin);
 }
 
 // -----------------------------------------------------------------------------
@@ -221,7 +233,7 @@ async function disable(req: Request, identityId: string): Promise<unknown> {
 
   const isSuperAdmin = await getIsSuperAdmin(identityId);
 
-  return await updateRoomEnabled(identityId, roomId, false, isSuperAdmin);
+  return updateRoomEnabled(identityId, roomId, false, isSuperAdmin);
 }
 
 // -----------------------------------------------------------------------------
@@ -252,33 +264,33 @@ async function handleUpdate(
 }
 
 // -----------------------------------------------------------------------------
-export default async function routeRoom(
+export default function routeRoom(
   req: Request,
   path: string,
   identityId: string,
 ): Promise<Response> {
   if (path === `${PRE}/get`) {
-    return await wrapper(get, req, identityId);
+    return wrapper(get, req, identityId);
   } else if (path === `${PRE}/get/link`) {
-    return await wrapper(getLink, req, identityId);
+    return wrapper(getLink, req, identityId);
   } else if (path === `${PRE}/get/link/byname`) {
-    return await wrapper(getLinkByName, req, identityId);
+    return wrapper(getLinkByName, req, identityId);
   } else if (path === `${PRE}/list`) {
-    return await wrapper(list, req, identityId);
+    return wrapper(list, req, identityId);
   } else if (path === `${PRE}/add`) {
-    return await handleAdd(req, identityId);
+    return handleAdd(req, identityId);
   } else if (path === `${PRE}/del`) {
-    return await wrapper(del, req, identityId);
+    return wrapper(del, req, identityId);
   } else if (path === `${PRE}/update`) {
-    return await handleUpdate(req, identityId);
+    return handleUpdate(req, identityId);
   } else if (path === `${PRE}/enable`) {
-    return await wrapper(enable, req, identityId);
+    return wrapper(enable, req, identityId);
   } else if (path === `${PRE}/disable`) {
-    return await wrapper(disable, req, identityId);
+    return wrapper(disable, req, identityId);
   } else if (path === `${PRE}/get/hostkey`) {
-    return await wrapper(getHostKey, req, identityId);
+    return wrapper(getHostKey, req, identityId);
   } else if (path === `${PRE}/reset/hostkey`) {
-    return await wrapper(resetHostKey, req, identityId);
+    return wrapper(resetHostKey, req, identityId);
   } else {
     return notFound();
   }

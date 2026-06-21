@@ -24,7 +24,7 @@ async function assertSuperAdmin(identityId: string): Promise<void> {
 // -----------------------------------------------------------------------------
 async function get(req: Request, _identityId: string): Promise<unknown> {
   const pl = await req.json();
-  return await getDomain(pl.id);
+  return getDomain(pl.id);
 }
 
 // -----------------------------------------------------------------------------
@@ -36,7 +36,7 @@ async function list(req: Request, identityId: string): Promise<unknown> {
   const roleRows = await getIdentityRole(identityId);
   const isSuperAdmin = roleRows[0]?.is_superadmin === true;
 
-  return await listDomain(identityId, isSuperAdmin, limit, offset);
+  return listDomain(identityId, isSuperAdmin, limit, offset);
 }
 
 // -----------------------------------------------------------------------------
@@ -55,14 +55,14 @@ async function add(req: Request, identityId: string): Promise<unknown> {
     throw new Error("invalid input");
   }
 
-  return await addDomain(name, authType, domainAttr, isPublic);
+  return addDomain(name, authType, domainAttr, isPublic);
 }
 
 // -----------------------------------------------------------------------------
 async function del(req: Request, identityId: string): Promise<unknown> {
   await assertSuperAdmin(identityId);
   const pl = await req.json();
-  return await delDomain(pl.id);
+  return delDomain(pl.id);
 }
 
 // -----------------------------------------------------------------------------
@@ -82,43 +82,43 @@ async function update(req: Request, identityId: string): Promise<unknown> {
     throw new Error("invalid input");
   }
 
-  return await updateDomain(domainId, name, authType, domainAttr, isPublic);
+  return updateDomain(domainId, name, authType, domainAttr, isPublic);
 }
 
 // -----------------------------------------------------------------------------
 async function enable(req: Request, identityId: string): Promise<unknown> {
   await assertSuperAdmin(identityId);
   const pl = await req.json();
-  return await updateDomainEnabled(pl.id, true);
+  return updateDomainEnabled(pl.id, true);
 }
 
 // -----------------------------------------------------------------------------
 async function disable(req: Request, identityId: string): Promise<unknown> {
   await assertSuperAdmin(identityId);
   const pl = await req.json();
-  return await updateDomainEnabled(pl.id, false);
+  return updateDomainEnabled(pl.id, false);
 }
 
 // -----------------------------------------------------------------------------
-export default async function routeDomain(
+export default function routeDomain(
   req: Request,
   path: string,
   identityId: string,
 ): Promise<Response> {
   if (path === `${PRE}/get`) {
-    return await wrapper(get, req, identityId);
+    return wrapper(get, req, identityId);
   } else if (path === `${PRE}/list`) {
-    return await wrapper(list, req, identityId);
+    return wrapper(list, req, identityId);
   } else if (path === `${PRE}/add`) {
-    return await wrapper(add, req, identityId);
+    return wrapper(add, req, identityId);
   } else if (path === `${PRE}/del`) {
-    return await wrapper(del, req, identityId);
+    return wrapper(del, req, identityId);
   } else if (path === `${PRE}/update`) {
-    return await wrapper(update, req, identityId);
+    return wrapper(update, req, identityId);
   } else if (path === `${PRE}/enable`) {
-    return await wrapper(enable, req, identityId);
+    return wrapper(enable, req, identityId);
   } else if (path === `${PRE}/disable`) {
-    return await wrapper(disable, req, identityId);
+    return wrapper(disable, req, identityId);
   } else {
     return notFound();
   }

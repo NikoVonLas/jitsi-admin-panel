@@ -12,7 +12,8 @@ export async function pri(
     const rows = await f(req, identityId);
 
     return ok(JSON.stringify(rows));
-  } catch {
+  } catch (e) {
+    console.error("handler error:", e);
     return internalServerError();
   }
 }
@@ -25,7 +26,8 @@ export async function pub(f: functionPub, req: Request): Promise<Response> {
     const rows = await f(req);
 
     return ok(JSON.stringify(rows));
-  } catch {
+  } catch (e) {
+    console.error("handler error:", e);
     return internalServerError();
   }
 }

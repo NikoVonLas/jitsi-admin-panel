@@ -30,21 +30,21 @@ async function search(req: Request, identityId: string): Promise<unknown> {
   const q = typeof pl.q === "string" ? pl.q.trim() : "";
   if (q.length < 2) return [];
 
-  return await searchIdentity(q, 5);
+  return searchIdentity(q, 5);
 }
 
 // -----------------------------------------------------------------------------
-export default async function routeIdentity(
+export default function routeIdentity(
   req: Request,
   path: string,
   identityId: string,
 ): Promise<Response> {
   if (path === `${PRE}/ping`) {
-    return await wrapper(ping, req, identityId);
+    return wrapper(ping, req, identityId);
   } else if (path === `${PRE}/role`) {
-    return await wrapper(role, req, identityId);
+    return wrapper(role, req, identityId);
   } else if (path === `${PRE}/search`) {
-    return await wrapper(search, req, identityId);
+    return wrapper(search, req, identityId);
   } else {
     return notFound();
   }

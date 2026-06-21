@@ -70,7 +70,7 @@ export async function initLogoDefaults() {
     // always ensure the DB entry exists (file may exist but DB entry may be missing)
     await upsertSetting("logo_url", "/api/pub/logo/logo");
   } catch (e) {
-    console.warn("initLogoDefaults failed:", e);
+    console.error("initLogoDefaults failed:", e);
   }
 }
 
@@ -96,7 +96,7 @@ export async function initFaviconDefaults() {
       await Deno.writeFile(defaultDest, data);
     }
   } catch (e) {
-    console.warn("initFaviconDefaults failed:", e);
+    console.error("initFaviconDefaults failed:", e);
   }
 }
 
@@ -105,7 +105,7 @@ async function get(req: Request, identityId: string): Promise<unknown> {
   const pl = await req.json();
   const profileId = pl.id;
 
-  return await getProfile(identityId, profileId);
+  return getProfile(identityId, profileId);
 }
 
 // -----------------------------------------------------------------------------
@@ -119,7 +119,7 @@ async function list(req: Request, identityId: string): Promise<unknown> {
   const limit = getLimit(pl.limit);
   const offset = getOffset(pl.offset);
 
-  return await listProfile(identityId, limit, offset);
+  return listProfile(identityId, limit, offset);
 }
 
 // -----------------------------------------------------------------------------
@@ -128,7 +128,7 @@ async function add(req: Request, identityId: string): Promise<unknown> {
   const name = pl.name;
   const email = pl.email;
 
-  return await addProfile(identityId, name, email);
+  return addProfile(identityId, name, email);
 }
 
 // -----------------------------------------------------------------------------
@@ -136,7 +136,7 @@ async function del(req: Request, identityId: string): Promise<unknown> {
   const pl = await req.json();
   const profileId = pl.id;
 
-  return await delProfile(identityId, profileId);
+  return delProfile(identityId, profileId);
 }
 
 // -----------------------------------------------------------------------------
@@ -147,7 +147,7 @@ async function update(req: Request, identityId: string): Promise<unknown> {
   const email = pl.email;
   const avatarUrl = pl.avatar_url || "";
 
-  return await updateProfile(identityId, profileId, name, email, avatarUrl);
+  return updateProfile(identityId, profileId, name, email, avatarUrl);
 }
 
 // -----------------------------------------------------------------------------
@@ -330,39 +330,39 @@ async function setDefault(req: Request, identityId: string): Promise<unknown> {
   const pl = await req.json();
   const profileId = pl.id;
 
-  return await setDefaultProfile(identityId, profileId);
+  return setDefaultProfile(identityId, profileId);
 }
 
 // -----------------------------------------------------------------------------
-export default async function routeProfile(
+export default function routeProfile(
   req: Request,
   path: string,
   identityId: string,
 ): Promise<Response> {
   if (path === `${PRE}/get`) {
-    return await wrapper(get, req, identityId);
+    return wrapper(get, req, identityId);
   } else if (path === `${PRE}/get/default`) {
-    return await wrapper(getDefault, req, identityId);
+    return wrapper(getDefault, req, identityId);
   } else if (path === `${PRE}/list`) {
-    return await wrapper(list, req, identityId);
+    return wrapper(list, req, identityId);
   } else if (path === `${PRE}/add`) {
-    return await wrapper(add, req, identityId);
+    return wrapper(add, req, identityId);
   } else if (path === `${PRE}/del`) {
-    return await wrapper(del, req, identityId);
+    return wrapper(del, req, identityId);
   } else if (path === `${PRE}/update`) {
-    return await wrapper(update, req, identityId);
+    return wrapper(update, req, identityId);
   } else if (path === `${PRE}/set/default`) {
-    return await wrapper(setDefault, req, identityId);
+    return wrapper(setDefault, req, identityId);
   } else if (path === `${PRE}/avatar/upload`) {
-    return await uploadAvatar(req, identityId);
+    return uploadAvatar(req, identityId);
   } else if (path === `${PRE}/logo/upload`) {
-    return await uploadLogo(req);
+    return uploadLogo(req);
   } else if (path === `${PRE}/logo/reset`) {
-    return await resetLogo(req);
+    return resetLogo(req);
   } else if (path === `${PRE}/favicon/upload`) {
-    return await uploadFavicon(req);
+    return uploadFavicon(req);
   } else if (path === `${PRE}/favicon/reset`) {
-    return await resetFavicon(req);
+    return resetFavicon(req);
   } else {
     return notFound();
   }

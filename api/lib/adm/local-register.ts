@@ -60,7 +60,8 @@ export default async function handleLocalRegister(
     headers.set("Content-Type", "application/json");
 
     return ok(JSON.stringify({ token }), headers);
-  } catch {
+  } catch (e) {
+    console.error("register failed:", e);
     return unauthorized();
   }
 }

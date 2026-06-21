@@ -110,7 +110,7 @@ async function buildTokenHS(
     },
   };
 
-  return await create(header, payload, cryptoKey);
+  return create(header, payload, cryptoKey);
 }
 
 // -----------------------------------------------------------------------------
@@ -152,15 +152,16 @@ async function buildTokenJaas(
     },
   };
 
-  return await create(header, payload, cryptoKey);
+  return create(header, payload, cryptoKey);
 }
 
 // -----------------------------------------------------------------------------
-export async function generateHostTokenHS(
+export function generateHostTokenHS(
   opts: HsTokenOptions,
 ): Promise<string> {
-  const avatar = opts.avatar || undefined;
-  return await buildTokenHS(
+  // coerce empty string to undefined so JWT payload omits the field
+  const avatar = opts.avatar === "" ? undefined : opts.avatar;
+  return buildTokenHS(
     opts,
     {
       avatar,
@@ -178,11 +179,12 @@ export async function generateHostTokenHS(
 }
 
 // -----------------------------------------------------------------------------
-export async function generateGuestTokenHS(
+export function generateGuestTokenHS(
   opts: HsTokenOptions,
 ): Promise<string> {
-  const avatar = opts.avatar || undefined;
-  return await buildTokenHS(
+  // coerce empty string to undefined so JWT payload omits the field
+  const avatar = opts.avatar === "" ? undefined : opts.avatar;
+  return buildTokenHS(
     opts,
     {
       avatar,
@@ -196,10 +198,10 @@ export async function generateGuestTokenHS(
 }
 
 // -----------------------------------------------------------------------------
-export async function generateHostTokenJaas(
+export function generateHostTokenJaas(
   opts: JaasTokenOptions,
 ): Promise<string> {
-  return await buildTokenJaas(
+  return buildTokenJaas(
     opts,
     {
       affiliation: "owner",
@@ -217,10 +219,10 @@ export async function generateHostTokenJaas(
 }
 
 // -----------------------------------------------------------------------------
-export async function generateGuestTokenJaas(
+export function generateGuestTokenJaas(
   opts: JaasTokenOptions,
 ): Promise<string> {
-  return await buildTokenJaas(
+  return buildTokenJaas(
     opts,
     {
       affiliation: "member",

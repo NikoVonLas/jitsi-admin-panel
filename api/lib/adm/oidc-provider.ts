@@ -21,7 +21,7 @@ export default async function handleOidcProvider(
   path: string,
 ): Promise<Response> {
   if (req.method === "GET" && path === `${PRE}/list`) {
-    return await wrapper(async () => {
+    return wrapper(async () => {
       const providers = await listOidcProviders();
       return providers.map(sanitize);
     }, req);
@@ -35,7 +35,7 @@ export default async function handleOidcProvider(
         "name, issuer_url, client_id and client_secret are required",
       );
     }
-    return await wrapper(async () => {
+    return wrapper(async () => {
       await addOidcProvider(
         name,
         issuer_url,
@@ -51,7 +51,7 @@ export default async function handleOidcProvider(
     const body = await req.json();
     const { id, name, issuer_url, client_id, client_secret, scopes } = body;
     if (!id) return badRequest("id is required");
-    return await wrapper(async () => {
+    return wrapper(async () => {
       await updateOidcProvider(
         id,
         name,
@@ -67,7 +67,7 @@ export default async function handleOidcProvider(
   if (req.method === "POST" && path === `${PRE}/enable`) {
     const { id } = await req.json();
     if (!id) return badRequest("id is required");
-    return await wrapper(async () => {
+    return wrapper(async () => {
       await toggleOidcProvider(id, true);
       return { ok: true };
     }, req);
@@ -76,7 +76,7 @@ export default async function handleOidcProvider(
   if (req.method === "POST" && path === `${PRE}/disable`) {
     const { id } = await req.json();
     if (!id) return badRequest("id is required");
-    return await wrapper(async () => {
+    return wrapper(async () => {
       await toggleOidcProvider(id, false);
       return { ok: true };
     }, req);
@@ -85,7 +85,7 @@ export default async function handleOidcProvider(
   if (req.method === "POST" && path === `${PRE}/del`) {
     const { id } = await req.json();
     if (!id) return badRequest("id is required");
-    return await wrapper(async () => {
+    return wrapper(async () => {
       await deleteOidcProvider(id);
       return { ok: true };
     }, req);

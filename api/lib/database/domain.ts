@@ -41,11 +41,6 @@ export async function getDomainIfAllowed(identityId: string, domainId: string) {
   return await fetch(sql) as Domain[];
 }
 
-// Returns the domain for the identity key (legacy stub).
-export function getDomainByKeyIfAllowed(_keyValue: string) {
-  return [] as Domain[];
-}
-
 // List domains accessible to an identity.
 // Superadmins see all domains; regular users see public + member-by-email.
 export async function listDomain(

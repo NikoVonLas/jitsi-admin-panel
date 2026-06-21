@@ -25,7 +25,8 @@ export default async function handleAuthConfig(): Promise<Response> {
         oidc_providers: providers.map((p) => ({ id: p.id, name: p.name })),
       }),
     );
-  } catch {
+  } catch (e) {
+    console.error("getAuthConfig failed:", e);
     return ok(
       JSON.stringify({
         local: AUTH_LOCAL,

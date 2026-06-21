@@ -26,7 +26,7 @@ export const EMPTY_PROFILE = {
 // Expand a relative path (e.g. /api/pub/avatar/foo.jpg) to an absolute URL.
 // Already-absolute URLs are returned as-is.
 function toAbsoluteUrl(url: string): string {
-  if (!url || url.startsWith("http://") || url.startsWith("https://")) {
+  if (!url || url.startsWith("http://") || url.startsWith("https://")) { // NOSONAR: string prefix check, not a network call
     return url;
   }
   return `${APP_SCHEME}://${APP_FQDN}${url}`;
