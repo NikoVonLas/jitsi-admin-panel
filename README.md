@@ -26,11 +26,22 @@ Self-hosted admin panel for [Jitsi Meet](https://jitsi.org/) — manage domains,
 
 ## Quick Start
 
+### Production (pre-built images from GHCR)
+
+```sh
+curl -O https://raw.githubusercontent.com/NikoVonLas/jitsi-admin-panel/main/docker-compose.prod.yml
+curl -O https://raw.githubusercontent.com/NikoVonLas/jitsi-admin-panel/main/.env.example
+cp .env.example .env          # fill in required values (see Configuration below)
+docker compose -f docker-compose.prod.yml up -d
+```
+
+### Development (build from source)
+
 ```sh
 git clone https://github.com/NikoVonLas/jitsi-admin-panel.git
 cd jitsi-admin-panel
-cp .env.example .env          # fill in required values (see Configuration below)
-docker compose up -d
+cp .env.example .env
+docker compose up -d          # builds all images locally
 ```
 
 Open `https://<APP_FQDN>` in your browser. The first local account to sign up becomes the superadmin.
@@ -97,11 +108,37 @@ npm run format       # Prettier
 npm run i18n:lint    # check i18n key coverage
 ```
 
+## Compose files
+
+| File | Purpose |
+|---|---|
+| `docker-compose.yml` | **Development** — builds all images locally from the Dockerfiles in `docker/`. Use when working on the source code. |
+| `docker-compose.prod.yml` | **Production** — pulls pre-built images from GHCR (`ghcr.io/nikovonlas/jitsi-admin-panel/*`). No local build required. |
+
+### Auto-updates with Watchtower
+
+`docker-compose.prod.yml` ships with a commented-out [Watchtower](https://containrrr.dev/watchtower/) service. Uncomment it to have Watchtower watch the four app containers and automatically pull updated images whenever a new release is published:
+
+```yaml
+# inside docker-compose.prod.yml
+watchtower:
+  image: containrrr/watchtower:latest
+  restart: always
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  environment:
+    - WATCHTOWER_CLEANUP=true
+    - WATCHTOWER_INCLUDE_RESTARTING=true
+  command: --interval 86400 api-adm api-pri api-pub ui
+```
+
+Adjust `--interval` (seconds) to control how often it checks for updates.
+
 ## CI
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| **CI** | Every push / PR | Deno lint & format check, frontend build, i18n lint, SonarCloud analysis |
+| **CI** | Every branch push / PR | Deno lint & format check, frontend build, i18n lint, API and frontend tests, SonarCloud analysis |
 | **Release** | Tag `v*.*.*` | Builds and pushes Docker images to GHCR (`ghcr.io/nikovonlas/jitsi-admin-panel/*`) |
 
 ## License
