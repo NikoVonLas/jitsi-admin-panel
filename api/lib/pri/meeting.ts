@@ -5,6 +5,7 @@ import { parseEnabledFilter } from "../common/parse.ts";
 import { getLimit, getOffset } from "../database/common.ts";
 import { getIsSuperAdmin } from "../database/identity.ts";
 import { getDefaultProfile } from "../database/profile.ts";
+import type { DomainAuthType } from "../database/types.ts";
 import {
   addMeeting,
   delMeeting,
@@ -56,7 +57,7 @@ async function getLink(req: Request, identityId: string): Promise<unknown> {
   const moderator_url = await generateMeetingUrl(linkset, remaining);
   const participantLinkset = {
     ...linkset,
-    auth_type: "none",
+    auth_type: "none" as DomainAuthType,
     profile_name: "",
     profile_email: "",
     profile_avatar_url: "",

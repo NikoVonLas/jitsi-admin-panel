@@ -99,11 +99,15 @@ describe("pri/meeting/schedule", () => {
   });
 
   it("lists schedules by meeting (empty initially)", async () => {
-    const req = makeRequest("POST", "/api/pri/meeting/schedule/list/bymeeting", {
-      id: meetingId,
-      limit: 20,
-      offset: 0,
-    });
+    const req = makeRequest(
+      "POST",
+      "/api/pri/meeting/schedule/list/bymeeting",
+      {
+        id: meetingId,
+        limit: 20,
+        offset: 0,
+      },
+    );
     const res = await routeMeetingSchedule(
       req,
       "/api/pri/meeting/schedule/list/bymeeting",
