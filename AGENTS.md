@@ -74,5 +74,9 @@ flows, and decision rationale.
 
 <!-- Remembered facts are added here on request and pushed to main. -->
 
-- Before every push: run `deno fmt --check api/ && deno lint api/` and
-  `npm run test:coverage` (frontend) locally; fix all failures before pushing.
+- Before every push run all of these locally and fix any failures:
+  1. `deno fmt --check api/ && deno lint api/`
+  2. `npm run build` (frontend)
+  3. `npm run i18n:lint` (frontend)
+  4. `npm run test:coverage` (frontend — requires Node 20 via nvm)
+  API tests require PostgreSQL and are verified in CI only.
