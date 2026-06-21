@@ -1,9 +1,4 @@
-import {
-  generateGuestTokenHS,
-  generateGuestTokenJaas,
-  generateHostTokenHS,
-  generateHostTokenJaas,
-} from "./token.ts";
+import { generateGuestTokenHS, generateHostTokenHS } from "./token.ts";
 import type {
   Affiliation,
   MeetingLinkset,
@@ -30,53 +25,6 @@ function toAbsoluteUrl(url: string): string {
     return url;
   }
   return `${APP_SCHEME}://${APP_FQDN}${url}`;
-}
-
-// -----------------------------------------------------------------------------
-async function generateRoomUrlJaas(
-  linkset: RoomLinkset,
-  profile: Profile,
-  affiliation: Affiliation,
-  exp: number,
-): Promise<string> {
-  const sub = encodeURIComponent(linkset.domain_attr.jaas_app_id);
-  let url = encodeURI(linkset.domain_attr.jaas_url);
-  let roomName = encodeURIComponent(linkset.name);
-
-  if (linkset.has_suffix) roomName = `${roomName}-${linkset.suffix}`;
-  url = `${url}/${sub}/${roomName}`;
-
-  if (affiliation === "host") {
-    const jwt = await generateHostTokenJaas({
-      jaasAppId: linkset.domain_attr.jaas_app_id,
-      jaasKid: linkset.domain_attr.jaas_kid,
-      jaasKey: linkset.domain_attr.jaas_key,
-      jaasAlg: linkset.domain_attr.jaas_alg,
-      jaasAud: linkset.domain_attr.jaas_aud,
-      jaasIss: linkset.domain_attr.jaas_iss,
-      roomName,
-      username: profile.name,
-      email: profile.email,
-      exp,
-    });
-
-    return `${url}?jwt=${jwt}`;
-  }
-
-  const jwt = await generateGuestTokenJaas({
-    jaasAppId: linkset.domain_attr.jaas_app_id,
-    jaasKid: linkset.domain_attr.jaas_kid,
-    jaasKey: linkset.domain_attr.jaas_key,
-    jaasAlg: linkset.domain_attr.jaas_alg,
-    jaasAud: linkset.domain_attr.jaas_aud,
-    jaasIss: linkset.domain_attr.jaas_iss,
-    roomName,
-    username: profile.name,
-    email: profile.email,
-    exp,
-  });
-
-  return `${url}?jwt=${jwt}`;
 }
 
 // -----------------------------------------------------------------------------
@@ -135,9 +83,7 @@ export async function generateRoomUrl(
   if (!profile.email) profile.email = "";
   if (!profile.avatar_url) profile.avatar_url = "";
 
-  if (linkset.auth_type === "jaas") {
-    url = await generateRoomUrlJaas(linkset, profile, affiliation, exp);
-  } else if (linkset.auth_type === "token") {
+  if (linkset.auth_type === "token") {
     url = await generateRoomUrlToken(linkset, profile, affiliation, exp);
   } else {
     let roomName = encodeURIComponent(linkset.name);
@@ -164,38 +110,6 @@ export async function generateRoomUrl(
   if (additionalHash) url = `${url}${additionalHash}`;
 
   return url;
-}
-
-// -----------------------------------------------------------------------------
-async function generateMeetingUrlJaas(
-  linkset: MeetingLinkset,
-  exp: number,
-  isHost: boolean,
-): Promise<string> {
-  const sub = encodeURIComponent(linkset.domain_attr.jaas_app_id);
-  let url = encodeURI(linkset.domain_attr.jaas_url);
-  let roomName = encodeURIComponent(linkset.room_name);
-
-  if (linkset.has_suffix) roomName = `${roomName}-${linkset.suffix}`;
-  url = `${url}/${sub}/${roomName}`;
-
-  const tokenArgs = {
-    jaasAppId: linkset.domain_attr.jaas_app_id,
-    jaasKid: linkset.domain_attr.jaas_kid,
-    jaasKey: linkset.domain_attr.jaas_key,
-    jaasAlg: linkset.domain_attr.jaas_alg,
-    jaasAud: linkset.domain_attr.jaas_aud,
-    jaasIss: linkset.domain_attr.jaas_iss,
-    roomName,
-    username: linkset.profile_name,
-    email: linkset.profile_email,
-    exp,
-  };
-  const jwt = isHost
-    ? await generateHostTokenJaas(tokenArgs)
-    : await generateGuestTokenJaas(tokenArgs);
-
-  return `${url}?jwt=${jwt}`;
 }
 
 // -----------------------------------------------------------------------------
@@ -245,9 +159,7 @@ async function resolveMeetingBaseUrl(
   exp: number,
 ): Promise<string> {
   const isHost = linkset.join_as === "host";
-  if (linkset.auth_type === "jaas") {
-    return await generateMeetingUrlJaas(linkset, exp, isHost);
-  } else if (linkset.auth_type === "token") {
+  if (linkset.auth_type === "token") {
     return await generateMeetingUrlToken(linkset, exp, isHost);
   }
 

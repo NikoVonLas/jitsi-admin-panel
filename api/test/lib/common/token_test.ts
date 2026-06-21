@@ -3,33 +3,9 @@ import { describe, it } from "@std/testing/bdd";
 import {
   generateCryptoKeyHS,
   generateGuestTokenHS,
-  generateGuestTokenJaas,
   generateHostTokenHS,
-  generateHostTokenJaas,
 } from "../../../lib/common/token.ts";
-import type {
-  HsTokenOptions,
-  JaasTokenOptions,
-} from "../../../lib/common/token.ts";
-
-// Minimal RSA private key for JaaS tests (2048-bit PKCS8)
-const TEST_RSA_KEY = `-----BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC7o4qne60TB3wo
-pMhTqgJQJ0PxMEgXstMdKHE6HJoANDoOL/gpQFG7A+SPFQAG0fNPNBYGJMEPQVpN
-e4LVEFl0bCKzFVoHQqWZNaOJ4nNLQEJB1H1wFhWLi2f0UhNHq5F2UE0AAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgMBAAECggEABfnr9Bj+
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAoQgEA
------END PRIVATE KEY-----`;
+import type { HsTokenOptions } from "../../../lib/common/token.ts";
 
 const HS_OPTS: HsTokenOptions = {
   appId: "test_app",
@@ -115,38 +91,5 @@ describe("generateGuestTokenHS", () => {
     const host = await generateHostTokenHS(HS_OPTS);
     const guest = await generateGuestTokenHS(HS_OPTS);
     assert(host !== guest);
-  });
-});
-
-describe("generateHostTokenJaas / generateGuestTokenJaas", () => {
-  const JAAS_OPTS: JaasTokenOptions = {
-    jaasAppId: "test_app_id",
-    jaasKid: "test/kid",
-    jaasKey: TEST_RSA_KEY,
-    jaasAlg: "RS256",
-    jaasAud: "jitsi",
-    jaasIss: "chat",
-    roomName: "test-room",
-    username: "Test User",
-    email: "test@example.com",
-    exp: 3600,
-  };
-
-  it("generateHostTokenJaas produces a JWT (when key is valid)", async () => {
-    try {
-      const jwt = await generateHostTokenJaas(JAAS_OPTS);
-      assertMatch(jwt, /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
-    } catch {
-      // A fake RSA key may fail crypto import — acceptable in unit test
-    }
-  });
-
-  it("generateGuestTokenJaas produces a JWT (when key is valid)", async () => {
-    try {
-      const jwt = await generateGuestTokenJaas(JAAS_OPTS);
-      assertMatch(jwt, /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);
-    } catch {
-      // A fake RSA key may fail crypto import — acceptable in unit test
-    }
   });
 });

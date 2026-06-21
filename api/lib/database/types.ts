@@ -8,7 +8,7 @@
 
 export type Affiliation = "host" | "guest";
 export type CandidateStatus = "pending" | "approved" | "rejected" | "expired";
-export type DomainAuthType = "none" | "token" | "jaas";
+export type DomainAuthType = "none" | "token";
 export type IntercomStatus = "none" | "seen" | "accepted" | "rejected";
 export type InviteTo = "audience" | "member";
 export type Message = "call" | "phone" | "text";
@@ -255,13 +255,6 @@ export interface MeetingLinkset {
     app_id: string;
     app_secret: string;
     app_alg: string;
-    jaas_url: string;
-    jaas_app_id: string;
-    jaas_kid: string;
-    jaas_key: string;
-    jaas_alg: string;
-    jaas_aud: string;
-    jaas_iss: string;
   };
   join_as: Affiliation;
   started_at: string;
@@ -434,13 +427,6 @@ export interface Phone333 {
     app_id: string;
     app_secret: string;
     app_alg: string;
-    jaas_url: string;
-    jaas_app_id: string;
-    jaas_kid: string;
-    jaas_key: string;
-    jaas_alg: string;
-    jaas_aud: string;
-    jaas_iss: string;
   };
 }
 
@@ -510,12 +496,5 @@ export interface RoomLinkset {
     app_id: string;
     app_secret: string;
     app_alg: string;
-    jaas_url: string;
-    jaas_app_id: string;
-    jaas_kid: string;
-    jaas_key: string;
-    jaas_alg: string;
-    jaas_aud: string;
-    jaas_iss: string;
   };
 }

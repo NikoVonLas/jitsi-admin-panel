@@ -53,10 +53,7 @@ export async function listDomain(
     const sql = {
       text: `
         SELECT id, name, auth_type,
-          (CASE auth_type
-             WHEN 'jaas' THEN domain_attr->>'jaas_url'
-             ELSE domain_attr->>'url'
-           END) as url,
+          domain_attr->>'url' as url,
           public, enabled, updated_at
         FROM domain
         ORDER BY name
@@ -69,10 +66,7 @@ export async function listDomain(
   const sql = {
     text: `
       SELECT id, name, auth_type,
-        (CASE auth_type
-           WHEN 'jaas' THEN domain_attr->>'jaas_url'
-           ELSE domain_attr->>'url'
-         END) as url,
+        domain_attr->>'url' as url,
         public, enabled, updated_at
       FROM domain d
       WHERE enabled

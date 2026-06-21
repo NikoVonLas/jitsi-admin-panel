@@ -49,11 +49,7 @@ async function add(req: Request, identityId: string): Promise<unknown> {
   const domainAttr = pl.domain_attr as Attr;
   const isPublic = pl.public === true;
 
-  if (authType === "jaas") {
-    if (!isValidUrl(domainAttr.jaas_url)) throw new Error("invalid input");
-  } else if (!isValidUrl(domainAttr.url)) {
-    throw new Error("invalid input");
-  }
+  if (!isValidUrl(domainAttr.url)) throw new Error("invalid input");
 
   return addDomain(name, authType, domainAttr, isPublic);
 }
@@ -76,11 +72,7 @@ async function update(req: Request, identityId: string): Promise<unknown> {
   const domainAttr = pl.domain_attr as Attr;
   const isPublic = pl.public === true;
 
-  if (authType === "jaas") {
-    if (!isValidUrl(domainAttr.jaas_url)) throw new Error("invalid input");
-  } else if (!isValidUrl(domainAttr.url)) {
-    throw new Error("invalid input");
-  }
+  if (!isValidUrl(domainAttr.url)) throw new Error("invalid input");
 
   return updateDomain(domainId, name, authType, domainAttr, isPublic);
 }

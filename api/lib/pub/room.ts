@@ -85,13 +85,7 @@ async function getLinkByShortCode(req: Request): Promise<unknown> {
   let roomName = encodeURIComponent(linkset.name);
   if (linkset.has_suffix) roomName = `${roomName}-${linkset.suffix}`;
 
-  let url: string;
-  if (linkset.auth_type === "jaas") {
-    const sub = encodeURIComponent(linkset.domain_attr.jaas_app_id);
-    url = `${encodeURI(linkset.domain_attr.jaas_url)}/${sub}/${roomName}`;
-  } else {
-    url = `${encodeURI(linkset.domain_attr.url)}/${roomName}`;
-  }
+  let url = `${encodeURI(linkset.domain_attr.url)}/${roomName}`;
 
   const subject = encodeURIComponent(`"${linkset.label || linkset.name}"`);
   url = `${url}#config.localSubject=${subject}`;

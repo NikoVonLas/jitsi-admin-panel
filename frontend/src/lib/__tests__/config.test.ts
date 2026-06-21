@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { FORM_WIDTH, AUTH_TYPE_OPTIONS, JAAS_ALGO, JAAS_AUD, JAAS_ISS, JAAS_URL, TOKEN_ALGO, SCHEDULE_ATTR_TYPE_OPTIONS } from '../config';
+import { FORM_WIDTH, AUTH_TYPE_OPTIONS, TOKEN_ALGO, SCHEDULE_ATTR_TYPE_OPTIONS } from '../config';
 
 describe('config constants', () => {
   it('FORM_WIDTH is a non-empty string', () => {
@@ -21,18 +21,13 @@ describe('config constants', () => {
     }
   });
 
-  it('AUTH_TYPE_OPTIONS includes none, token, jaas', () => {
+  it('AUTH_TYPE_OPTIONS includes none and token', () => {
     const values = AUTH_TYPE_OPTIONS.map((o) => o[0]);
     expect(values).toContain('none');
     expect(values).toContain('token');
-    expect(values).toContain('jaas');
   });
 
-  it('JAAS constants are correct strings', () => {
-    expect(JAAS_ALGO).toBe('RS256');
-    expect(JAAS_AUD).toBe('jitsi');
-    expect(JAAS_ISS).toBe('chat');
-    expect(JAAS_URL).toBe('https://8x8.vc');
+  it('TOKEN_ALGO is HS256', () => {
     expect(TOKEN_ALGO).toBe('HS256');
   });
 

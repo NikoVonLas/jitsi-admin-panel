@@ -7,7 +7,7 @@
 // -----------------------------------------------------------------------------
 
 export type Affiliation = 'host' | 'guest';
-export type DomainAuthType = 'none' | 'token' | 'jaas';
+export type DomainAuthType = 'none' | 'token';
 export type EnabledFilter = 'all' | 'enabled' | 'disabled';
 export type IntercomStatus = 'none' | 'seen' | 'accepted' | 'rejected';
 export type Message = 'call' | 'phone' | 'text';
@@ -28,13 +28,6 @@ export interface Domain {
     app_id: string;
     app_secret: string;
     app_alg: string;
-    jaas_url: string;
-    jaas_app_id: string;
-    jaas_kid: string;
-    jaas_key: string;
-    jaas_alg: string;
-    jaas_aud: string;
-    jaas_iss: string;
   };
   public: boolean;
   enabled: boolean;

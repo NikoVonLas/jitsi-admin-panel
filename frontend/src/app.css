@@ -37,6 +37,10 @@ body,
   color: var(--color-text);
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   overflow-x: hidden;
 }

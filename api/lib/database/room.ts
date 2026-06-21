@@ -38,11 +38,7 @@ export async function getRoom(
   const sql = {
     text: `
       SELECT r.id, r.name, r.label, d.id as domain_id, d.name as domain_name,
-        (CASE d.auth_type
-           WHEN 'jaas' THEN d.domain_attr->>'jaas_url'
-           ELSE d.domain_attr->>'url'
-         END
-        ) as domain_url,
+        d.domain_attr->>'url' as domain_url,
         d.enabled as domain_enabled, r.has_suffix, r.enabled, r.created_at,
         r.updated_at, r.accessed_at
       FROM room r
@@ -190,12 +186,7 @@ export async function getRoomIdByName(
                    ELSE r.name
                  END
                ) as room_full_name,
-               lower(
-                 CASE d.auth_type
-                   WHEN 'jaas' THEN coalesce(d.domain_attr->>'jaas_url', '')
-                   ELSE coalesce(d.domain_attr->>'url', '')
-                 END
-               ) as domain_url
+               lower(coalesce(d.domain_attr->>'url', '')) as domain_url
         FROM room r
           JOIN domain d ON r.domain_id = d.id
                            AND d.enabled
@@ -379,11 +370,7 @@ export async function listRoom(
     const itemSql = {
       text: `
         SELECT r.id, r.name, r.label, r.short_code, d.name as domain_name,
-          (CASE d.auth_type
-             WHEN 'jaas' THEN d.domain_attr->>'jaas_url'
-             ELSE d.domain_attr->>'url'
-           END
-          ) as domain_url,
+          d.domain_attr->>'url' as domain_url,
           r.enabled,
           (d.enabled AND i.enabled) as chain_enabled,
           r.updated_at,
@@ -427,11 +414,7 @@ export async function listRoom(
   const itemSql = {
     text: `
       SELECT r.id, r.name, r.label, r.short_code, d.name as domain_name,
-        (CASE d.auth_type
-           WHEN 'jaas' THEN d.domain_attr->>'jaas_url'
-           ELSE d.domain_attr->>'url'
-         END
-        ) as domain_url,
+        d.domain_attr->>'url' as domain_url,
         r.enabled,
         (d.enabled AND i.enabled AND (d.identity_id = $1 OR d.public)) as chain_enabled,
         r.updated_at

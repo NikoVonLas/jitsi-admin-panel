@@ -7,12 +7,10 @@ import { TOKEN_ALGO } from '../../../lib/config';
 
 export interface DomainAttr {
   url: string; app_id: string; app_secret: string; app_alg: string;
-  jaas_url: string; jaas_app_id: string; jaas_kid: string; jaas_key: string;
-  jaas_alg: string; jaas_aud: string; jaas_iss: string;
 }
 
 export function getDefaultDomainAttr(): DomainAttr {
-  return { url: '', app_id: '', app_secret: '', app_alg: TOKEN_ALGO, jaas_url: '', jaas_app_id: '', jaas_kid: '', jaas_key: '', jaas_alg: '', jaas_aud: '', jaas_iss: '' };
+  return { url: '', app_id: '', app_secret: '', app_alg: TOKEN_ALGO };
 }
 
 interface Props {

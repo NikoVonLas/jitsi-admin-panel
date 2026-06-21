@@ -1,6 +1,7 @@
 {
   "version": "5",
   "specifiers": {
+    "jsr:@db/postgres@0.19.5": "0.19.5",
     "jsr:@db/postgres@~0.19.5": "0.19.5",
     "jsr:@emrahcom/jwt@~0.4.8": "0.4.8",
     "jsr:@std/assert@1": "1.0.19",

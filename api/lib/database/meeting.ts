@@ -63,11 +63,7 @@ export async function getMeeting(
     text: `
       SELECT m.id, m.name, m.info, pr.id as profile_id, pr.name as profile_name,
         pr.email as profile_email, d.id as domain_id, d.name as domain_name,
-        (CASE d.auth_type
-           WHEN 'jaas' THEN d.domain_attr->>'jaas_url'
-           ELSE d.domain_attr->>'url'
-         END
-        ) as domain_url,
+        d.domain_attr->>'url' as domain_url,
         d.enabled as domain_enabled, r.id as room_id, r.name as room_name,
         r.enabled as room_enabled,
         m.hidden, m.subscribable, m.enabled,
@@ -228,11 +224,7 @@ export async function getMeeting222ById(
     text: `
       SELECT m.id, m.name, m.short_code, m.info, pr.name as profile_name, pr.email as profile_email,
         d.name as domain_name,
-        (CASE d.auth_type
-           WHEN 'jaas' THEN d.domain_attr->>'jaas_url'
-           ELSE d.domain_attr->>'url'
-         END
-        ) as domain_url,
+        d.domain_attr->>'url' as domain_url,
         r.name as room_name,
         array(SELECT started_at
               FROM meeting_session
@@ -293,11 +285,7 @@ export async function listMeeting(
   const itemSql = {
     text: `
       SELECT m.id, m.name, m.short_code, m.info, pr.name as profile_name, pr.email as profile_email, d.name as domain_name,
-        (CASE d.auth_type
-           WHEN 'jaas' THEN d.domain_attr->>'jaas_url'
-           ELSE d.domain_attr->>'url'
-         END
-        ) as domain_url,
+        d.domain_attr->>'url' as domain_url,
         r.name as room_name,
         array(SELECT started_at
               FROM meeting_session
