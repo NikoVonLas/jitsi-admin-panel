@@ -73,3 +73,6 @@ flows, and decision rationale.
 ## Memory
 
 <!-- Remembered facts are added here on request and pushed to main. -->
+
+- Before every push: run `deno fmt --check api/ && deno lint api/` and
+  `npm run test:coverage` (frontend) locally; fix all failures before pushing.
