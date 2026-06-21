@@ -87,6 +87,30 @@ describe("pub/room", { sanitizeResources: false, sanitizeOps: false }, () => {
     assertEquals(body.length, 0);
   });
 
+  it("joinAsMod with wrong (non-empty) host_key returns empty array", async () => {
+    const req = makeRequest("POST", "/api/pub/room/join/asmod", {
+      room_id: roomId,
+      host_key: "wrong-key-that-does-not-match",
+    });
+    const res = await handlePubRoom(req, "/api/pub/room/join/asmod");
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(Array.isArray(body), true);
+    assertEquals(body.length, 0);
+  });
+
+  it("joinAsModByRoom with wrong (non-empty) host_key returns error object", async () => {
+    const req = makeRequest("POST", "/api/pub/room/join/asmod/byroom", {
+      room_id: roomId,
+      host_key: "wrong-key-does-not-match",
+    });
+    const res = await handlePubRoom(req, "/api/pub/room/join/asmod/byroom");
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(Array.isArray(body), true);
+    assertEquals(body[0].error, "invalid");
+  });
+
   it("returns 404 for unknown path", async () => {
     const req = makeRequest("POST", "/api/pub/room/unknown", {});
     const res = await handlePubRoom(req, "/api/pub/room/unknown");

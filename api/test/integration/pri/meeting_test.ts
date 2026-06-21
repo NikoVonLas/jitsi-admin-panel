@@ -294,6 +294,20 @@ describe(
       assertEquals(body.items.length >= 1, true);
     });
 
+    it("getLink returns empty for non-existent meeting", async () => {
+      const req = makeRequest("POST", "/api/pri/meeting/get/link", {
+        id: "00000000-0000-0000-0000-000000000099",
+      });
+      const res = await routeMeeting(
+        req,
+        "/api/pri/meeting/get/link",
+        identityId,
+      );
+      assertEquals(res.status, 200);
+      const body = await res.json();
+      assertEquals(body, []);
+    });
+
     it("returns 404 for unknown path", async () => {
       const req = makeRequest("POST", "/api/pri/meeting/unknown", {});
       const res = await routeMeeting(
