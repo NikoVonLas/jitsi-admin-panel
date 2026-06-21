@@ -100,6 +100,69 @@ describe(
       assertEquals(updateRes.status, 200);
     });
 
+    it("gets the default profile", async () => {
+      const req = makeRequest("POST", "/api/pri/profile/get/default", {});
+      const res = await routeProfile(
+        req,
+        "/api/pri/profile/get/default",
+        identityId,
+      );
+      assertEquals(res.status, 200);
+      const body = await res.json();
+      assertEquals(Array.isArray(body), true);
+      assertEquals(body.length >= 1, true);
+    });
+
+    it("sets a profile as default", async () => {
+      // Add a second profile to set as default
+      const addReq = makeRequest("POST", "/api/pri/profile/add", {
+        name: "Default Candidate",
+        email: "default-cand@example.com",
+      });
+      const addRes = await routeProfile(
+        addReq,
+        "/api/pri/profile/add",
+        identityId,
+      );
+      const addBody = await addRes.json();
+      const profileId = addBody[0].id;
+
+      const setReq = makeRequest("POST", "/api/pri/profile/set/default", {
+        id: profileId,
+      });
+      const setRes = await routeProfile(
+        setReq,
+        "/api/pri/profile/set/default",
+        identityId,
+      );
+      assertEquals(setRes.status, 200);
+    });
+
+    it("deletes a profile", async () => {
+      // Add a profile to delete
+      const addReq = makeRequest("POST", "/api/pri/profile/add", {
+        name: "To Delete",
+        email: "to-delete@example.com",
+      });
+      const addRes = await routeProfile(
+        addReq,
+        "/api/pri/profile/add",
+        identityId,
+      );
+      const addBody = await addRes.json();
+      const profileId = addBody[0].id;
+
+      const delReq = makeRequest("POST", "/api/pri/profile/del", {
+        id: profileId,
+      });
+      const delRes = await routeProfile(
+        delReq,
+        "/api/pri/profile/del",
+        identityId,
+      );
+      assertEquals(delRes.status, 200);
+    });
+
     it("returns 404 for unknown path", async () => {
       const req = makeRequest("POST", "/api/pri/profile/unknown", {});
       const res = await routeProfile(

@@ -175,6 +175,73 @@ describe("pri/room", { sanitizeResources: false, sanitizeOps: false }, () => {
     assertEquals(delRes.status, 200);
   });
 
+  it("resets room host key", async () => {
+    const addReq = makeRequest("POST", "/api/pri/room/add", {
+      domain_id: domainId,
+      name: "reset-key-room",
+      label: "Reset Key Room",
+    });
+    const addRes = await routeRoom(addReq, "/api/pri/room/add", identityId);
+    const id = (await addRes.json())[0].id;
+
+    const resetRes = await routeRoom(
+      makeRequest("POST", "/api/pri/room/reset/hostkey", { id }),
+      "/api/pri/room/reset/hostkey",
+      identityId,
+    );
+    assertEquals(resetRes.status, 200);
+    const body = await resetRes.json();
+    assertEquals(Array.isArray(body), true);
+  });
+
+  it("gets room link (returns empty if room disabled or no public domain)", async () => {
+    const addReq = makeRequest("POST", "/api/pri/room/add", {
+      domain_id: domainId,
+      name: "link-room",
+      label: "Link Room",
+    });
+    const addRes = await routeRoom(addReq, "/api/pri/room/add", identityId);
+    const id = (await addRes.json())[0].id;
+
+    const linkRes = await routeRoom(
+      makeRequest("POST", "/api/pri/room/get/link", { id }),
+      "/api/pri/room/get/link",
+      identityId,
+    );
+    assertEquals(linkRes.status, 200);
+    const body = await linkRes.json();
+    assertEquals(Array.isArray(body), true);
+  });
+
+  it("gets room link by name (returns empty for unknown room)", async () => {
+    const linkRes = await routeRoom(
+      makeRequest("POST", "/api/pri/room/get/link/byname", {
+        room_name: "nonexistent-room-xyz",
+        domain_url: "https://meet.room-test.example",
+      }),
+      "/api/pri/room/get/link/byname",
+      identityId,
+    );
+    assertEquals(linkRes.status, 200);
+    const body = await linkRes.json();
+    assertEquals(Array.isArray(body), true);
+    assertEquals(body.length, 0);
+  });
+
+  it("gets room link by name returns empty for empty room_name", async () => {
+    const linkRes = await routeRoom(
+      makeRequest("POST", "/api/pri/room/get/link/byname", {
+        room_name: "",
+        domain_url: "",
+      }),
+      "/api/pri/room/get/link/byname",
+      identityId,
+    );
+    assertEquals(linkRes.status, 200);
+    const body = await linkRes.json();
+    assertEquals(body, []);
+  });
+
   it("returns 404 for unknown path", async () => {
     const req = makeRequest("POST", "/api/pri/room/unknown", {});
     const res = await routeRoom(req, "/api/pri/room/unknown", identityId);

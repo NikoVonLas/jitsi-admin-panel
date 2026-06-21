@@ -190,5 +190,96 @@ describe(
       );
       assertEquals(res.status, 400);
     });
+
+    it("updates a provider preserving secret when client_secret is empty", async () => {
+      // Add first
+      const addReq = makeRequest("POST", "/api/adm/oidc-provider/add", {
+        name: "Update SSO Keep Secret",
+        issuer_url: "https://update-keep.example.com",
+        client_id: "cid-keep",
+        client_secret: "original-secret",
+        scopes: "openid",
+      });
+      await routeOidcProvider(addReq, "/api/adm/oidc-provider/add");
+
+      const listReq = new Request(
+        "http://test/api/adm/oidc-provider/list",
+        { method: "GET" },
+      );
+      const listRes = await routeOidcProvider(
+        listReq,
+        "/api/adm/oidc-provider/list",
+      );
+      const providers = await listRes.json();
+      const id = providers[0].id;
+
+      // Update with empty client_secret → should preserve original
+      const updateReq = makeRequest("POST", "/api/adm/oidc-provider/update", {
+        id,
+        name: "Update SSO Keep Secret Renamed",
+        issuer_url: "https://update-keep.example.com",
+        client_id: "cid-keep",
+        client_secret: "",
+        scopes: "openid profile",
+      });
+      const res = await routeOidcProvider(
+        updateReq,
+        "/api/adm/oidc-provider/update",
+      );
+      assertEquals(res.status, 200);
+      const body = await res.json();
+      assertEquals(body.ok, true);
+    });
+
+    it("updates a provider replacing secret when client_secret is provided", async () => {
+      // Add first
+      const addReq = makeRequest("POST", "/api/adm/oidc-provider/add", {
+        name: "Update SSO Replace Secret",
+        issuer_url: "https://update-replace.example.com",
+        client_id: "cid-replace",
+        client_secret: "old-secret",
+        scopes: "openid",
+      });
+      await routeOidcProvider(addReq, "/api/adm/oidc-provider/add");
+
+      const listReq = new Request(
+        "http://test/api/adm/oidc-provider/list",
+        { method: "GET" },
+      );
+      const listRes = await routeOidcProvider(
+        listReq,
+        "/api/adm/oidc-provider/list",
+      );
+      const providers = await listRes.json();
+      const id = providers[0].id;
+
+      // Update with new client_secret → should replace
+      const updateReq = makeRequest("POST", "/api/adm/oidc-provider/update", {
+        id,
+        name: "Update SSO Replace Secret Renamed",
+        issuer_url: "https://update-replace.example.com",
+        client_id: "cid-replace",
+        client_secret: "new-secret",
+        scopes: "openid profile email",
+      });
+      const res = await routeOidcProvider(
+        updateReq,
+        "/api/adm/oidc-provider/update",
+      );
+      assertEquals(res.status, 200);
+      const body = await res.json();
+      assertEquals(body.ok, true);
+    });
+
+    it("returns 400 for update without id", async () => {
+      const req = makeRequest("POST", "/api/adm/oidc-provider/update", {
+        name: "No Id",
+      });
+      const res = await routeOidcProvider(
+        req,
+        "/api/adm/oidc-provider/update",
+      );
+      assertEquals(res.status, 400);
+    });
   },
 );

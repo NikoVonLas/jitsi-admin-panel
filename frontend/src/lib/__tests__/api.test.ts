@@ -179,7 +179,7 @@ describe('listFiltered', () => {
       identity_id: 'i1',
       session_date: '2024-06-01',
     });
-    const payload = mockHttpPost.mock.calls[0][1];
+    const payload = mockHttpPost.mock.calls[0][1] as Record<string, unknown>;
     expect(payload.has_session).toBe(true);
     expect(payload.room_id).toBe('r1');
     expect(payload.domain_id).toBe('d1');
@@ -197,7 +197,7 @@ describe('listFiltered', () => {
       room_id: '',
       domain_id: '',
     });
-    const payload = mockHttpPost.mock.calls[0][1];
+    const payload = mockHttpPost.mock.calls[0][1] as Record<string, unknown>;
     expect(payload.room_id).toBeNull();
     expect(payload.domain_id).toBeNull();
   });

@@ -68,6 +68,14 @@ describe(
       assertEquals(secret, undefined);
     });
 
+    it("getSettingValue returns empty string for missing key", async () => {
+      const { getSettingValue } = await import(
+        "../../../lib/database/setting.ts"
+      );
+      const val = await getSettingValue("nonexistent_key_xyz");
+      assertEquals(val, "");
+    });
+
     it("returns 404 for unknown path", async () => {
       const req = makeRequest("POST", "/api/adm/setting/unknown", {});
       const res = await handleSetting(req, "/api/adm/setting/unknown");
