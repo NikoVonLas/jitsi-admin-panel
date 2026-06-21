@@ -79,4 +79,14 @@ flows, and decision rationale.
   2. `npm run build` (frontend)
   3. `npm run i18n:lint` (frontend)
   4. `npm run test:coverage` (frontend — requires Node 20 via nvm)
-  API tests require PostgreSQL and are verified in CI only.
+  5. API tests — spin up Postgres via Docker, then run:
+     ```
+     docker run --rm -d --name jitsi-test-pg \
+       -e POSTGRES_DB=jitsi_test -e POSTGRES_USER=jitsi -e POSTGRES_PASSWORD=test \
+       -p 5432:5432 postgres:17
+     docker exec -i jitsi-test-pg psql -U jitsi -d jitsi_test \
+       < api/database/02-create-jitsi-tables.sql
+     deno task migrate:test   # from api/
+     deno task test:coverage  # from api/
+     docker rm -f jitsi-test-pg
+     ```
