@@ -16,7 +16,7 @@ describe('useIsMobile', () => {
     Object.defineProperty(globalThis, 'matchMedia', {
       writable: true,
       value: vi.fn((query: string) => ({
-        matches: query.includes('991px') ? false : false,
+        matches: false,
         media: query,
         onchange: null,
         addListener: vi.fn(),
