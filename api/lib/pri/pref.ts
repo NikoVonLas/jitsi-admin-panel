@@ -29,6 +29,6 @@ export default function routePref(
   } else if (path === `${PRE}/update`) {
     return wrapper(update, req, identityId);
   } else {
-    return notFound();
+    return Promise.resolve(notFound());
   }
 }

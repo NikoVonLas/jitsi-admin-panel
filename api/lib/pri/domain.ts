@@ -120,6 +120,6 @@ export default function routeDomain(
   } else if (path === `${PRE}/disable`) {
     return wrapper(disable, req, identityId);
   } else {
-    return notFound();
+    return Promise.resolve(notFound());
   }
 }

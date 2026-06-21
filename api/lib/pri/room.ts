@@ -292,6 +292,6 @@ export default function routeRoom(
   } else if (path === `${PRE}/reset/hostkey`) {
     return wrapper(resetHostKey, req, identityId);
   } else {
-    return notFound();
+    return Promise.resolve(notFound());
   }
 }

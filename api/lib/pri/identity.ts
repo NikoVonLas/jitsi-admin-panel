@@ -46,6 +46,6 @@ export default function routeIdentity(
   } else if (path === `${PRE}/search`) {
     return wrapper(search, req, identityId);
   } else {
-    return notFound();
+    return Promise.resolve(notFound());
   }
 }

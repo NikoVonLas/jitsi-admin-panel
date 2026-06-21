@@ -364,6 +364,6 @@ export default function routeProfile(
   } else if (path === `${PRE}/favicon/reset`) {
     return resetFavicon(req);
   } else {
-    return notFound();
+    return Promise.resolve(notFound());
   }
 }

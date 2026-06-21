@@ -34,6 +34,6 @@ export default function handleSetting(
   } else if (path === `${PRE}/update`) {
     return wrapper(update, req);
   } else {
-    return notFound();
+    return Promise.resolve(notFound());
   }
 }
