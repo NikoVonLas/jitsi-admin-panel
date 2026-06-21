@@ -88,6 +88,8 @@ jobs:
       - name: Run tests with coverage
         run: deno task test:coverage
         working-directory: api
+      - name: Fix lcov paths (strip file:// URI prefix)
+        run: sed -i "s|SF:file://$(pwd)/||g" api/coverage/lcov.info
       - name: Upload API coverage
         uses: actions/upload-artifact@v4
         with:
