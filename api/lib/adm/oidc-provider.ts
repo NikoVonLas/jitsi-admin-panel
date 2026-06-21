@@ -17,7 +17,7 @@ function sanitize(p: Awaited<ReturnType<typeof listOidcProviders>>[number]) {
 }
 
 // -----------------------------------------------------------------------------
-async function handleList(req: Request): Promise<Response> {
+function handleList(req: Request): Promise<Response> {
   return wrapper(async () => {
     const providers = await listOidcProviders();
     return providers.map(sanitize);
@@ -103,11 +103,11 @@ const ROUTES: Record<string, (req: Request) => Promise<Response>> = {
   [`${PRE}/del`]: handleDel,
 };
 
-export default async function handleOidcProvider(
+export default function handleOidcProvider(
   req: Request,
   path: string,
 ): Promise<Response> {
   const handler = ROUTES[path];
-  if (!handler) return notFound();
+  if (!handler) return Promise.resolve(notFound());
   return handler(req);
 }

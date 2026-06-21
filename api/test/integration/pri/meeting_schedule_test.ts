@@ -93,8 +93,8 @@ describe("pri/meeting/schedule", () => {
   beforeEach(async () => {
     const { query } = await import("../../../lib/database/common.ts");
     await query({
-      text: `DELETE FROM meeting_schedule WHERE identity_id = $1`,
-      args: [identityId],
+      text: `DELETE FROM meeting_schedule WHERE meeting_id = $1`,
+      args: [meetingId],
     });
   });
 

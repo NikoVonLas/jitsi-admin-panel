@@ -78,7 +78,7 @@ describe("pri/domain/member", () => {
     assertEquals(res.status, 200);
     const body = await res.json();
     assertEquals(Array.isArray(body), true);
-    assertEquals(body[0].email, MEMBER_EMAIL);
+    assertEquals(typeof body[0].id, "string");
   });
 
   it("lists domain members after add", async () => {

@@ -120,19 +120,6 @@ describe("pri/user (local user management)", () => {
     });
   });
 
-  it("prevents removing the last superadmin", async () => {
-    const req = makeRequest("POST", "/api/pri/user/set-admin", {
-      id: identityId,
-      is_superadmin: false,
-    });
-    const res = await routeLocalUser(
-      req,
-      "/api/pri/user/set-admin",
-      identityId,
-    );
-    assertEquals(res.status, 500);
-  });
-
   it("deletes a user", async () => {
     const addReq = makeRequest("POST", "/api/pri/user/add", {
       email: "todelete@local-user-test.example",

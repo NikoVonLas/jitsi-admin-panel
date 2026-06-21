@@ -83,8 +83,13 @@ describe("pri/meeting/request", () => {
 
   beforeEach(async () => {
     const { query } = await import("../../../lib/database/common.ts");
+    // Clean requests and any membership created by the accepts test
     await query({
       text: `DELETE FROM meeting_request WHERE identity_id = $1`,
+      args: [identityId],
+    });
+    await query({
+      text: `DELETE FROM meeting_member WHERE identity_id = $1`,
       args: [identityId],
     });
   });
