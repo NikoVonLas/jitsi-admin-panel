@@ -9,7 +9,7 @@ Admin panel for managing Jitsi Meet instances. Monorepo: Deno backend + React fr
 | api-adm | Deno REST API | 8000 (internal) |
 | api-pri | Deno REST API | 8001 (internal) |
 | api-pub | Deno REST API | 8002 (internal) |
-| ui      | React / Caddy | 80, 443         |
+| web     | Caddy + React | 80, 443         |
 | db      | PostgreSQL 17 | — (internal)    |
 
 ## Commands

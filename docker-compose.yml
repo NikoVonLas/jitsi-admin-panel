@@ -90,10 +90,10 @@ services:
     networks:
       - intranet
 
-  ui:
+  web:
     build:
       context: .
-      dockerfile: docker/frontend.Dockerfile
+      dockerfile: docker/web.Dockerfile
     restart: always
     ports:
       - "80:80"

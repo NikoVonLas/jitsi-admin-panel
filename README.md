@@ -68,12 +68,12 @@ All configuration is done via environment variables. Copy `.env.example` to `.en
 
 ## Architecture
 
-All traffic enters through Caddy (`ui`), which is the single public entry point and reverse proxy.
+All traffic enters through Caddy (`web`), which is the single public entry point and reverse proxy.
 
 ```
                 ┌─────────────────────────────────────────┐
                 │          Docker network: intranet        │
-Browser ──443───► ui (Caddy)  ──/api/adm/──► api-adm:8000 │
+Browser ──443───► web (Caddy) ──/api/adm/──► api-adm:8000 │
                 │             ──/api/pri/──► api-pri:8001  │
                 │             ──/api/pub/──► api-pub:8002  │
                 │                               │          │
@@ -87,7 +87,7 @@ Browser ──443───► ui (Caddy)  ──/api/adm/──► api-adm:8000 
 | `api-adm` | Auth gateway and control plane. Runs DB migrations and housekeeping. Superadmin-only. |
 | `api-pri` | Main worker. All routes require a valid JWT. Covers rooms, meetings, schedules, intercom. |
 | `api-pub` | Fully public, no auth. Serves avatars, favicons, iCal files, and guest join pages. |
-| `ui` | React 19 SPA served by Caddy. Caddy handles TLS and reverse-proxies all `/api/*` routes. |
+| `web` | Caddy — serves the React 19 SPA as static files and reverse-proxies all `/api/*` routes. Sole public entry point. |
 | `db` | PostgreSQL 17. Schema initialised on first boot; further migrations run automatically. |
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full service map, data flow, and design decisions.
@@ -129,7 +129,7 @@ watchtower:
   environment:
     - WATCHTOWER_CLEANUP=true
     - WATCHTOWER_INCLUDE_RESTARTING=true
-  command: --interval 86400 api-adm api-pri api-pub ui
+  command: --interval 86400 api-adm api-pri api-pub web
 ```
 
 Adjust `--interval` (seconds) to control how often it checks for updates.

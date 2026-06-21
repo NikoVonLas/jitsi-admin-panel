@@ -80,8 +80,8 @@ services:
     networks:
       - intranet
 
-  ui:
-    image: ghcr.io/nikovonlas/jitsi-admin-panel/ui:latest
+  web:
+    image: ghcr.io/nikovonlas/jitsi-admin-panel/web:latest
     restart: always
     ports:
       - "80:80"
@@ -111,7 +111,7 @@ services:
   #   environment:
   #     - WATCHTOWER_CLEANUP=true
   #     - WATCHTOWER_INCLUDE_RESTARTING=true
-  #   command: --interval 86400 api-adm api-pri api-pub ui
+  #   command: --interval 86400 api-adm api-pri api-pub web
 
 volumes:
   data:
