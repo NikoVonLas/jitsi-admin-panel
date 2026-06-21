@@ -105,7 +105,7 @@ export function streamIntercom(
           );
           if (rows.length > 0) {
             const last = rows.at(-1);
-            if (last.microsec_created_at > microsec) {
+            if (last && last.microsec_created_at > microsec) {
               microsec = last.microsec_created_at;
             }
             controller.enqueue(
