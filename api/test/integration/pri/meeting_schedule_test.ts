@@ -72,6 +72,50 @@ function makeScheduleAttr() {
   return { type: "o", duration: "60", started_at: startedAt };
 }
 
+function makeDailyAttr() {
+  return {
+    type: "d",
+    duration: "60",
+    started_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    rep_end_type: "x",
+    rep_end_x: "3",
+    rep_every: "1",
+  };
+}
+
+function makeWeeklyAttr() {
+  const startedAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+  const repEndAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+    .toISOString();
+  return {
+    type: "w",
+    duration: "60",
+    started_at: startedAt,
+    rep_end_type: "at",
+    rep_end_at: repEndAt,
+    rep_every: "1",
+    rep_days: "1111111",
+    timezone_offset: "0",
+  };
+}
+
+function makeMonthlyAttr() {
+  const startedAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+  const repEndAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
+    .toISOString();
+  return {
+    type: "m",
+    duration: "60",
+    started_at: startedAt,
+    rep_end_type: "at",
+    rep_end_at: repEndAt,
+    rep_every: "1",
+    timezone_offset: "0",
+    rep_month_mode: "d",
+    rep_month_day: "15",
+  };
+}
+
 describe("pri/meeting/schedule", {
   sanitizeResources: false,
   sanitizeOps: false,
@@ -321,5 +365,70 @@ describe("pri/meeting/schedule", {
       identityId,
     );
     assertEquals(res.status, 404);
+  });
+
+  it("adds a daily schedule", async () => {
+    const req = makeRequest("POST", "/api/pri/meeting/schedule/add", {
+      meeting_id: meetingId,
+      schedule_attr: makeDailyAttr(),
+    });
+    const res = await routeMeetingSchedule(
+      req,
+      "/api/pri/meeting/schedule/add",
+      identityId,
+    );
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(Array.isArray(body), true);
+    assertEquals(typeof body[0].id, "string");
+  });
+
+  it("adds a weekly schedule", async () => {
+    const req = makeRequest("POST", "/api/pri/meeting/schedule/add", {
+      meeting_id: meetingId,
+      schedule_attr: makeWeeklyAttr(),
+    });
+    const res = await routeMeetingSchedule(
+      req,
+      "/api/pri/meeting/schedule/add",
+      identityId,
+    );
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(Array.isArray(body), true);
+    assertEquals(typeof body[0].id, "string");
+  });
+
+  it("adds a monthly schedule", async () => {
+    const req = makeRequest("POST", "/api/pri/meeting/schedule/add", {
+      meeting_id: meetingId,
+      schedule_attr: makeMonthlyAttr(),
+    });
+    const res = await routeMeetingSchedule(
+      req,
+      "/api/pri/meeting/schedule/add",
+      identityId,
+    );
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(Array.isArray(body), true);
+    assertEquals(typeof body[0].id, "string");
+  });
+
+  it("rejects unknown schedule type", async () => {
+    const req = makeRequest("POST", "/api/pri/meeting/schedule/add", {
+      meeting_id: meetingId,
+      schedule_attr: {
+        type: "z",
+        duration: "60",
+        started_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      },
+    });
+    const res = await routeMeetingSchedule(
+      req,
+      "/api/pri/meeting/schedule/add",
+      identityId,
+    );
+    assertEquals(res.status, 500);
   });
 });
