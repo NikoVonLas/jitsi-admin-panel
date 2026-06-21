@@ -31,5 +31,5 @@ jobs:
           config: .hadolint.yaml
       - uses: hadolint/hadolint-action@v3.1.0
         with:
-          dockerfile: docker/frontend.Dockerfile
+          dockerfile: docker/web.Dockerfile
           config: .hadolint.yaml
