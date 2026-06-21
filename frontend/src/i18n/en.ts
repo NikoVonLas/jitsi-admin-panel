@@ -14,6 +14,8 @@ const en: Record<string, string> = {
   'pref.theme_light': 'Light',
   'pref.theme_dark': 'Dark',
   'pref.language': 'Language',
+  'pref.week_start': 'First Day of Week',
+  'pref.week_start_browser': 'Auto',
 
   // Subheader tooltips
   'sub.add': 'Add',
@@ -99,10 +101,7 @@ const en: Record<string, string> = {
   'form.email_optional': 'Email (optional)',
   'form.avatar_remove': 'Remove avatar',
   'form.display_name': 'Display name',
-  'form.contact_email': 'Contact Email',
-  'form.galaxy_fqdn': 'Application Domain (FQDN)',
-  'form.galaxy_scheme': 'Scheme',
-  'form.week_start': 'First Day of Week',
+
   'form.oidc_issuer_url': 'Issuer URL',
   'form.oidc_client_id': 'Client ID',
   'form.oidc_client_secret': 'Client Secret',
@@ -202,7 +201,6 @@ const en: Record<string, string> = {
   'empty.domains_suffix': ' to add one.',
 
   // Settings
-  'setting.general': 'General',
   'setting.mailer': 'Email (SMTP)',
   'setting.appearance': 'Appearance',
   'setting.auth': 'Authentication',

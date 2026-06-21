@@ -25,17 +25,17 @@ describe(
 
     it("POST /api/adm/setting/update saves allowed keys", async () => {
       const req = makeRequest("POST", "/api/adm/setting/update", {
-        contact_email: "admin@example.com",
+        mailer_from: "test@example.com",
       });
       const res = await handleSetting(req, "/api/adm/setting/update");
       assertEquals(res.status, 200);
       const body = await res.json();
       assertEquals(Array.isArray(body), true);
-      // contact_email should appear in the result
+      // mailer_from should appear in the result
       const item = (body as { mkey: string; mvalue: string }[]).find(
-        (s) => s.mkey === "contact_email",
+        (s) => s.mkey === "mailer_from",
       );
-      assertEquals(item?.mvalue, "admin@example.com");
+      assertEquals(item?.mvalue, "test@example.com");
     });
 
     it("POST /api/adm/setting/update ignores unknown keys", async () => {

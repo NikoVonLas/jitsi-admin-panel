@@ -1,20 +1,10 @@
 import { getSettings } from "../database/setting.ts";
-import {
-  APP_FQDN,
-  APP_SCHEME,
-  CONTACT_EMAIL,
-  LANG,
-  WEEK_START,
-} from "../../config.ts";
+import { LANG } from "../../config.ts";
 import { MAILER_FROM, MAILER_TRANSPORT_OPTIONS } from "../../config.mailer.ts";
 
 // -----------------------------------------------------------------------------
 export const ALLOWED_KEYS = new Set([
-  "contact_email",
-  "app_fqdn",
-  "app_scheme",
   "lang",
-  "week_start",
   "mailer_host",
   "mailer_port",
   "mailer_secure",
@@ -37,11 +27,7 @@ export const SECRET_KEYS = new Set(["mailer_pass"]);
 
 // Default values from environment variables
 export const ENV_DEFAULTS: Record<string, string> = {
-  contact_email: CONTACT_EMAIL,
-  app_fqdn: APP_FQDN,
-  app_scheme: APP_SCHEME,
   lang: LANG,
-  week_start: String(WEEK_START),
   mailer_host: MAILER_TRANSPORT_OPTIONS.host,
   mailer_port: String(MAILER_TRANSPORT_OPTIONS.port),
   mailer_secure: String(MAILER_TRANSPORT_OPTIONS.secure),

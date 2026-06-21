@@ -20,8 +20,10 @@ vi.mock('../../../store/pref', () => ({
   usePrefStore: () => ({
     lang: 'en',
     theme: 'system',
+    weekStart: null,
     setLang: vi.fn().mockResolvedValue(undefined),
     setTheme: vi.fn().mockResolvedValue(undefined),
+    setWeekStart: vi.fn().mockResolvedValue(undefined),
   }),
 }));
 
@@ -76,6 +78,13 @@ describe('ButtonAccountOidc', () => {
     await waitFor(() => screen.getByText('John'));
     fireEvent.click(document.querySelector('button')!);
     await waitFor(() => expect(screen.getByText('pref.language')).toBeInTheDocument());
+  });
+
+  it('shows week start options in drawer', async () => {
+    render(<ButtonAccountOidc />);
+    await waitFor(() => screen.getByText('John'));
+    fireEvent.click(document.querySelector('button')!);
+    await waitFor(() => expect(screen.getByText('pref.week_start')).toBeInTheDocument());
   });
 
   it('navigates to /oidc/logout on logout click', async () => {

@@ -31,7 +31,7 @@ function avatarColor(name: string): string {
 export default function ButtonAccountOidc() {
   const t = useTr();
   const navigate = useNavigate();
-  const { lang, theme, setLang, setTheme } = usePrefStore();
+  const { lang, theme, weekStart, setLang, setTheme, setWeekStart } = usePrefStore();
   const [open, setOpen] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(false);
@@ -59,6 +59,10 @@ export default function ButtonAccountOidc() {
     setLang(val).catch(() => {});
   }
 
+  function handleWeekStart(val: string) {
+    setWeekStart(val === 'browser' ? null : Number(val)).catch(() => {});
+  }
+
   const themeOptions = [
     { value: 'system', label: t('pref.theme_system') },
     { value: 'light', label: t('pref.theme_light') },
@@ -69,6 +73,14 @@ export default function ButtonAccountOidc() {
     { value: 'en', label: t('setting.lang_en') },
     { value: 'ru', label: t('setting.lang_ru') },
   ];
+
+  const weekStartOptions = [
+    { value: 'browser', label: t('pref.week_start_browser') },
+    { value: '1', label: t('setting.week_mon') },
+    { value: '0', label: t('setting.week_sun') },
+  ];
+
+  const weekStartValue = weekStart === null ? 'browser' : String(weekStart);
 
   return (
     <>
@@ -110,6 +122,13 @@ export default function ButtonAccountOidc() {
             {t('pref.language')}
           </Text>
           <Segmented options={langOptions} value={lang ?? 'en'} onChange={(v) => handleLang(v as Lang)} block />
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+            {t('pref.week_start')}
+          </Text>
+          <Segmented options={weekStartOptions} value={weekStartValue} onChange={(v) => handleWeekStart(v as string)} block />
         </div>
 
         <Divider />

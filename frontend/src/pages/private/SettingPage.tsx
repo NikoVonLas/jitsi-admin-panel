@@ -10,21 +10,20 @@ import AlertWarning from '../../components/common/AlertWarning';
 import Spinner from '../../components/common/Spinner';
 import DomainList from '../../components/pri/domain/DomainList';
 import DomainAdd from '../../components/pri/domain/DomainAdd';
-import SettingGeneral from '../../components/pri/setting/SettingGeneral';
 import SettingMailer from '../../components/pri/setting/SettingMailer';
 import SettingAppearance from '../../components/pri/setting/SettingAppearance';
 import SettingAuth from '../../components/pri/setting/SettingAuth';
 import SettingUsers from '../../components/pri/setting/SettingUsers';
 
-type Tab = 'general' | 'appearance' | 'domains' | 'mailer' | 'auth' | 'users';
+type Tab = 'appearance' | 'domains' | 'mailer' | 'auth' | 'users';
 
 export default function SettingPage() {
   const t = useTr();
   const navigate = useNavigate();
   const { isSuperAdmin } = useRoleStore();
   const urlTab = new URLSearchParams(globalThis.location.search).get('tab') as Tab;
-  const validTabs: Tab[] = ['general', 'appearance', 'domains', 'mailer', 'auth', 'users'];
-  const [activeTab, setActiveTab] = useState<Tab>(validTabs.includes(urlTab) ? urlTab : 'general');
+  const validTabs: Tab[] = ['appearance', 'domains', 'mailer', 'auth', 'users'];
+  const [activeTab, setActiveTab] = useState<Tab>(validTabs.includes(urlTab) ? urlTab : 'domains');
   const [domains, setDomains] = useState<Domain333[]>([]);
   const [domainsError, setDomainsError] = useState(false);
   const [settings, setSettings] = useState<{ mkey: string; mvalue: string }[]>([]);
@@ -78,7 +77,6 @@ export default function SettingPage() {
   }
 
   function renderActiveTab() {
-    if (activeTab === 'general') return <SettingGeneral settings={settings} />;
     if (activeTab === 'appearance') return <SettingAppearance settings={settings} />;
     if (activeTab === 'domains') {
       if (domainsError) return <AlertWarning type="error">{t('err.generic')}</AlertWarning>;
@@ -91,12 +89,11 @@ export default function SettingPage() {
   }
 
   const tabItems = [
-    { key: 'general', label: t('setting.general') },
-    { key: 'appearance', label: t('setting.appearance') },
     { key: 'domains', label: t('nav.domains') },
-    { key: 'mailer', label: t('setting.mailer') },
-    { key: 'auth', label: t('setting.auth') || 'Authentication' },
     ...(authLocal ? [{ key: 'users', label: t('setting.users') }] : []),
+    { key: 'auth', label: t('setting.auth') || 'Authentication' },
+    { key: 'mailer', label: t('setting.mailer') },
+    { key: 'appearance', label: t('setting.appearance') },
   ];
 
   return (

@@ -25,18 +25,19 @@ const mockGet = apiGet as ReturnType<typeof vi.fn>;
 describe('usePrefStore', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    usePrefStore.setState({ lang: null, theme: 'system', loaded: false });
+    usePrefStore.setState({ lang: null, theme: 'system', weekStart: null, loaded: false });
   });
 
   it('initial state', () => {
     const { result } = renderHook(() => usePrefStore());
     expect(result.current.lang).toBeNull();
     expect(result.current.theme).toBe('system');
+    expect(result.current.weekStart).toBeNull();
     expect(result.current.loaded).toBe(false);
   });
 
-  it('load populates lang and theme from API', async () => {
-    mockGet.mockResolvedValueOnce({ pref_lang: 'ru', pref_theme: 'dark' });
+  it('load populates lang, theme, and weekStart from API', async () => {
+    mockGet.mockResolvedValueOnce({ pref_lang: 'ru', pref_theme: 'dark', pref_week_start: 0 });
 
     const { result } = renderHook(() => usePrefStore());
     await act(async () => {
@@ -45,6 +46,7 @@ describe('usePrefStore', () => {
 
     expect(result.current.lang).toBe('ru');
     expect(result.current.theme).toBe('dark');
+    expect(result.current.weekStart).toBe(0);
     expect(result.current.loaded).toBe(true);
   });
 
@@ -58,10 +60,11 @@ describe('usePrefStore', () => {
 
     expect(result.current.lang).toBeNull();
     expect(result.current.theme).toBe('system');
+    expect(result.current.weekStart).toBeNull();
   });
 
   it('does not re-fetch when already loaded', async () => {
-    usePrefStore.setState({ loaded: true, lang: 'en', theme: 'light' });
+    usePrefStore.setState({ loaded: true, lang: 'en', theme: 'light', weekStart: 1 });
 
     const { result } = renderHook(() => usePrefStore());
     await act(async () => {
@@ -88,7 +91,7 @@ describe('usePrefStore', () => {
 
   it('setTheme updates theme in store and calls API', async () => {
     mockAction.mockResolvedValue({});
-    usePrefStore.setState({ lang: 'en', theme: 'system' });
+    usePrefStore.setState({ lang: 'en', theme: 'system', weekStart: null });
 
     const { result } = renderHook(() => usePrefStore());
     await act(async () => {
@@ -99,6 +102,22 @@ describe('usePrefStore', () => {
     expect(mockAction).toHaveBeenCalledWith(
       '/api/pri/pref/update',
       expect.objectContaining({ theme: 'dark' }),
+    );
+  });
+
+  it('setWeekStart updates weekStart in store and calls API', async () => {
+    mockAction.mockResolvedValue({});
+    usePrefStore.setState({ lang: 'en', theme: 'system', weekStart: null });
+
+    const { result } = renderHook(() => usePrefStore());
+    await act(async () => {
+      await result.current.setWeekStart(0);
+    });
+
+    expect(result.current.weekStart).toBe(0);
+    expect(mockAction).toHaveBeenCalledWith(
+      '/api/pri/pref/update',
+      expect.objectContaining({ week_start: 0 }),
     );
   });
 });

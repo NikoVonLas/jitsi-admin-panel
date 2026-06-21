@@ -40,10 +40,6 @@ vi.mock('../../../components/pri/domain/DomainAdd', () => ({
   default: () => <div>DomainAdd</div>,
 }));
 
-vi.mock('../../../components/pri/setting/SettingGeneral', () => ({
-  default: () => <div data-testid="setting-general">SettingGeneral</div>,
-}));
-
 vi.mock('../../../components/pri/setting/SettingMailer', () => ({
   default: () => <div>SettingMailer</div>,
 }));
@@ -79,8 +75,8 @@ describe('SettingPage', () => {
     await waitFor(() => expect(screen.getByText('page.settings')).toBeInTheDocument());
   });
 
-  it('renders general settings tab by default', async () => {
+  it('renders domains tab by default', async () => {
     render(<SettingPage />);
-    await waitFor(() => expect(screen.getByTestId('setting-general')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('domain-list')).toBeInTheDocument());
   });
 });

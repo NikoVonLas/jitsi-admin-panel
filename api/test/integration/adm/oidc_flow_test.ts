@@ -75,12 +75,11 @@ describe(
     });
 
     // -------------------------------------------------------------------------
-    it("handleConfigOidc returns lang and week_start", async () => {
+    it("handleConfigOidc returns lang", async () => {
       const res = await handleConfigOidc();
       assertEquals(res.status, 200);
       const body = await res.json();
       assertEquals(Array.isArray(body), true);
-      assertEquals(typeof body[0].week_start, "number");
       assertEquals(typeof body[0].lang, "string");
     });
 

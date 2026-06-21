@@ -7,15 +7,23 @@ const PRE = "/api/pri/pref";
 // -----------------------------------------------------------------------------
 async function get(_req: Request, identityId: string): Promise<unknown> {
   const rows = await getPref(identityId);
-  return rows[0] ?? { pref_lang: null, pref_theme: null };
+  return rows[0] ??
+    { pref_lang: null, pref_theme: null, pref_week_start: null };
 }
 
 // -----------------------------------------------------------------------------
 async function update(req: Request, identityId: string): Promise<unknown> {
   const pl = await req.json();
-  await updatePref(identityId, pl.lang ?? null, pl.theme ?? null);
+  const weekStart = pl.week_start != null ? Number(pl.week_start) : null;
+  await updatePref(
+    identityId,
+    pl.lang ?? null,
+    pl.theme ?? null,
+    weekStart,
+  );
   const rows = await getPref(identityId);
-  return rows[0] ?? { pref_lang: null, pref_theme: null };
+  return rows[0] ??
+    { pref_lang: null, pref_theme: null, pref_week_start: null };
 }
 
 // -----------------------------------------------------------------------------

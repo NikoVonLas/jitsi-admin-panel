@@ -25,11 +25,12 @@ describe("pri/pref", { sanitizeResources: false, sanitizeOps: false }, () => {
     const res = await routePref(req, "/api/pri/pref/get", identityId);
     assertEquals(res.status, 200);
     const body = await res.json();
-    // Default prefs — pref_lang and pref_theme may be null
+    // Default prefs — all fields may be null
     assertEquals(
       body.pref_lang === null || typeof body.pref_lang === "string",
       true,
     );
+    assertEquals(body.pref_week_start, null);
   });
 
   it("POST /api/pri/pref/update saves lang preference", async () => {
@@ -49,6 +50,30 @@ describe("pri/pref", { sanitizeResources: false, sanitizeOps: false }, () => {
     assertEquals(res.status, 200);
     const body = await res.json();
     assertEquals(body.pref_theme, "dark");
+  });
+
+  it("POST /api/pri/pref/update saves week_start preference", async () => {
+    const req = makeRequest("POST", "/api/pri/pref/update", {
+      lang: "en",
+      theme: "light",
+      week_start: 0,
+    });
+    const res = await routePref(req, "/api/pri/pref/update", identityId);
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.pref_week_start, 0);
+  });
+
+  it("POST /api/pri/pref/update clears week_start when null", async () => {
+    const req = makeRequest("POST", "/api/pri/pref/update", {
+      lang: "en",
+      theme: "light",
+      week_start: null,
+    });
+    const res = await routePref(req, "/api/pri/pref/update", identityId);
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.pref_week_start, null);
   });
 
   it("returns 404 for unknown path", async () => {

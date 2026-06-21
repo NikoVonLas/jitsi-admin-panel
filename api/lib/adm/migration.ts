@@ -767,6 +767,20 @@ async function migrateTo2026061803() {
 }
 
 // -----------------------------------------------------------------------------
+// Move week_start to per-user pref; drop obsolete setting keys.
+async function migrateTo2026062201() {
+  const upgradeTo = "20260622.01";
+  const sqls = [
+    `ALTER TABLE identity
+       ADD COLUMN IF NOT EXISTS pref_week_start smallint DEFAULT NULL`,
+    `DELETE FROM setting
+       WHERE mkey IN ('contact_email', 'app_fqdn', 'app_scheme', 'week_start')`,
+  ];
+
+  await migrateTo(upgradeTo, sqls);
+}
+
+// -----------------------------------------------------------------------------
 export default async function runMigration() {
   console.log("migration...");
 
@@ -804,4 +818,5 @@ export default async function runMigration() {
   await migrateTo2026061803();
   await migrateTo2026061804();
   await migrateTo2026061805();
+  await migrateTo2026062201();
 }
