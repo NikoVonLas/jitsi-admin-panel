@@ -237,9 +237,15 @@ async function disable(req: Request, identityId: string): Promise<unknown> {
 }
 
 // -----------------------------------------------------------------------------
-async function handleAdd(req: Request, identityId: string): Promise<Response> {
+type WriteFn = (req: Request, identityId: string) => Promise<unknown>;
+
+async function handleWrite(
+  fn: WriteFn,
+  req: Request,
+  identityId: string,
+): Promise<Response> {
   try {
-    return ok(JSON.stringify(await add(req, identityId)));
+    return ok(JSON.stringify(await fn(req, identityId)));
   } catch (e) {
     if ((e as { fields?: { code?: string } })?.fields?.code === "23505") {
       return conflict();
@@ -248,19 +254,12 @@ async function handleAdd(req: Request, identityId: string): Promise<Response> {
   }
 }
 
-// -----------------------------------------------------------------------------
-async function handleUpdate(
-  req: Request,
-  identityId: string,
-): Promise<Response> {
-  try {
-    return ok(JSON.stringify(await update(req, identityId)));
-  } catch (e) {
-    if ((e as { fields?: { code?: string } })?.fields?.code === "23505") {
-      return conflict();
-    }
-    return internalServerError();
-  }
+function handleAdd(req: Request, identityId: string): Promise<Response> {
+  return handleWrite(add, req, identityId);
+}
+
+function handleUpdate(req: Request, identityId: string): Promise<Response> {
+  return handleWrite(update, req, identityId);
 }
 
 // -----------------------------------------------------------------------------

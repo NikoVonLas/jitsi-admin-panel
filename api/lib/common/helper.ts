@@ -167,9 +167,10 @@ export async function generateRoomUrl(
 }
 
 // -----------------------------------------------------------------------------
-async function generateMeetingUrlJaasHost(
+async function generateMeetingUrlJaas(
   linkset: MeetingLinkset,
   exp: number,
+  isHost: boolean,
 ): Promise<string> {
   const sub = encodeURIComponent(linkset.domain_attr.jaas_app_id);
   let url = encodeURI(linkset.domain_attr.jaas_url);
@@ -178,7 +179,7 @@ async function generateMeetingUrlJaasHost(
   if (linkset.has_suffix) roomName = `${roomName}-${linkset.suffix}`;
   url = `${url}/${sub}/${roomName}`;
 
-  const jwt = await generateHostTokenJaas({
+  const tokenArgs = {
     jaasAppId: linkset.domain_attr.jaas_app_id,
     jaasKid: linkset.domain_attr.jaas_kid,
     jaasKey: linkset.domain_attr.jaas_key,
@@ -189,43 +190,19 @@ async function generateMeetingUrlJaasHost(
     username: linkset.profile_name,
     email: linkset.profile_email,
     exp,
-  });
+  };
+  const jwt = isHost
+    ? await generateHostTokenJaas(tokenArgs)
+    : await generateGuestTokenJaas(tokenArgs);
 
   return `${url}?jwt=${jwt}`;
 }
 
 // -----------------------------------------------------------------------------
-async function generateMeetingUrlJaasGuest(
+async function generateMeetingUrlToken(
   linkset: MeetingLinkset,
   exp: number,
-): Promise<string> {
-  const sub = encodeURIComponent(linkset.domain_attr.jaas_app_id);
-  let url = encodeURI(linkset.domain_attr.jaas_url);
-  let roomName = encodeURIComponent(linkset.room_name);
-
-  if (linkset.has_suffix) roomName = `${roomName}-${linkset.suffix}`;
-  url = `${url}/${sub}/${roomName}`;
-
-  const jwt = await generateGuestTokenJaas({
-    jaasAppId: linkset.domain_attr.jaas_app_id,
-    jaasKid: linkset.domain_attr.jaas_kid,
-    jaasKey: linkset.domain_attr.jaas_key,
-    jaasAlg: linkset.domain_attr.jaas_alg,
-    jaasAud: linkset.domain_attr.jaas_aud,
-    jaasIss: linkset.domain_attr.jaas_iss,
-    roomName,
-    username: linkset.profile_name,
-    email: linkset.profile_email,
-    exp,
-  });
-
-  return `${url}?jwt=${jwt}`;
-}
-
-// -----------------------------------------------------------------------------
-async function generateMeetingUrlTokenHost(
-  linkset: MeetingLinkset,
-  exp: number,
+  isHost: boolean,
 ): Promise<string> {
   let url = encodeURI(linkset.domain_attr.url);
   let roomName = encodeURIComponent(linkset.room_name);
@@ -233,7 +210,7 @@ async function generateMeetingUrlTokenHost(
   if (linkset.has_suffix) roomName = `${roomName}-${linkset.suffix}`;
   url = `${url}/${roomName}`;
 
-  const jwt = await generateHostTokenHS({
+  const tokenArgs = {
     appId: linkset.domain_attr.app_id,
     appSecret: linkset.domain_attr.app_secret,
     appAlg: linkset.domain_attr.app_alg,
@@ -242,41 +219,24 @@ async function generateMeetingUrlTokenHost(
     email: linkset.profile_email,
     exp,
     avatar: linkset.profile_avatar_url,
-  });
+  };
+  const jwt = isHost
+    ? await generateHostTokenHS(tokenArgs)
+    : await generateGuestTokenHS(tokenArgs);
 
   return `${url}?jwt=${jwt}`;
 }
 
 // -----------------------------------------------------------------------------
-async function generateMeetingUrlTokenGuest(
+function normalizeMeetingLinksetProfiles(
   linkset: MeetingLinkset,
-  exp: number,
-): Promise<string> {
-  let url = encodeURI(linkset.domain_attr.url);
-  let roomName = encodeURIComponent(linkset.room_name);
-
-  if (linkset.has_suffix) roomName = `${roomName}-${linkset.suffix}`;
-  url = `${url}/${roomName}`;
-
-  const jwt = await generateGuestTokenHS({
-    appId: linkset.domain_attr.app_id,
-    appSecret: linkset.domain_attr.app_secret,
-    appAlg: linkset.domain_attr.app_alg,
-    roomName,
-    username: linkset.profile_name,
-    email: linkset.profile_email,
-    exp,
-    avatar: linkset.profile_avatar_url,
-  });
-
-  return `${url}?jwt=${jwt}`;
-}
-
-// -----------------------------------------------------------------------------
-function normalizeMeetingLinksetProfiles(linkset: MeetingLinkset): void {
-  if (!linkset.profile_name) linkset.profile_name = "";
-  if (!linkset.profile_email) linkset.profile_email = "";
-  if (!linkset.profile_avatar_url) linkset.profile_avatar_url = "";
+): MeetingLinkset {
+  return {
+    ...linkset,
+    profile_name: linkset.profile_name || "",
+    profile_email: linkset.profile_email || "",
+    profile_avatar_url: linkset.profile_avatar_url || "",
+  };
 }
 
 // -----------------------------------------------------------------------------
@@ -284,14 +244,11 @@ async function resolveMeetingBaseUrl(
   linkset: MeetingLinkset,
   exp: number,
 ): Promise<string> {
-  if (linkset.auth_type === "jaas" && linkset.join_as === "host") {
-    return await generateMeetingUrlJaasHost(linkset, exp);
-  } else if (linkset.auth_type === "jaas") {
-    return await generateMeetingUrlJaasGuest(linkset, exp);
-  } else if (linkset.auth_type === "token" && linkset.join_as === "host") {
-    return await generateMeetingUrlTokenHost(linkset, exp);
+  const isHost = linkset.join_as === "host";
+  if (linkset.auth_type === "jaas") {
+    return await generateMeetingUrlJaas(linkset, exp, isHost);
   } else if (linkset.auth_type === "token") {
-    return await generateMeetingUrlTokenGuest(linkset, exp);
+    return await generateMeetingUrlToken(linkset, exp, isHost);
   }
 
   let roomName = encodeURIComponent(linkset.room_name);
@@ -330,15 +287,15 @@ export async function generateMeetingUrl(
   exp = 3600,
   additionalHash = "",
 ): Promise<string> {
-  normalizeMeetingLinksetProfiles(linkset);
+  const normalized = normalizeMeetingLinksetProfiles(linkset);
 
-  const url = await resolveMeetingBaseUrl(linkset, exp);
+  const url = await resolveMeetingBaseUrl(normalized, exp);
 
   // Exception for meet.jit.si, it doesn't support fragments correctly.
   // So, use only the link without any fragment.
-  if (linkset.domain_attr.url === "https://meet.jit.si") return url;
+  if (normalized.domain_attr.url === "https://meet.jit.si") return url;
 
-  return url + buildMeetingFragment(linkset, additionalHash);
+  return url + buildMeetingFragment(normalized, additionalHash);
 }
 
 // -----------------------------------------------------------------------------

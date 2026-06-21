@@ -61,25 +61,20 @@ export async function getVersion() {
   };
   const rows = await fetch(sql) as Meta[];
 
+  if (!rows[0]) throw new Error("database_version not found in metadata");
   return rows[0].mvalue;
 }
 
 // -----------------------------------------------------------------------------
 export function getLimit(limit: number): number {
-  if (!limit) {
-    limit = DEFAULT_LIST_SIZE;
-  } else if (limit > MAX_LIST_SIZE) {
-    limit = MAX_LIST_SIZE;
-  }
-
-  return limit + 0;
+  if (!limit) return DEFAULT_LIST_SIZE;
+  if (limit > MAX_LIST_SIZE) return MAX_LIST_SIZE;
+  return limit;
 }
 
 // -----------------------------------------------------------------------------
 export function getOffset(offset: number): number {
-  if (!offset) offset = 0;
-
-  return offset + 0;
+  return offset || 0;
 }
 
 // -----------------------------------------------------------------------------
