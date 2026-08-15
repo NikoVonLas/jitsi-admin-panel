@@ -153,11 +153,6 @@ interface MeetingScheduleBase {
 }
 
 // -----------------------------------------------------------------------------
-export interface MeetingSchedule111 extends MeetingScheduleBase {
-  code: string;
-}
-
-// -----------------------------------------------------------------------------
 export interface MeetingSchedule222 extends MeetingScheduleBase {
   meeting_id: string;
   membership_id: string | null;

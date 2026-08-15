@@ -42,7 +42,6 @@ const en: Record<string, string> = {
   'btn.show_schedules': 'Show schedules',
   'btn.set_default_profile': 'Set as default profile',
   'btn.update': 'Update',
-  'btn.join_now': 'Join Now',
   'btn.random': 'Generate random slug',
   'btn.reset_key': 'Reset code',
   'btn.next': 'Next',

@@ -349,18 +349,6 @@ export interface MeetingSchedule {
 }
 
 // -----------------------------------------------------------------------------
-export interface MeetingSchedule111 {
-  code: string;
-  meeting_name: string;
-  meeting_info: string;
-  started_at: string;
-  ended_at: string;
-  duration: number;
-  waiting_time: number;
-  join_as: Affiliation;
-}
-
-// -----------------------------------------------------------------------------
 export interface MeetingSchedule222 {
   meeting_id: string;
   meeting_name: string;
@@ -376,10 +364,8 @@ export interface MeetingSchedule222 {
 // -----------------------------------------------------------------------------
 export interface MeetingSessionForReminder {
   id: string;
-  role: string;
   email: string;
   meeting_name: string;
-  meeting_schedule_name?: string;
   started_at: string;
 }
 

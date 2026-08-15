@@ -35,7 +35,6 @@ const ru: Record<string, string> = {
   'btn.show_schedules': 'Расписание',
   'btn.set_default_profile': 'Сделать профилем по умолчанию',
   'btn.update': 'Изменить',
-  'btn.join_now': 'Войти',
   'btn.random': 'Сгенерировать случайный слаг',
   'btn.reset_key': 'Сбросить код',
   'btn.next': 'Далее',

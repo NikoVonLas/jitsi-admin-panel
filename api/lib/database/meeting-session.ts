@@ -468,11 +468,9 @@ export async function listMeetingSessionForReminder(lastCheckTime: string) {
   // for this period.
   const limit = 1000;
 
-  // id should be the membership id for members.
-  // id should be the meeting id for the owner.
   const sql = {
     text: `
-      SELECT m.id, 'owner' as role, i3.identity_attr->>'email' as email,
+      SELECT m.id, i3.identity_attr->>'email' as email,
         m.name as meeting_name, ses.started_at
       FROM meeting m
         JOIN room r ON m.room_id = r.id
