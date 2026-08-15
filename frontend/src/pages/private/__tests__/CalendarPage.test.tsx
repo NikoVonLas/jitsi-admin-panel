@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import CalendarPage from '../CalendarPage';
 
@@ -8,11 +8,15 @@ vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }));
 
-vi.mock('../../lib/common', () => ({
+vi.mock('../../../lib/common', () => ({
   getToday: () => '2026-06-21',
 }));
 
 describe('CalendarPage', () => {
+  beforeEach(() => {
+    mockNavigate.mockClear();
+  });
+
   it('renders without crashing', () => {
     render(<CalendarPage />);
   });
