@@ -54,7 +54,7 @@ async function add(req: Request, _identityId: string): Promise<unknown> {
   await setIdentityEmail(newId, email);
   await addProfile(newId, name, email, true);
 
-  return { id: newId, email, name, is_superadmin: isSuperAdmin };
+  return [{ id: newId, email, name, is_superadmin: isSuperAdmin }];
 }
 
 // -----------------------------------------------------------------------------
@@ -65,7 +65,7 @@ async function del(req: Request, identityId: string): Promise<unknown> {
   if (targetId === identityId) throw new Error("cannot delete yourself");
 
   await deleteLocalIdentity(targetId);
-  return { ok: true };
+  return [{ ok: true }];
 }
 
 // -----------------------------------------------------------------------------
@@ -82,7 +82,7 @@ async function setAdmin(req: Request, _identityId: string): Promise<unknown> {
   }
 
   await setSuperAdmin(targetId, value);
-  return { ok: true };
+  return [{ ok: true }];
 }
 
 // -----------------------------------------------------------------------------

@@ -40,7 +40,9 @@ export default function SettingUsers({ addOpen = false, onAddClose }: Props) {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   function closeAdd() {
     form.resetFields();
@@ -48,7 +50,12 @@ export default function SettingUsers({ addOpen = false, onAddClose }: Props) {
     onAddClose?.();
   }
 
-  async function handleAdd(values: { email: string; password: string; name?: string; is_superadmin?: boolean }) {
+  async function handleAdd(values: {
+    email: string;
+    password: string;
+    name?: string;
+    is_superadmin?: boolean;
+  }) {
     setSaving(true);
     setSaveError(false);
     try {
@@ -79,7 +86,7 @@ export default function SettingUsers({ addOpen = false, onAddClose }: Props) {
   async function handleSetAdmin(id: string, value: boolean) {
     try {
       await action('/api/pri/user/set-admin', { id, is_superadmin: value });
-      setUsers((prev) => prev.map((u) => u.id === id ? { ...u, is_superadmin: value } : u));
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, is_superadmin: value } : u)));
     } catch {
       setError(true);
     }
@@ -95,17 +102,13 @@ export default function SettingUsers({ addOpen = false, onAddClose }: Props) {
       title: t('user.is_admin'),
       key: 'is_superadmin',
       render: (_: unknown, record: LocalUser) => (
-        <Switch
-          checked={record.is_superadmin}
-          onChange={(v) => handleSetAdmin(record.id, v)}
-        />
+        <Switch checked={record.is_superadmin} onChange={(v) => handleSetAdmin(record.id, v)} />
       ),
     },
     {
       title: t('user.created'),
       key: 'created_at',
-      render: (_: unknown, record: LocalUser) =>
-        new Date(record.created_at).toLocaleDateString(),
+      render: (_: unknown, record: LocalUser) => new Date(record.created_at).toLocaleDateString(),
     },
     {
       title: '',
@@ -124,7 +127,6 @@ export default function SettingUsers({ addOpen = false, onAddClose }: Props) {
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto' }}>
-
       {error && <AlertWarning type="error">{t('user.err_del')}</AlertWarning>}
 
       <div style={{ overflowX: 'auto' }}>
@@ -138,15 +140,13 @@ export default function SettingUsers({ addOpen = false, onAddClose }: Props) {
         />
       </div>
 
-      <Modal
-        title={t('user.add')}
-        open={addOpen}
-        onCancel={closeAdd}
-        footer={null}
-        destroyOnClose
-      >
+      <Modal title={t('user.add')} open={addOpen} onCancel={closeAdd} footer={null} destroyOnHidden>
         <Form form={form} layout="vertical" onFinish={handleAdd} style={{ marginTop: 16 }}>
-          <Form.Item name="email" label={t('user.email')} rules={[{ required: true, type: 'email' }]}>
+          <Form.Item
+            name="email"
+            label={t('user.email')}
+            rules={[{ required: true, type: 'email' }]}
+          >
             <Input autoComplete="off" />
           </Form.Item>
           <Form.Item name="name" label={t('user.name')}>
@@ -164,8 +164,12 @@ export default function SettingUsers({ addOpen = false, onAddClose }: Props) {
           </Form.Item>
           {saveError && <AlertWarning type="error">{t('user.err_add')}</AlertWarning>}
           <FormActions>
-            <Button block onClick={closeAdd}>{t('btn.cancel')}</Button>
-            <Button type="primary" htmlType="submit" loading={saving} block>{t('user.add')}</Button>
+            <Button block onClick={closeAdd}>
+              {t('btn.cancel')}
+            </Button>
+            <Button type="primary" htmlType="submit" loading={saving} block>
+              {t('user.add')}
+            </Button>
           </FormActions>
         </Form>
       </Modal>

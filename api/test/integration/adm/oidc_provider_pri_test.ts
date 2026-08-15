@@ -67,6 +67,8 @@ describe(
         identityId,
       );
       assertEquals(res.status, 200);
+      const body = await res.json();
+      assertEquals(typeof body[0].id, "string");
     });
 
     it("add returns 500 when required fields missing", async () => {
@@ -123,6 +125,7 @@ describe(
         identityId,
       );
       assertEquals(updateRes.status, 200);
+      assertEquals((await updateRes.json())[0].ok, true);
     });
 
     it("update returns 500 when id missing", async () => {
@@ -175,6 +178,7 @@ describe(
         identityId,
       );
       assertEquals(enableRes.status, 200);
+      assertEquals((await enableRes.json())[0].ok, true);
 
       // Disable
       const disableRes = await routeOidcProvider(
@@ -186,6 +190,7 @@ describe(
         identityId,
       );
       assertEquals(disableRes.status, 200);
+      assertEquals((await disableRes.json())[0].ok, true);
     });
 
     it("toggle returns 500 when id missing", async () => {
@@ -232,6 +237,7 @@ describe(
         identityId,
       );
       assertEquals(delRes.status, 200);
+      assertEquals((await delRes.json())[0].ok, true);
     });
 
     it("del returns 500 when id missing", async () => {

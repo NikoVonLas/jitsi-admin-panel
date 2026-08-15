@@ -42,7 +42,9 @@ export default function SettingAuth({ addOpen = false, onAddClose }: Props) {
     }
   }
 
-  useEffect(() => { loadProviders(); }, []);
+  useEffect(() => {
+    loadProviders();
+  }, []);
 
   function closeAdd() {
     form.resetFields();
@@ -79,15 +81,19 @@ export default function SettingAuth({ addOpen = false, onAddClose }: Props) {
   async function onToggle(id: string, enabled: boolean) {
     try {
       await action('/api/pri/oidc-provider/toggle', { id, enabled });
-      setProviders((prev) => prev.map((p) => p.id === id ? { ...p, enabled } : p));
-    } catch { /* ignore */ }
+      setProviders((prev) => prev.map((p) => (p.id === id ? { ...p, enabled } : p)));
+    } catch {
+      /* ignore */
+    }
   }
 
   async function onDelete(id: string) {
     try {
       await action('/api/pri/oidc-provider/del', { id });
       await loadProviders();
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   if (loading) return <Spinner />;
@@ -114,7 +120,9 @@ export default function SettingAuth({ addOpen = false, onAddClose }: Props) {
           <div>
             <strong>{p.name}</strong>
             <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{p.issuer_url}</div>
-            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Client ID: {p.client_id}</div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+              Client ID: {p.client_id}
+            </div>
           </div>
           <Space>
             <Switch checked={p.enabled} onChange={(v) => onToggle(p.id, v)} />
@@ -130,18 +138,16 @@ export default function SettingAuth({ addOpen = false, onAddClose }: Props) {
         </div>
       ))}
 
-      <Modal
-        title={t('btn.add')}
-        open={addOpen}
-        onCancel={closeAdd}
-        footer={null}
-        destroyOnClose
-      >
+      <Modal title={t('btn.add')} open={addOpen} onCancel={closeAdd} footer={null} destroyOnHidden>
         <Form form={form} layout="vertical" onFinish={onAdd} style={{ marginTop: 8 }}>
           <Form.Item name="name" label={t('setting.provider_name')} initialValue="SSO">
             <Input placeholder="Keycloak" />
           </Form.Item>
-          <Form.Item name="issuer_url" label={t('form.oidc_issuer_url')} rules={[{ required: true }]}>
+          <Form.Item
+            name="issuer_url"
+            label={t('form.oidc_issuer_url')}
+            rules={[{ required: true }]}
+          >
             <Input placeholder="https://keycloak.example.com/realms/myrealm" />
           </Form.Item>
           <Form.Item name="client_id" label={t('form.oidc_client_id')} rules={[{ required: true }]}>
@@ -150,13 +156,21 @@ export default function SettingAuth({ addOpen = false, onAddClose }: Props) {
           <Form.Item name="client_secret" label={t('form.oidc_client_secret')}>
             <Input.Password />
           </Form.Item>
-          <Form.Item name="scopes" label={t('form.oidc_scopes')} initialValue="openid profile email">
+          <Form.Item
+            name="scopes"
+            label={t('form.oidc_scopes')}
+            initialValue="openid profile email"
+          >
             <Input placeholder="openid profile email" />
           </Form.Item>
           {saveError && <AlertWarning type="error">{t('err.generic')}</AlertWarning>}
           <FormActions>
-            <Button block onClick={closeAdd}>{t('btn.cancel')}</Button>
-            <Button type="primary" htmlType="submit" loading={saving} block>{t('btn.add')}</Button>
+            <Button block onClick={closeAdd}>
+              {t('btn.cancel')}
+            </Button>
+            <Button type="primary" htmlType="submit" loading={saving} block>
+              {t('btn.add')}
+            </Button>
           </FormActions>
         </Form>
       </Modal>

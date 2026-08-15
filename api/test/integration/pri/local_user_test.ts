@@ -44,9 +44,9 @@ describe("pri/user (local user management)", {
     const res = await routeLocalUser(req, "/api/pri/user/add", identityId);
     assertEquals(res.status, 200);
     const body = await res.json();
-    assertEquals(body.email, "newuser@local-user-test.example");
-    assertEquals(body.name, "New User");
-    assertEquals(body.is_superadmin, false);
+    assertEquals(body[0].email, "newuser@local-user-test.example");
+    assertEquals(body[0].name, "New User");
+    assertEquals(body[0].is_superadmin, false);
   });
 
   it("rejects duplicate email on add", async () => {
@@ -88,7 +88,7 @@ describe("pri/user (local user management)", {
       identityId,
     );
     const addBody = await addRes.json();
-    const newId = addBody.id as string;
+    const newId = addBody[0].id as string;
 
     // Promote
     const promoteReq = makeRequest("POST", "/api/pri/user/set-admin", {
@@ -102,7 +102,7 @@ describe("pri/user (local user management)", {
     );
     assertEquals(promoteRes.status, 200);
     const promoteBody = await promoteRes.json();
-    assertEquals(promoteBody.ok, true);
+    assertEquals(promoteBody[0].ok, true);
 
     // Demote back
     const demoteReq = makeRequest("POST", "/api/pri/user/set-admin", {
@@ -136,7 +136,7 @@ describe("pri/user (local user management)", {
       identityId,
     );
     const addBody = await addRes.json();
-    const newId = addBody.id as string;
+    const newId = addBody[0].id as string;
 
     const delReq = makeRequest("POST", "/api/pri/user/del", { id: newId });
     const delRes = await routeLocalUser(
@@ -146,7 +146,7 @@ describe("pri/user (local user management)", {
     );
     assertEquals(delRes.status, 200);
     const delBody = await delRes.json();
-    assertEquals(delBody.ok, true);
+    assertEquals(delBody[0].ok, true);
   });
 
   it("prevents deleting yourself", async () => {

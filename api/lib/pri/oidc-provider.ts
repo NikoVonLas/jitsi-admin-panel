@@ -57,7 +57,7 @@ async function update(req: Request, _identityId: string): Promise<unknown> {
   }
 
   await updateOidcProvider(id, name, issuerUrl, clientId, clientSecret, scopes);
-  return { ok: true };
+  return [{ ok: true }];
 }
 
 // -----------------------------------------------------------------------------
@@ -67,7 +67,7 @@ async function del(req: Request, _identityId: string): Promise<unknown> {
   if (!id) throw new Error("id is required");
 
   await deleteOidcProvider(id);
-  return { ok: true };
+  return [{ ok: true }];
 }
 
 // -----------------------------------------------------------------------------
@@ -78,7 +78,7 @@ async function toggle(req: Request, _identityId: string): Promise<unknown> {
   if (!id) throw new Error("id is required");
 
   await toggleOidcProvider(id, enabled);
-  return { ok: true };
+  return [{ ok: true }];
 }
 
 // -----------------------------------------------------------------------------
