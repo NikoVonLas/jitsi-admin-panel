@@ -8,4 +8,4 @@ then
     export IGNORE_CERT_ERRORS="--unsafely-ignore-certificate-errors"
 fi
 
-exec deno run --allow-net --allow-env $IGNORE_CERT_ERRORS index-adm.ts
+exec deno run --allow-net --allow-env --allow-read=/app/database $IGNORE_CERT_ERRORS index-adm.ts

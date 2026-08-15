@@ -21,6 +21,7 @@ import authConfig from "./lib/adm/auth-config.ts";
 import localLogin from "./lib/adm/local-login.ts";
 import localRegister from "./lib/adm/local-register.ts";
 import oidcProvider from "./lib/adm/oidc-provider.ts";
+import { bootstrapOidcProvider } from "./lib/adm/bootstrap-oidc.ts";
 
 const PRE = "/api/adm";
 
@@ -30,6 +31,7 @@ const timers = {} as Timers;
 async function migration() {
   try {
     await migrate();
+    await bootstrapOidcProvider();
 
     return true;
   } catch (e) {

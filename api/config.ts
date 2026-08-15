@@ -1,4 +1,6 @@
 // server
+import { getBooleanEnv } from "./lib/common/env.ts";
+
 export const HOSTNAME = "0.0.0.0";
 export const PORT_ADMIN = 8000;
 export const PORT_PRIVATE = 8001;
@@ -20,7 +22,10 @@ export const MAX_LIST_SIZE = Number(Deno.env.get("MAX_LIST_SIZE") || 2000);
 // application
 export const APP_FQDN = Deno.env.get("APP_FQDN") || "";
 export const APP_SCHEME = Deno.env.get("APP_SCHEME") || "https";
-export const ALLOW_UNSECURE_CERT = Boolean(Deno.env.get("ALLOW_UNSECURE_CERT"));
+export const ALLOW_UNSECURE_CERT = getBooleanEnv(
+  "ALLOW_UNSECURE_CERT",
+  false,
+);
 
 // contact
 export const CONTACT_EMAIL = Deno.env.get("CONTACT_EMAIL") || "";
@@ -37,4 +42,4 @@ export const FAVICON_DIR = Deno.env.get("FAVICON_DIR") || "/data/favicons";
 export const LOGO_DIR = Deno.env.get("LOGO_DIR") || "/data/logo";
 
 // auth: local email/password (true by default; OIDC providers are managed via UI Settings)
-export const AUTH_LOCAL = Deno.env.get("AUTH_LOCAL") !== "false";
+export const AUTH_LOCAL = getBooleanEnv("AUTH_LOCAL", true);

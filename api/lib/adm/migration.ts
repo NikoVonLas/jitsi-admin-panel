@@ -10,6 +10,43 @@ import {
 
 import { MAILER_FROM, MAILER_TRANSPORT_OPTIONS } from "../../config.mailer.ts";
 
+interface SchemaBootstrapDependencies {
+  hasMetadata: () => Promise<boolean>;
+  initialize: () => Promise<void>;
+}
+
+async function hasMetadata(): Promise<boolean> {
+  using client = await pool.connect();
+  const result = await client.queryObject<{ metadata: string | null }>(
+    "SELECT to_regclass('public.metadata')::text AS metadata",
+  );
+  return result.rows[0]?.metadata === "metadata";
+}
+
+async function initializeSchema(): Promise<void> {
+  const schemaUrl = new URL(
+    "../../database/02-create-jitsi-tables.sql",
+    import.meta.url,
+  );
+  const schema = await Deno.readTextFile(schemaUrl);
+  using client = await pool.connect();
+  await client.queryArray(schema);
+}
+
+export async function bootstrapSchema(
+  dependencies: SchemaBootstrapDependencies = {
+    hasMetadata,
+    initialize: initializeSchema,
+  },
+): Promise<boolean> {
+  if (await dependencies.hasMetadata()) return false;
+
+  console.log("Initializing database schema...");
+  await dependencies.initialize();
+  console.log("Database schema initialized");
+  return true;
+}
+
 // -----------------------------------------------------------------------------
 // Migrate template.
 // -----------------------------------------------------------------------------
@@ -25,7 +62,11 @@ async function migrateTo(upgradeTo: string, sqls: (string | QueryObject)[]) {
 
     // run migration sqls
     for (const sql of sqls) {
-      await trans.queryObject(sql);
+      if (typeof sql === "string") {
+        await trans.queryObject(sql);
+      } else {
+        await trans.queryObject(sql.text, sql.args);
+      }
     }
 
     // set the new version in metadata
@@ -783,6 +824,8 @@ async function migrateTo2026062201() {
 // -----------------------------------------------------------------------------
 export default async function runMigration() {
   console.log("migration...");
+
+  await bootstrapSchema();
 
   const version = await getVersion();
   console.log(`Database version: ${version}`);

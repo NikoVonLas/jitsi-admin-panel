@@ -24,7 +24,6 @@ services:
       - API_SECRET
       - API_TIMEOUT
       - AUTH_LOCAL
-      - CONTACT_EMAIL
       - DB_HOST=db
       - DB_PASSWD
       - APP_FQDN
@@ -32,11 +31,23 @@ services:
       - OIDC_CLIENT_ID
       - OIDC_CLIENT_SECRET
       - OIDC_ISSUER_URL
+      - OIDC_PROVIDER_NAME
       - OIDC_SCOPES
       - SUPERADMIN_ROLE
+      - MAILER_HOST
+      - MAILER_PORT
+      - MAILER_SECURE
+      - MAILER_USER
+      - MAILER_PASS
+      - MAILER_FROM
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "deno", "eval", "const conn=await Deno.connect({hostname:'127.0.0.1',port:8000});conn.close()"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - intranet
 
@@ -45,6 +56,7 @@ services:
     restart: always
     environment:
       - API_SECRET
+      - AUTH_LOCAL
       - DB_HOST=db
       - DB_PASSWD
       - APP_FQDN
@@ -60,7 +72,7 @@ services:
       db:
         condition: service_healthy
       api-adm:
-        condition: service_started
+        condition: service_healthy
     networks:
       - intranet
 
@@ -76,7 +88,7 @@ services:
       db:
         condition: service_healthy
       api-adm:
-        condition: service_started
+        condition: service_healthy
     networks:
       - intranet
 
