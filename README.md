@@ -13,16 +13,17 @@ Self-hosted admin panel for [Jitsi Meet](https://jitsi.org/) — manage domains,
 - **Room management** — create and configure rooms with custom settings per domain
 - **Meeting scheduling** — schedule meetings with iCal export and email reminders
 - **Guest join pages** — public, auth-free pages for guests to join meetings
-- **OIDC + local auth** — sign in via any OIDC provider or with email/password
+- **Keycloak OIDC + local auth** — sign in through Keycloak or with email/password
 - **Intercom** — real-time in-app messaging between users (SSE-based)
 - **Avatar & favicon** — per-domain branding (custom logos and favicons)
-- **Jitsi token generation** — server-side HS256/HS512 (self-hosted) and RS256/RS512 (JaaS)
+- **Jitsi token generation** — server-side HS256/HS512 for self-hosted Jitsi
 
 ## Requirements
 
 - [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/)
 - A publicly accessible domain with DNS pointed to your server (required for Let's Encrypt TLS)
   - For local use, `localhost` (internal CA) or `:80` (plain HTTP) work without a domain
+- Node.js 20 for local frontend development and tests
 
 ## Quick Start
 
@@ -44,7 +45,11 @@ cp .env.example .env
 docker compose up -d          # builds all images locally
 ```
 
-Open `https://<APP_FQDN>` in your browser. The first local account to sign up becomes the superadmin.
+On the first start, `api-adm` initializes an empty PostgreSQL volume and applies
+all migrations before the other API services start.
+
+Open `https://<APP_FQDN>` in your browser. When local authentication is enabled,
+the first local account to sign up becomes the superadmin.
 
 ## Configuration
 
@@ -55,16 +60,43 @@ All configuration is done via environment variables. Copy `.env.example` to `.en
 | `DB_PASSWD` | Yes | `changeme` | PostgreSQL password |
 | `API_SECRET` | Yes | — | Secret key for JWT signing — use a strong random string |
 | `APP_FQDN` | Yes | `localhost` | Public domain (`example.com`), `localhost` for local TLS, or `:80` for plain HTTP |
-| `AUTH_LOCAL` | No | `true` | Enable email/password login |
+| `AUTH_LOCAL` | No | `true` | Enable email/password login and local-user management |
 | `ALLOW_UNSECURE_CERT` | No | `false` | Skip TLS certificate verification (dev only) |
-| `API_TIMEOUT` | No | `30000` | API request timeout in milliseconds |
-| `CONTACT_EMAIL` | No | — | Contact email shown in the UI |
+| `API_TIMEOUT` | No | `86400` | Authentication session lifetime in seconds |
+| `OIDC_PROVIDER_NAME` | No | `Keycloak` | Display name used when bootstrapping the first OIDC provider |
+| `OIDC_ISSUER_URL` | Keycloak-only setup | — | Realm issuer URL, for example `https://keycloak.example.com/realms/jitsi` |
+| `OIDC_CLIENT_ID` | Keycloak-only setup | — | OIDC client ID |
+| `OIDC_CLIENT_SECRET` | No | — | OIDC client secret; leave empty for a public client |
+| `OIDC_SCOPES` | No | `openid profile email` | Scopes requested from Keycloak |
+| `SUPERADMIN_ROLE` | No | `jitsi-superadmin` | Keycloak realm role that grants panel superadmin access |
 | `MAILER_HOST` | No | — | SMTP host (required for email reminders) |
 | `MAILER_PORT` | No | `465` | SMTP port |
 | `MAILER_SECURE` | No | `true` | Use TLS for SMTP |
 | `MAILER_USER` | No | — | SMTP username |
 | `MAILER_PASS` | No | — | SMTP password |
 | `MAILER_FROM` | No | — | Sender address for outgoing emails |
+
+### Keycloak-only authentication
+
+Create users and assign roles in Keycloak; the panel does not use the Keycloak
+Admin REST API. On first login, the panel creates or updates its local
+identity/profile from the OIDC `sub`, email, and username claims.
+
+For a fresh installation, set at least:
+
+```env
+AUTH_LOCAL=false
+OIDC_ISSUER_URL=https://keycloak.example.com/realms/jitsi
+OIDC_CLIENT_ID=jitsi-admin
+OIDC_CLIENT_SECRET=change-me
+SUPERADMIN_ROLE=jitsi-superadmin
+```
+
+Configure `https://<APP_FQDN>/oidc/validate` as a valid redirect URI in the
+Keycloak client. Assign the `SUPERADMIN_ROLE` realm role to at least one user.
+If the database has no OIDC providers, `api-adm` creates the first one from
+these variables. Providers subsequently managed through the UI are not
+overwritten by environment configuration.
 
 ## Architecture
 
@@ -84,7 +116,7 @@ Browser ──443───► web (Caddy) ──/api/adm/──► api-adm:8000 
 
 | Service | Description |
 |---|---|
-| `api-adm` | Auth gateway and control plane. Runs DB migrations and housekeeping. Superadmin-only. |
+| `api-adm` | Auth gateway and control plane. Initializes/migrates the database, runs housekeeping and sends email reminders. |
 | `api-pri` | Main worker. All routes require a valid JWT. Covers rooms, meetings, schedules, intercom. |
 | `api-pub` | Fully public, no auth. Serves avatars, favicons, iCal files, and guest join pages. |
 | `web` | Caddy — serves the React 19 SPA as static files and reverse-proxies all `/api/*` routes. Sole public entry point. |
@@ -101,6 +133,7 @@ deno run --allow-all index-pri.ts   # private API on :8001
 deno run --allow-all index-pub.ts   # public API on :8002
 
 # Frontend (from frontend/)
+nvm use              # reads Node 20 from ../.nvmrc
 npm install
 npm run dev          # dev server (Vite)
 npm run build        # production build

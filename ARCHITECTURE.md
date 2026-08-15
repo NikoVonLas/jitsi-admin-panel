@@ -15,7 +15,7 @@ Browser ──443───► web (Caddy) ──/api/adm/──► api-adm:8000 
                 └─────────────────────────────────────────┘
 ```
 
-nginx — единственная точка входа. Все три API недоступны снаружи Docker-сети.
+Caddy — единственная точка входа. Все три API недоступны снаружи Docker-сети.
 
 ## Services
 
@@ -25,7 +25,9 @@ Auth gateway и control plane. Единственный сервис с публ
 остальные маршруты требуют `is_superadmin = true`.
 
 Также только api-adm:
-- запускает DB-миграции при старте (`migrateTo*()` + `metadata.database_version`)
+- инициализирует базовую схему на пустой БД и запускает миграции при старте
+  (`migrateTo*()` + `metadata.database_version`)
+- при отсутствии OIDC-провайдеров может создать первый из `OIDC_*` env
 - запускает housekeeping (каждые 10 мин) и cronjob email-напоминаний (каждые 30 сек)
 
 api-pri и api-pub при старте проверяют версию БД и завершаются с ошибкой,
@@ -52,8 +54,10 @@ Caddy с собранным React 19 + Vite SPA. Обслуживает стат
 
 ### db
 PostgreSQL 17. Схема инициализируется через
-`api/database/02-create-jitsi-tables.sql` (Docker init), дальнейшие миграции
-применяются кодом api-adm.
+`api/database/02-create-jitsi-tables.sql`: в development compose её может
+применить Docker init, а на чистом production volume её применяет api-adm.
+Дальнейшие миграции выполняются тем же api-adm. Остальные API ждут его
+healthcheck, поэтому не стартуют посреди миграции.
 
 ## Auth Flow
 
@@ -63,6 +67,11 @@ HS256 JWT (`API_SECRET`) → `Set-Cookie: token=...; HttpOnly; Path=/api`.
 **OIDC:** SPA получает `auth_url` → редирект на провайдер → колбэк на
 `/oidc/validate` → api-adm обменивает code на токен, достаёт `sub`, создаёт
 или обновляет identity → тот же HS256 JWT в cookie.
+
+Для Keycloak-only установки первый OIDC-провайдер создаётся из `OIDC_*` env,
+если таблица провайдеров пуста. Дальше записи управляются через UI и имеют
+приоритет над env. Пользователи создаются в Keycloak; Admin REST API Keycloak
+не используется. Локальные identity/profile создаются JIT при первом входе.
 
 Суперадмин-флаг: для local auth — первый зарегистрированный пользователь;
 для OIDC — роль `SUPERADMIN_ROLE` из `realm_access.roles` токена провайдера.
@@ -80,17 +89,24 @@ api-pri верифицирует cookie на каждом запросе; api-pu
 Большинство DB-функций принимают `isSuperAdmin: boolean` — при `true`
 фильтр владельца (`AND identity_id = $1`) снимается на уровне SQL.
 
-Миграции — пронумерованные SQL-файлы в `api/database/`. Существующие файлы
-не редактируются — только добавление нового.
+Базовая схема хранится в `api/database/02-create-jitsi-tables.sql`. Версионные
+миграции реализованы функциями `migrateTo*()` в `api/lib/adm/migration.ts`;
+существующие миграции не изменяются, новая схема добавляется следующей версией.
 
 ## Jitsi Token Generation
 
 Ссылки на встречи и комнаты генерируются server-side в `lib/common/helper.ts`
 через Web Crypto API:
 - Self-hosted: HS256/HS512, symmetric key из `domain_attr.app_secret`
-- JaaS (8x8.vc): RS256/RS512, RSA private key из `domain_attr.jaas_key`
 
 Хост получает `moderator: true`, гость — `moderator: false`.
+
+## Email Reminders
+
+Cronjob в api-adm раз в 30 секунд выбирает встречи, начинающиеся примерно
+через 30 минут, и отправляет владельцу ссылку `/jm/:meetingId`. Эта публичная
+страница позволяет открыть moderator URL из активной сессии либо войти по
+host key. SMTP берётся из настроек БД с fallback на `MAILER_*` env api-adm.
 
 ## Key Decisions
 
