@@ -260,7 +260,6 @@ describe(
             }),
             access_token: await sign({
               iss: issuer,
-              sub: "same-subject",
               exp: now + 300,
               iat: now,
               realm_access: { roles: ["jitsi-superadmin"] },

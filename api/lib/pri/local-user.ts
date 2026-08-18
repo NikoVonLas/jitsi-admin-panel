@@ -18,6 +18,7 @@ import {
   createLocalIdentity,
   deleteLocalIdentity,
   getIdentityByEmail,
+  getLocalUser,
   listLocalUsers,
 } from "../database/identity-local.ts";
 import { addProfile } from "../database/profile.ts";
@@ -67,7 +68,8 @@ async function del(req: Request, identityId: string): Promise<unknown> {
     throw new HttpError(409, "You cannot delete your own account");
   }
 
-  await deleteLocalIdentity(targetId);
+  const rows = await deleteLocalIdentity(targetId);
+  if (!rows[0]) throw new HttpError(404, "Local user not found");
   return [{ ok: true }];
 }
 
@@ -78,15 +80,19 @@ async function setAdmin(req: Request, _identityId: string): Promise<unknown> {
   const value: boolean = body.is_superadmin === true;
   if (!targetId) throw new HttpError(400, "User id is required");
 
+  const target = (await getLocalUser(targetId))[0];
+  if (!target) throw new HttpError(404, "Local user not found");
+
   // Prevent removing the last superadmin
-  if (!value) {
+  if (!value && target.is_superadmin) {
     const adminCount = await countSuperAdmins();
     if (adminCount <= 1) {
       throw new HttpError(409, "The last superadmin cannot be demoted");
     }
   }
 
-  await setSuperAdmin(targetId, value);
+  const rows = await setSuperAdmin(targetId, value);
+  if (!rows[0]) throw new HttpError(404, "Local user not found");
   return [{ ok: true }];
 }
 

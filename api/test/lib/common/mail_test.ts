@@ -7,6 +7,7 @@ describe("meeting reminder message", () => {
     const message = buildMeetingReminderMessage(
       {
         id: "cbbce245-f626-4f70-ac01-c4f4e58cb26e",
+        session_id: "8e641112-b4a4-4209-a903-8cac7475483f",
         email: "owner@example.com",
         meeting_name: "Weekly sync",
         started_at: "2026-08-15T12:30:00.000Z",

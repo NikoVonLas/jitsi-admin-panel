@@ -462,15 +462,12 @@ export async function delMeetingSessionBySchedule(
 }
 
 // -----------------------------------------------------------------------------
-export async function listMeetingSessionForReminder(lastCheckTime: string) {
-  // The limit should be higher than the number of expected participants in a
-  // minute, otherwise lastCheckTime will be skipped before fetching all records
-  // for this period.
+export async function listMeetingSessionForReminder() {
   const limit = 1000;
 
   const sql = {
     text: `
-      SELECT m.id, i3.identity_attr->>'email' as email,
+      SELECT m.id, ses.id as session_id, i3.identity_attr->>'email' as email,
         m.name as meeting_name, ses.started_at
       FROM meeting m
         JOIN room r ON m.room_id = r.id
@@ -486,17 +483,87 @@ export async function listMeetingSessionForReminder(lastCheckTime: string) {
         JOIN meeting_schedule s ON m.id = s.meeting_id
                                    AND s.enabled
         JOIN meeting_session ses ON s.id = ses.meeting_schedule_id
-      WHERE ses.started_at > $1
+      WHERE ses.reminder_sent_at IS NULL
         AND ses.started_at > now() + interval '25 minutes'
         AND ses.started_at < now() + interval '31 minutes'
         AND m.enabled
-
-      LIMIT $2`,
-    args: [
-      lastCheckTime,
-      limit,
-    ],
+      ORDER BY ses.started_at, ses.id
+      LIMIT $1`,
+    args: [limit],
   };
 
   return await fetch(sql) as MeetingSessionForReminder[];
+}
+
+// -----------------------------------------------------------------------------
+export async function markMeetingSessionReminderSent(sessionId: string) {
+  const sql = {
+    text: `
+      UPDATE meeting_session
+      SET reminder_sent_at = now(), updated_at = now()
+      WHERE id = $1
+        AND reminder_sent_at IS NULL
+      RETURNING id, reminder_sent_at as at`,
+    args: [sessionId],
+  };
+
+  return await fetch(sql) as { id: string; at: string }[];
+}
+
+// -----------------------------------------------------------------------------
+// Keep a one-year rolling horizon for daily schedules that have no end date.
+// The unique index added by the migration makes this safe to run repeatedly.
+export async function ensureForeverMeetingSessions() {
+  const sql = {
+    text: `
+      WITH forever_schedule AS (
+        SELECT id,
+          (schedule_attr->>'started_at')::timestamptz AS original_start,
+          (schedule_attr->>'duration')::integer AS duration,
+          (schedule_attr->>'rep_every')::integer AS repeat_days
+        FROM meeting_schedule
+        WHERE enabled
+          AND schedule_attr->>'type' = 'd'
+          AND schedule_attr->>'rep_end_type' = 'forever'
+          AND schedule_attr->>'started_at' IS NOT NULL
+          AND schedule_attr->>'duration' ~ '^[0-9]+$'
+          AND schedule_attr->>'rep_every' ~ '^[0-9]+$'
+          AND (schedule_attr->>'duration')::integer BETWEEN 1 AND 1440
+          AND (schedule_attr->>'rep_every')::integer >= 1
+      ), bounds AS (
+        SELECT *,
+          greatest(
+            0,
+            floor(
+              extract(epoch FROM (
+                now() - original_start - duration * interval '1 minute'
+              )) / (repeat_days * 86400)
+            )::integer + 1
+          ) AS first_occurrence,
+          floor(
+            extract(epoch FROM (
+              now() + interval '365 days' - original_start
+            )) / (repeat_days * 86400)
+          )::integer AS last_occurrence
+        FROM forever_schedule
+      )
+      INSERT INTO meeting_session (
+        meeting_schedule_id, started_at, duration, ended_at
+      )
+      SELECT id,
+        original_start + occurrence * repeat_days * interval '1 day',
+        duration,
+        original_start + occurrence * repeat_days * interval '1 day'
+          + duration * interval '1 minute'
+      FROM bounds
+      CROSS JOIN LATERAL generate_series(
+        first_occurrence,
+        last_occurrence
+      ) AS occurrence
+      ON CONFLICT (meeting_schedule_id, started_at) DO NOTHING
+      RETURNING id, created_at as at`,
+    args: [],
+  };
+
+  return await fetch(sql) as { id: string; at: string }[];
 }

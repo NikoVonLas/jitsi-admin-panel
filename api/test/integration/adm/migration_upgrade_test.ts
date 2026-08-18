@@ -80,7 +80,7 @@ describe(
   "historical database upgrade",
   { sanitizeResources: false, sanitizeOps: false },
   () => {
-    it("preserves active legacy data while upgrading from 20260321.03", async () => {
+    it("preserves meeting membership while upgrading from 20260321.03", async () => {
       const database = `jitsi_upgrade_${
         crypto.randomUUID().replaceAll("-", "")
       }`;
@@ -125,21 +125,6 @@ describe(
                 '30000000-0000-0000-0000-000000000001',
                 'Upgrade meeting'
               );
-            INSERT INTO contact (identity_id, remote_id, name)
-              VALUES (
-                '00000000-0000-0000-0000-000000000000',
-                '10000000-0000-0000-0000-000000000001', 'Upgrade contact'
-              );
-            INSERT INTO contact_invite (identity_id, name)
-              VALUES ('10000000-0000-0000-0000-000000000001', 'Invite');
-            INSERT INTO identity_key (identity_id, domain_id, name)
-              SELECT '10000000-0000-0000-0000-000000000001', id, 'Key'
-              FROM domain WHERE name='meet.jit.si';
-            INSERT INTO phone (identity_id, profile_id, domain_id, name)
-              SELECT
-                '10000000-0000-0000-0000-000000000001',
-                '20000000-0000-0000-0000-000000000001', id, 'Phone'
-              FROM domain WHERE name='meet.jit.si';
             INSERT INTO meeting_member (identity_id, meeting_id, profile_id)
               VALUES (
                 '10000000-0000-0000-0000-000000000001',
@@ -161,24 +146,22 @@ describe(
         const verify = databasePool(database);
         try {
           using client = await verify.connect();
-          const result = await client.queryObject<Record<string, string>>(`
+          const result = await client.queryObject<
+            Record<string, boolean | string>
+          >(`
             SELECT
               (SELECT mvalue FROM metadata WHERE mkey='database_version') AS version,
-              (SELECT count(*)::text FROM contact) AS contact,
-              (SELECT count(*)::text FROM contact_invite) AS contact_invite,
-              (SELECT count(*)::text FROM identity_key) AS identity_key,
-              (SELECT count(*)::text FROM phone) AS phone,
               (SELECT count(*)::text FROM meeting_member) AS meeting_member,
-              (SELECT count(*)::text FROM meeting_member_candidate) AS candidate
+              (SELECT count(*)::text FROM meeting_member_candidate) AS candidate,
+              to_regclass('contact') IS NULL AS contact_removed,
+              to_regclass('intercom') IS NULL AS intercom_removed
           `);
           assertEquals(result.rows[0], {
             version: DB_VERSION,
-            contact: "1",
-            contact_invite: "1",
-            identity_key: "1",
-            phone: "1",
             meeting_member: "1",
             candidate: "1",
+            contact_removed: true,
+            intercom_removed: true,
           });
         } finally {
           await verify.end();
@@ -188,7 +171,7 @@ describe(
       }
     });
 
-    it("recreates active tables on databases already affected by the old migration", async () => {
+    it("repairs membership tables and scheduling state after the old migration", async () => {
       const database = `jitsi_repair_${
         crypto.randomUUID().replaceAll("-", "")
       }`;
@@ -198,8 +181,7 @@ describe(
         try {
           using client = await setup.connect();
           await client.queryArray(`
-            DROP TABLE meeting_member_candidate, meeting_member, contact_invite,
-              contact, identity_key, phone;
+            DROP TABLE meeting_member_candidate, meeting_member;
             UPDATE metadata SET mvalue='20260622.01'
               WHERE mkey='database_version';
           `);
@@ -217,21 +199,24 @@ describe(
           >(`
             SELECT
               (SELECT mvalue FROM metadata WHERE mkey='database_version') AS version,
-              to_regclass('contact') IS NOT NULL AS contact,
-              to_regclass('contact_invite') IS NOT NULL AS contact_invite,
-              to_regclass('identity_key') IS NOT NULL AS identity_key,
-              to_regclass('phone') IS NOT NULL AS phone,
               to_regclass('meeting_member') IS NOT NULL AS meeting_member,
-              to_regclass('meeting_member_candidate') IS NOT NULL AS candidate
+              to_regclass('meeting_member_candidate') IS NOT NULL AS candidate,
+              EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name='meeting_session'
+                  AND column_name='reminder_sent_at'
+              ) AS reminder_state,
+              to_regclass('meeting_session_schedule_started_at_idx')
+                IS NOT NULL AS unique_session_index,
+              to_regclass('phone') IS NULL AS phone_removed
           `);
           assertEquals(result.rows[0], {
             version: DB_VERSION,
-            contact: true,
-            contact_invite: true,
-            identity_key: true,
-            phone: true,
             meeting_member: true,
             candidate: true,
+            reminder_state: true,
+            unique_session_index: true,
+            phone_removed: true,
           });
         } finally {
           await verify.end();

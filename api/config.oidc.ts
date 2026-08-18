@@ -1,5 +1,5 @@
 // application
-export const API_SECRET = Deno.env.get("API_SECRET") || "mysecret";
+export const API_SECRET = Deno.env.get("API_SECRET") || "";
 export const API_TIMEOUT = Number(Deno.env.get("API_TIMEOUT") || 86400);
 
 // Optional first-provider bootstrap for Keycloak-only installations.

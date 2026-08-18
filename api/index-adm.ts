@@ -25,10 +25,13 @@ import { bootstrapOidcProvider } from "./lib/adm/bootstrap-oidc.ts";
 import { isPublicAuthPostPath } from "./lib/adm/public-auth-route.ts";
 import { AUTH_LOCAL } from "./config.ts";
 import { hasEnabledOidcProvider } from "./lib/database/oidc-provider.ts";
+import { validateRuntimeConfig } from "./lib/common/runtime-config.ts";
 
 const PRE = "/api/adm";
 
 const timers = {} as Timers;
+
+validateRuntimeConfig("adm");
 
 // -----------------------------------------------------------------------------
 async function migration() {

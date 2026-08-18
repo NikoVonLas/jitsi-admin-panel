@@ -11,7 +11,6 @@ import domain from "./lib/pri/domain.ts";
 import domainMember from "./lib/pri/domain-member.ts";
 import hello from "./lib/pri/hello.ts";
 import identity from "./lib/pri/identity.ts";
-import intercom, { streamIntercom } from "./lib/pri/intercom.ts";
 import meeting from "./lib/pri/meeting.ts";
 import meetingRequest from "./lib/pri/meeting-request.ts";
 import meetingSchedule from "./lib/pri/meeting-schedule.ts";
@@ -24,8 +23,11 @@ import setting from "./lib/pri/setting.ts";
 import oidcProvider from "./lib/pri/oidc-provider.ts";
 import room from "./lib/pri/room.ts";
 import localUser from "./lib/pri/local-user.ts";
+import { validateRuntimeConfig } from "./lib/common/runtime-config.ts";
 
 const PRE = "/api/pri";
+
+validateRuntimeConfig("pri");
 
 type RouteHandler = (
   req: Request,
@@ -38,7 +40,6 @@ const ROUTE_TABLE: Array<[RegExp, RouteHandler]> = [
   [/^\/api\/pri\/domain\/member\//, domainMember],
   [/^\/api\/pri\/domain\//, domain],
   [/^\/api\/pri\/identity\//, identity],
-  [/^\/api\/pri\/intercom\//, intercom],
   [/^\/api\/pri\/meeting\/request\//, meetingRequest],
   [/^\/api\/pri\/meeting\/schedule\//, meetingSchedule],
   [/^\/api\/pri\/meeting\//, meeting],
@@ -74,11 +75,7 @@ async function handler(req: Request): Promise<Response> {
   const url = new URL(req.url);
   const path = url.pathname;
 
-  if (req.method === "GET" && path === `${PRE}/intercom/stream`) {
-    const identityId = await getIdentityId(req);
-    if (!identityId) return unauthorized();
-    return streamIntercom(req, identityId);
-  } else if (req.method === "POST") {
+  if (req.method === "POST") {
     const identityId = await getIdentityId(req);
 
     if (identityId && typeof identityId === "string") {

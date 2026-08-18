@@ -4,9 +4,23 @@ export class SlidingWindowRateLimiter {
   constructor(
     private readonly limit: number,
     private readonly windowMs: number,
+    private readonly maxKeys = 10_000,
   ) {}
 
   take(key: string, now = Date.now()): boolean {
+    if (!this.#attempts.has(key) && this.#attempts.size >= this.maxKeys) {
+      const cutoff = now - this.windowMs;
+      for (const [candidate, timestamps] of this.#attempts) {
+        if (timestamps.every((timestamp) => timestamp <= cutoff)) {
+          this.#attempts.delete(candidate);
+        }
+      }
+      if (this.#attempts.size >= this.maxKeys) {
+        const oldest = this.#attempts.keys().next().value;
+        if (oldest !== undefined) this.#attempts.delete(oldest);
+      }
+    }
+
     const cutoff = now - this.windowMs;
     const attempts = (this.#attempts.get(key) ?? []).filter(
       (timestamp) => timestamp > cutoff,
@@ -25,8 +39,13 @@ export class SlidingWindowRateLimiter {
   }
 }
 
+export function clientAddress(req: Request): string {
+  const realIp = req.headers.get("x-real-ip")?.trim();
+  const forwarded = req.headers.get("x-forwarded-for")?.split(",").at(-1)
+    ?.trim();
+  return realIp || forwarded || "unknown";
+}
+
 export function loginRateLimitKey(req: Request, email: string): string {
-  const forwarded = req.headers.get("x-forwarded-for")?.split(",")[0].trim();
-  const address = forwarded || req.headers.get("x-real-ip") || "unknown";
-  return `${address}\0${email}`;
+  return `${clientAddress(req)}\0${email}`;
 }

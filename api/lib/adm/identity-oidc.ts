@@ -196,6 +196,7 @@ async function getByCode(req: Request): Promise<Response> {
     const accessClaims = tokens.accessToken.split(".").length === 3
       ? await verifyOidcJwt(tokens.accessToken, jwks, {
         issuer: discovery.issuer,
+        requireSubject: false,
       })
       : {};
     const userInfo = await getUserInfo(tokens.accessToken, discovery.userinfo);

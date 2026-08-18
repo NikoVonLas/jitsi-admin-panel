@@ -95,6 +95,29 @@ describe("OIDC JWT validation", () => {
     );
   });
 
+  it("allows a signed access token without a subject when requested", async () => {
+    const { jwks, sign } = await fixture();
+    const now = 1_700_000_000;
+    const token = await sign({
+      iss: "https://idp.example",
+      exp: now + 300,
+      realm_access: { roles: ["panel-admin"] },
+    });
+
+    await assertRejects(() =>
+      verifyOidcJwt(token, jwks, {
+        issuer: "https://idp.example",
+        now,
+      })
+    );
+    const claims = await verifyOidcJwt(token, jwks, {
+      issuer: "https://idp.example",
+      now,
+      requireSubject: false,
+    });
+    assertEquals(claims.realm_access, { roles: ["panel-admin"] });
+  });
+
   it("rejects tampered claims", async () => {
     const { jwks, sign } = await fixture();
     const now = 1_700_000_000;

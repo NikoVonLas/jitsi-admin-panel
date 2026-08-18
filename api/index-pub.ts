@@ -6,19 +6,19 @@ import { serveFavicon } from "./lib/pub/favicon.ts";
 import { serveLogo } from "./lib/pub/logo.ts";
 import { serveIcal } from "./lib/pub/ical.ts";
 import hello from "./lib/pub/hello.ts";
-import identity from "./lib/pub/identity.ts";
 import meeting from "./lib/pub/meeting.ts";
 import meetingSchedule from "./lib/pub/meeting-schedule.ts";
 import room from "./lib/pub/room.ts";
+import { validateRuntimeConfig } from "./lib/common/runtime-config.ts";
 
 const PRE = "/api/pub";
+
+validateRuntimeConfig("pub");
 
 // -----------------------------------------------------------------------------
 async function route(req: Request, path: string): Promise<Response> {
   if (path === `${PRE}/hello`) {
     return await hello();
-  } else if (new RegExp(`^${PRE}/identity/`).exec(path)) {
-    return await identity(req, path);
   } else if (new RegExp(`^${PRE}/meeting/schedule/`).exec(path)) {
     return await meetingSchedule(req, path);
   } else if (new RegExp(`^${PRE}/meeting/`).exec(path)) {

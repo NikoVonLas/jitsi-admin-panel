@@ -7,53 +7,12 @@
 // -----------------------------------------------------------------------------
 
 export type Affiliation = "host" | "guest";
-export type CandidateStatus = "pending" | "approved" | "rejected" | "expired";
 export type DomainAuthType = "none" | "token";
-export type IntercomStatus = "none" | "seen" | "accepted" | "rejected";
-export type InviteTo = "audience" | "member";
-export type Message = "call" | "phone" | "text";
 export type RequestStatus = "pending" | "rejected";
 
 // -----------------------------------------------------------------------------
 export interface Attr {
   [key: string]: string;
-}
-
-// -----------------------------------------------------------------------------
-export interface Contact {
-  id: string;
-  name: string;
-  profile_name: string;
-  profile_email: string;
-  visible: boolean;
-  created_at: string;
-  updated_at: string;
-  seen_second_ago: number;
-}
-
-// -----------------------------------------------------------------------------
-export interface ContactInvite {
-  id: string;
-  name: string;
-  code: string;
-  disposable: boolean;
-  enabled: boolean;
-  created_at: string;
-  updated_at: string;
-  expired_at: string;
-}
-
-// -----------------------------------------------------------------------------
-export interface ContactInvite111 {
-  profile_name: string;
-  profile_email: string;
-  code: string;
-}
-
-// -----------------------------------------------------------------------------
-export interface ContactStatus {
-  id: string;
-  seen_second_ago: number;
 }
 
 // -----------------------------------------------------------------------------
@@ -95,71 +54,6 @@ export interface Identity {
   created_at: string;
   updated_at: string;
   seen_at: string;
-}
-
-// -----------------------------------------------------------------------------
-export interface IdentityKey {
-  id: string;
-  name: string;
-  value: string;
-  domain_id: string;
-  domain_name: string;
-  domain_url: string;
-  domain_enabled: boolean;
-  enabled: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-// -----------------------------------------------------------------------------
-export interface IdentityKey333 {
-  id: string;
-  name: string;
-  value: string;
-  domain_name: string;
-  domain_url: string;
-  enabled: boolean;
-  chain_enabled: boolean;
-  updated_at: string;
-}
-
-// -----------------------------------------------------------------------------
-export interface IntercomCall {
-  id: string;
-  url: string;
-}
-
-// -----------------------------------------------------------------------------
-export interface IntercomMessage {
-  id: string;
-  remote_id: string;
-  status: IntercomStatus;
-  message_type: Message;
-  intercom_attr: {
-    [key: string]: string;
-  };
-  expired_at: string;
-}
-
-// -----------------------------------------------------------------------------
-export interface IntercomMessage222 {
-  id: string;
-  contact_id: string | null;
-  contact_name: string | null;
-  status: IntercomStatus;
-  message_type: Message;
-  intercom_attr: {
-    [key: string]: string;
-  };
-  created_at: string;
-  microsec_created_at: number;
-  expired_at: string;
-}
-
-// -----------------------------------------------------------------------------
-export interface IntercomRing {
-  id: string;
-  status: IntercomStatus;
 }
 
 // -----------------------------------------------------------------------------
@@ -216,32 +110,6 @@ export interface Meeting222 {
 }
 
 // -----------------------------------------------------------------------------
-export interface MeetingInvite {
-  id: string;
-  name: string;
-  meeting_id: string;
-  meeting_name: string;
-  meeting_info: string;
-  code: string;
-  invite_to: InviteTo;
-  join_as: Affiliation;
-  disposable: boolean;
-  enabled: boolean;
-  created_at: string;
-  updated_at: string;
-  expired_at: string;
-}
-
-// -----------------------------------------------------------------------------
-export interface MeetingInvite111 {
-  meeting_name: string;
-  meeting_info: string;
-  code: string;
-  invite_to: InviteTo;
-  session_list: [[string, string]];
-}
-
-// -----------------------------------------------------------------------------
 export interface MeetingLinkset {
   id: string;
   name: string;
@@ -264,60 +132,6 @@ export interface MeetingLinkset {
   profile_name: string;
   profile_email: string;
   profile_avatar_url: string;
-}
-
-// -----------------------------------------------------------------------------
-export interface MeetingMember {
-  id: string;
-  meeting_id: string;
-  contact_name: string;
-  profile_name: string;
-  profile_email: string;
-  join_as: Affiliation;
-  enabled: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-// -----------------------------------------------------------------------------
-export interface MeetingMemberCandidacy {
-  id: string;
-  meeting_name: string;
-  meeting_info: string;
-  session_list: [[string, string]];
-  join_as: Affiliation;
-  status: CandidateStatus;
-  created_at: string;
-  updated_at: string;
-  expired_at: string;
-}
-
-// -----------------------------------------------------------------------------
-export interface MeetingMemberCandidate {
-  id: string;
-  meeting_id: string;
-  contact_name: string;
-  profile_name: string;
-  profile_email: string;
-  join_as: Affiliation;
-  status: CandidateStatus;
-  created_at: string;
-  updated_at: string;
-  expired_at: string;
-}
-
-// -----------------------------------------------------------------------------
-export interface MeetingMembership {
-  id: string;
-  profile_id: string;
-  profile_name: string;
-  profile_email: string;
-  meeting_name: string;
-  meeting_info: string;
-  join_as: Affiliation;
-  enabled: boolean;
-  created_at: string;
-  updated_at: string;
 }
 
 // -----------------------------------------------------------------------------
@@ -364,6 +178,7 @@ export interface MeetingSchedule222 {
 // -----------------------------------------------------------------------------
 export interface MeetingSessionForReminder {
   id: string;
+  session_id: string;
   email: string;
   meeting_name: string;
   started_at: string;
@@ -372,48 +187,6 @@ export interface MeetingSessionForReminder {
 // -----------------------------------------------------------------------------
 export interface Meta {
   mvalue: string;
-}
-
-// -----------------------------------------------------------------------------
-export interface Phone {
-  id: string;
-  name: string;
-  code: string;
-  domain_id: string;
-  domain_name: string;
-  domain_url: string;
-  domain_enabled: boolean;
-  profile_id: string;
-  profile_name: string;
-  profile_email: string;
-  email_enabled: boolean;
-  enabled: boolean;
-  created_at: string;
-  updated_at: string;
-  called_at: string;
-}
-
-// -----------------------------------------------------------------------------
-export interface Phone111 {
-  profile_name: string;
-  profile_email: string;
-  code: string;
-}
-
-// -----------------------------------------------------------------------------
-export interface Phone333 {
-  id: string;
-  name: string;
-  owner_id: string;
-  profile_name: string;
-  profile_email: string;
-  auth_type: DomainAuthType;
-  domain_attr: {
-    url: string;
-    app_id: string;
-    app_secret: string;
-    app_alg: string;
-  };
 }
 
 // -----------------------------------------------------------------------------

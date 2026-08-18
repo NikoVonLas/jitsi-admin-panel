@@ -15,6 +15,7 @@ export interface VerifyOidcJwtOptions {
   audience?: string;
   nonce?: string;
   now?: number;
+  requireSubject?: boolean;
 }
 
 function decodeBase64Url(value: string): Uint8Array {
@@ -65,7 +66,10 @@ function validateClaims(
   const now = options.now ?? Math.floor(Date.now() / 1000);
   const skew = 60;
   if (claims.iss !== options.issuer) throw new Error("invalid token issuer");
-  if (typeof claims.sub !== "string" || !claims.sub) {
+  if (
+    options.requireSubject !== false &&
+    (typeof claims.sub !== "string" || !claims.sub)
+  ) {
     throw new Error("missing token subject");
   }
   if (typeof claims.exp !== "number" || claims.exp < now - skew) {

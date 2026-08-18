@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, it } from "@std/testing/bdd";
 import { cleanDb, makeRequest } from "../../helpers/db.ts";
 import { registerFirst } from "../../helpers/auth.ts";
 import routeLocalUser from "../../../lib/pri/local-user.ts";
+import { query } from "../../../lib/database/common.ts";
 
 const EMAIL = "admin@local-user-test.example";
 const PASSWORD = "secure_localuser_test_pass_123";
@@ -72,8 +73,6 @@ describe("pri/user (local user management)", {
   });
 
   it("promotes and demotes superadmin flag", async () => {
-    const { query } = await import("../../../lib/database/common.ts");
-
     // Add a second user to promote
     const addReq = makeRequest("POST", "/api/pri/user/add", {
       email: "promote@local-user-test.example",
@@ -152,6 +151,44 @@ describe("pri/user (local user management)", {
     const req = makeRequest("POST", "/api/pri/user/del", { id: identityId });
     const res = await routeLocalUser(req, "/api/pri/user/del", identityId);
     assertEquals(res.status, 409);
+  });
+
+  it("does not mutate non-local identities through local user routes", async () => {
+    const oidcIdentityId = crypto.randomUUID();
+    await query({
+      text: `INSERT INTO identity (id) VALUES ($1)`,
+      args: [oidcIdentityId],
+    });
+
+    const promoteRes = await routeLocalUser(
+      makeRequest("POST", "/api/pri/user/set-admin", {
+        id: oidcIdentityId,
+        is_superadmin: true,
+      }),
+      "/api/pri/user/set-admin",
+      identityId,
+    );
+    assertEquals(promoteRes.status, 404);
+
+    const delRes = await routeLocalUser(
+      makeRequest("POST", "/api/pri/user/del", { id: oidcIdentityId }),
+      "/api/pri/user/del",
+      identityId,
+    );
+    assertEquals(delRes.status, 404);
+
+    const remaining = await query({
+      text: `SELECT id, is_superadmin FROM identity WHERE id = $1`,
+      args: [oidcIdentityId],
+    });
+    assertEquals(remaining.rows, [{
+      id: oidcIdentityId,
+      is_superadmin: false,
+    }]);
+    await query({
+      text: `DELETE FROM identity WHERE id = $1`,
+      args: [oidcIdentityId],
+    });
   });
 
   it("rejects user management from a regular user", async () => {

@@ -13,6 +13,12 @@ import routeRoom from "../../../lib/pri/room.ts";
 import routeMeeting from "../../../lib/pri/meeting.ts";
 import routeProfile from "../../../lib/pri/profile.ts";
 import routeMeetingSchedule from "../../../lib/pri/meeting-schedule.ts";
+import { query } from "../../../lib/database/common.ts";
+import {
+  ensureForeverMeetingSessions,
+  listMeetingSessionForReminder,
+  markMeetingSessionReminderSent,
+} from "../../../lib/database/meeting-session.ts";
 
 const EMAIL = "admin@meeting-schedule-test.example";
 const PASSWORD = "secure_schedule_test_pass_123";
@@ -79,6 +85,16 @@ function makeDailyAttr() {
     started_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
     rep_end_type: "x",
     rep_end_x: "3",
+    rep_every: "1",
+  };
+}
+
+function makeForeverDailyAttr() {
+  return {
+    type: "d",
+    duration: "60",
+    started_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    rep_end_type: "forever",
     rep_every: "1",
   };
 }
@@ -381,6 +397,71 @@ describe("pri/meeting/schedule", {
     const body = await res.json();
     assertEquals(Array.isArray(body), true);
     assertEquals(typeof body[0].id, "string");
+  });
+
+  it("persists reminder delivery state for an upcoming session", async () => {
+    const req = makeRequest("POST", "/api/pri/meeting/schedule/add", {
+      meeting_id: meetingId,
+      schedule_attr: {
+        type: "o",
+        duration: "60",
+        started_at: new Date(Date.now() + 28 * 60 * 1000).toISOString(),
+      },
+    });
+    const res = await routeMeetingSchedule(
+      req,
+      "/api/pri/meeting/schedule/add",
+      identityId,
+    );
+    assertEquals(res.status, 200);
+
+    const pending = await listMeetingSessionForReminder();
+    const row = pending.find((item) => item.id === meetingId);
+    assertEquals(typeof row?.session_id, "string");
+
+    await markMeetingSessionReminderSent(row!.session_id);
+    const afterMark = await listMeetingSessionForReminder();
+    assertEquals(
+      afterMark.some((item) => item.session_id === row!.session_id),
+      false,
+    );
+  });
+
+  it("replenishes forever schedules to a rolling horizon idempotently", async () => {
+    const req = makeRequest("POST", "/api/pri/meeting/schedule/add", {
+      meeting_id: meetingId,
+      schedule_attr: makeForeverDailyAttr(),
+    });
+    const res = await routeMeetingSchedule(
+      req,
+      "/api/pri/meeting/schedule/add",
+      identityId,
+    );
+    assertEquals(res.status, 200);
+    const scheduleId = (await res.json())[0].id as string;
+
+    await query({
+      text: `DELETE FROM meeting_session WHERE meeting_schedule_id = $1`,
+      args: [scheduleId],
+    });
+
+    const inserted = await ensureForeverMeetingSessions();
+    const secondPass = await ensureForeverMeetingSessions();
+    const result = await query({
+      text: `
+        SELECT count(*)::integer AS count,
+          extract(epoch FROM (max(started_at) - now())) / 86400 AS horizon_days
+        FROM meeting_session
+        WHERE meeting_schedule_id = $1`,
+      args: [scheduleId],
+    });
+    const row = result.rows[0] as { count: number; horizon_days: number };
+
+    assertEquals(inserted.length >= 365, true);
+    assertEquals(secondPass.length, 0);
+    assertEquals(row.count, inserted.length);
+    assertEquals(Number(row.horizon_days) >= 364, true);
+    assertEquals(Number(row.horizon_days) <= 365, true);
   });
 
   it("adds a weekly schedule", async () => {

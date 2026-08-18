@@ -1,6 +1,6 @@
 import { fetch } from "./common.ts";
 import { generateRoomUrl } from "../common/helper.ts";
-import { getDefaultProfile, getDefaultProfileByKey } from "./profile.ts";
+import { getDefaultProfile } from "./profile.ts";
 import type {
   Affiliation,
   Id,
@@ -232,27 +232,6 @@ export async function getRoomUrl(
   additionalHash: string,
 ) {
   const profiles = await getDefaultProfile(identityId);
-  const profile = profiles[0];
-  if (!profile) throw new Error("profile is not available");
-
-  return await generateRoomUrl(
-    roomLinkset,
-    profile,
-    affiliation,
-    exp,
-    additionalHash,
-  );
-}
-
-// -----------------------------------------------------------------------------
-export async function getRoomUrlByKey(
-  keyValue: string,
-  roomLinkset: RoomLinkset,
-  affiliation: Affiliation,
-  exp: number,
-  additionalHash: string,
-) {
-  const profiles = await getDefaultProfileByKey(keyValue);
   const profile = profiles[0];
   if (!profile) throw new Error("profile is not available");
 

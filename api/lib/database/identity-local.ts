@@ -152,13 +152,33 @@ export async function listLocalUsers(): Promise<LocalUserRow[]> {
   return await fetch(sql) as LocalUserRow[];
 }
 
+export async function getLocalUser(
+  identityId: string,
+): Promise<LocalUserRow[]> {
+  const sql = {
+    text: `
+      SELECT il.identity_id as id, il.email, i.is_superadmin, il.created_at
+      FROM identity_local il
+        JOIN identity i ON i.id = il.identity_id
+      WHERE il.identity_id = $1`,
+    args: [identityId],
+  };
+  return await fetch(sql) as LocalUserRow[];
+}
+
 // -----------------------------------------------------------------------------
 // Delete a local identity (cascades to identity via FK)
 // -----------------------------------------------------------------------------
-export async function deleteLocalIdentity(identityId: string): Promise<void> {
+export async function deleteLocalIdentity(identityId: string): Promise<Id[]> {
   const sql = {
-    text: `DELETE FROM identity WHERE id = $1`,
+    text: `
+      DELETE FROM identity i
+      WHERE i.id = $1
+        AND EXISTS (
+          SELECT 1 FROM identity_local il WHERE il.identity_id = i.id
+        )
+      RETURNING i.id, now() as at`,
     args: [identityId],
   };
-  await fetch(sql);
+  return await fetch(sql) as Id[];
 }

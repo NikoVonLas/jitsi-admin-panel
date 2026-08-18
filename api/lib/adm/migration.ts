@@ -816,78 +816,11 @@ async function migrateTo2026062201() {
 }
 
 // -----------------------------------------------------------------------------
-// Restore tables that remain part of the runtime data model. Version
-// 20260321.04 briefly dropped them even though meeting membership and intercom
-// continued to query them. IF NOT EXISTS keeps fresh and unaffected databases
-// unchanged while repairing installations that already crossed that version.
+// Restore meeting membership tables accidentally removed by an older upgrade.
+// IF NOT EXISTS repairs affected installations without changing intact ones.
 async function migrateTo2026081801() {
   const upgradeTo = "20260818.01";
   const sqls = [
-    `CREATE TABLE IF NOT EXISTS contact (
-       "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
-       "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
-       "remote_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
-       "name" varchar(250) NOT NULL,
-       "visible" boolean NOT NULL DEFAULT true,
-       "created_at" timestamp with time zone NOT NULL DEFAULT now(),
-       "updated_at" timestamp with time zone NOT NULL DEFAULT now()
-     )`,
-    `CREATE UNIQUE INDEX IF NOT EXISTS contact_identity_id_remote_id_idx
-       ON contact("identity_id", "remote_id")`,
-    `CREATE INDEX IF NOT EXISTS contact_identity_id_name_idx
-       ON contact("identity_id", "name")`,
-    `CREATE TABLE IF NOT EXISTS contact_invite (
-       "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
-       "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
-       "name" varchar(250) NOT NULL,
-       "code" varchar(250) NOT NULL
-         DEFAULT md5(random()::text) || md5(gen_random_uuid()::text),
-       "disposable" boolean NOT NULL DEFAULT true,
-       "enabled" boolean NOT NULL DEFAULT true,
-       "created_at" timestamp with time zone NOT NULL DEFAULT now(),
-       "updated_at" timestamp with time zone NOT NULL DEFAULT now(),
-       "expired_at" timestamp with time zone NOT NULL
-         DEFAULT now() + interval '3 days'
-     )`,
-    `CREATE UNIQUE INDEX IF NOT EXISTS contact_invite_code_idx
-       ON contact_invite("code")`,
-    `CREATE INDEX IF NOT EXISTS contact_invite_identity_id_expired_at_idx
-       ON contact_invite("identity_id", "expired_at")`,
-    `CREATE INDEX IF NOT EXISTS contact_invite_expired_at_idx
-       ON contact_invite("expired_at")`,
-    `CREATE TABLE IF NOT EXISTS identity_key (
-       "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
-       "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
-       "domain_id" uuid NOT NULL REFERENCES domain(id) ON DELETE CASCADE,
-       "name" varchar(250) NOT NULL,
-       "value" varchar(250) NOT NULL
-         DEFAULT md5(random()::text) || md5(gen_random_uuid()::text),
-       "enabled" boolean NOT NULL DEFAULT true,
-       "created_at" timestamp with time zone NOT NULL DEFAULT now(),
-       "updated_at" timestamp with time zone NOT NULL DEFAULT now()
-     )`,
-    `CREATE UNIQUE INDEX IF NOT EXISTS identity_key_value_idx
-       ON identity_key("value")`,
-    `CREATE INDEX IF NOT EXISTS identity_key_identity_id_name_idx
-       ON identity_key("identity_id", "name")`,
-    `CREATE TABLE IF NOT EXISTS phone (
-       "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
-       "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
-       "profile_id" uuid NOT NULL REFERENCES profile(id) ON DELETE NO ACTION,
-       "domain_id" uuid NOT NULL REFERENCES domain(id) ON DELETE CASCADE,
-       "name" varchar(250) NOT NULL,
-       "code" varchar(250) NOT NULL
-         DEFAULT md5(random()::text) || md5(gen_random_uuid()::text),
-       "email_enabled" boolean NOT NULL DEFAULT true,
-       "enabled" boolean NOT NULL DEFAULT true,
-       "created_at" timestamp with time zone NOT NULL DEFAULT now(),
-       "updated_at" timestamp with time zone NOT NULL DEFAULT now(),
-       "called_at" timestamp with time zone NOT NULL DEFAULT now(),
-       "calls" integer NOT NULL DEFAULT 0
-     )`,
-    `CREATE UNIQUE INDEX IF NOT EXISTS phone_code_idx ON phone("code")`,
-    `CREATE INDEX IF NOT EXISTS phone_identity_id_name_idx
-       ON phone("identity_id", "name")`,
     `CREATE TABLE IF NOT EXISTS meeting_member (
        "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
        "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
@@ -915,6 +848,33 @@ async function migrateTo2026081801() {
        ON meeting_member_candidate("identity_id", "meeting_id", "join_as")`,
     `CREATE INDEX IF NOT EXISTS meeting_member_candidate_expired_at_idx
        ON meeting_member_candidate("expired_at")`,
+  ];
+
+  await migrateTo(upgradeTo, sqls);
+}
+
+// -----------------------------------------------------------------------------
+// Retire the unreachable contact/invite/phone/intercom model and add durable
+// scheduling state used by reminders and rolling recurring sessions.
+async function migrateTo2026081802() {
+  const upgradeTo = "20260818.02";
+  const sqls = [
+    `ALTER TABLE meeting_session
+       ADD COLUMN IF NOT EXISTS reminder_sent_at timestamp with time zone`,
+    `DELETE FROM meeting_session a
+       USING meeting_session b
+       WHERE a.meeting_schedule_id = b.meeting_schedule_id
+         AND a.started_at = b.started_at
+         AND a.id > b.id`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS meeting_session_schedule_started_at_idx
+       ON meeting_session("meeting_schedule_id", "started_at")`,
+    `DROP TABLE IF EXISTS intercom`,
+    `DROP TABLE IF EXISTS contact_invite`,
+    `DROP TABLE IF EXISTS contact`,
+    `DROP TABLE IF EXISTS identity_key`,
+    `DROP TABLE IF EXISTS phone`,
+    `DROP TYPE IF EXISTS intercom_message_type`,
+    `DROP TYPE IF EXISTS intercom_status_type`,
   ];
 
   await migrateTo(upgradeTo, sqls);
@@ -962,4 +922,5 @@ export default async function runMigration() {
   await migrateTo2026061805();
   await migrateTo2026062201();
   await migrateTo2026081801();
+  await migrateTo2026081802();
 }

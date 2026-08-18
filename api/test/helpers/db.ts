@@ -10,7 +10,7 @@ const SYSTEM_DOMAIN_NAMES = ["meet.jit.si", "meet.element.io"];
 
 export async function cleanDb(): Promise<void> {
   // Delete all non-system identities (cascades to profile, domain, room,
-  // meeting, intercom, etc.)
+  // meetings and other integration-test data.)
   await query({
     text:
       `DELETE FROM identity WHERE id != '00000000-0000-0000-0000-000000000000'`,
