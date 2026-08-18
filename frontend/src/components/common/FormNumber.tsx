@@ -11,7 +11,16 @@ interface Props {
   readonly max?: number;
 }
 
-export default function FormNumber({ name, label, required, value, onChange, disabled, min, max }: Props) {
+export default function FormNumber({
+  name,
+  label,
+  required,
+  value,
+  onChange,
+  disabled,
+  min,
+  max,
+}: Props) {
   return (
     <Form.Item label={label} required={required} style={{ marginBottom: 16 }}>
       <InputNumber

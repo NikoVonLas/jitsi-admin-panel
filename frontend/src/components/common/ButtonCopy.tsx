@@ -20,11 +20,17 @@ export default function ButtonCopy({ text, size = 'small' }: Props) {
 
   return (
     <Tooltip title={t('btn.copy')}>
-      <Button size={size} onClick={handleCopy} icon={
-        copied
-          ? <i className="bi bi-check-lg" style={{ color: '#16a34a' }} />
-          : <i className="bi bi-clipboard" />
-      } />
+      <Button
+        size={size}
+        onClick={handleCopy}
+        icon={
+          copied ? (
+            <i className="bi bi-check-lg" style={{ color: '#16a34a' }} />
+          ) : (
+            <i className="bi bi-clipboard" />
+          )
+        }
+      />
     </Tooltip>
   );
 }

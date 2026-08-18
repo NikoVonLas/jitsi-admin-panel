@@ -3,6 +3,11 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import FormUrl from '../../common/FormUrl';
 
 describe('FormUrl (uncontrolled mode)', () => {
+  it('associates the label with the input', () => {
+    render(<FormUrl name="url" label="URL" />);
+    expect(screen.getByLabelText('URL')).toHaveAttribute('name', 'url');
+  });
+
   it('renders an input', () => {
     render(<FormUrl name="url" label="URL" />);
     // antd renders an input
@@ -17,9 +22,7 @@ describe('FormUrl (uncontrolled mode)', () => {
 
   it('shows current value', () => {
     render(<FormUrl name="url" label="URL" value="https://example.com" />);
-    expect(
-      screen.getByDisplayValue('https://example.com'),
-    ).toBeInTheDocument();
+    expect(screen.getByDisplayValue('https://example.com')).toBeInTheDocument();
   });
 
   it('calls onChange', () => {

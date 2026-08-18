@@ -39,7 +39,9 @@ export default function ScheduleModal({ meetingId }: Props) {
     }
   }
 
-  useEffect(() => { load(); }, [meetingId]);
+  useEffect(() => {
+    load();
+  }, [meetingId]);
 
   async function handleAddSchedule() {
     if (!fieldsRef.current) return;
@@ -64,7 +66,11 @@ export default function ScheduleModal({ meetingId }: Props) {
       {error && <AlertWarning type="error">{t('err.generic')}</AlertWarning>}
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-        <Button type="primary" icon={<i className="bi bi-plus-lg" />} onClick={() => setAddOpen(true)}>
+        <Button
+          type="primary"
+          icon={<i className="bi bi-plus-lg" />}
+          onClick={() => setAddOpen(true)}
+        >
           {t('btn.add_schedule')}
         </Button>
       </div>
@@ -72,7 +78,10 @@ export default function ScheduleModal({ meetingId }: Props) {
       {loading ? (
         <Spinner />
       ) : (
-        <div className="card-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}>
+        <div
+          className="card-grid"
+          style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}
+        >
           {schedules.map((s) => (
             <ScheduleListItem key={s.id} schedule={s} onRefresh={load} />
           ))}
@@ -85,7 +94,10 @@ export default function ScheduleModal({ meetingId }: Props) {
 
       <Modal
         open={addOpen}
-        onCancel={() => { setAddOpen(false); setAddKey((k) => k + 1); }}
+        onCancel={() => {
+          setAddOpen(false);
+          setAddKey((k) => k + 1);
+        }}
         title={t('page.add_schedule')}
         footer={null}
         width={600}
@@ -94,8 +106,21 @@ export default function ScheduleModal({ meetingId }: Props) {
           <ScheduleFields ref={fieldsRef} />
           {addWarning && <AlertWarning type="error">{t('err.add')}</AlertWarning>}
           <FormActions>
-            <ButtonCancel onClick={() => { setAddOpen(false); setAddKey((k) => k + 1); }} disabled={addDisabled} block />
-            <ButtonSubmit onClick={handleAddSchedule} disabled={addDisabled} label={t('btn.add_schedule')} htmlType="button" block />
+            <ButtonCancel
+              onClick={() => {
+                setAddOpen(false);
+                setAddKey((k) => k + 1);
+              }}
+              disabled={addDisabled}
+              block
+            />
+            <ButtonSubmit
+              onClick={handleAddSchedule}
+              disabled={addDisabled}
+              label={t('btn.add_schedule')}
+              htmlType="button"
+              block
+            />
           </FormActions>
         </Form>
       </Modal>

@@ -2,17 +2,43 @@ name: CI
 
 on:
   push:
-    branches:
-      - '**'
+    branches: [main]
   pull_request:
     branches: [main]
 
 jobs:
+  validate-compose:
+    name: Validate Compose configuration
+    runs-on: ubuntu-latest
+    env:
+      API_SECRET: 0123456789abcdef0123456789abcdef
+      APP_FQDN: panel.example.com
+      DB_PASSWD: ci-database-password
+      MAILER_PASS: ci-smtp-password
+    steps:
+      - uses: actions/checkout@v5
+      - name: Render all Compose files
+        run: |
+          docker compose --file docker-compose.yml config --quiet
+          docker compose --file docker-compose.prod.yml config --quiet
+          docker compose --file docker-compose.e2e.yml config --quiet
+      - name: Verify production secret isolation
+        run: |
+          docker compose --file docker-compose.prod.yml config --format json > /tmp/compose.json
+          jq --exit-status '
+            .services["api-adm"].environment.MAILER_PASS == "ci-smtp-password" and
+            (.services["api-pri"].environment | has("MAILER_PASS") | not) and
+            (.services["api-pub"].environment | has("API_SECRET") | not) and
+            (.services["api-pub"].environment | has("MAILER_PASS") | not) and
+            .services["api-pub"].environment.LANG_UI == "en" and
+            .services.web.environment.CADDY_ADDRESS == "https://panel.example.com"
+          ' /tmp/compose.json
+
   lint-api:
     name: Deno lint & format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
@@ -25,14 +51,17 @@ jobs:
     name: Frontend build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - name: Install deps
         run: npm ci
+        working-directory: frontend
+      - name: Audit dependencies
+        run: npm audit --audit-level=moderate
         working-directory: frontend
       - name: Build
         run: npm run build
@@ -42,8 +71,8 @@ jobs:
     name: i18n lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm
@@ -76,7 +105,7 @@ jobs:
         ports:
           - 5432:5432
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
@@ -93,7 +122,7 @@ jobs:
       - name: Fix lcov paths (make relative to repo root)
         run: sed -i "s|SF:$(pwd)/|SF:|g" api/coverage/lcov.info
       - name: Upload API coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: api-coverage
           path: api/coverage/lcov.info
@@ -102,8 +131,8 @@ jobs:
     name: Frontend tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm
@@ -115,28 +144,58 @@ jobs:
         run: npm run test:coverage
         working-directory: frontend
       - name: Upload frontend coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: frontend-coverage
           path: frontend/coverage/lcov.info
+
+  test-e2e:
+    name: E2E (${{ matrix.auth }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs:
+      [
+        validate-compose,
+        lint-api,
+        build-frontend,
+        lint-i18n,
+        test-api,
+        test-frontend,
+      ]
+    strategy:
+      fail-fast: false
+      matrix:
+        auth: [local, keycloak]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run full stack E2E
+        run: ./e2e/run.sh ${{ matrix.auth }}
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-${{ matrix.auth }}
+          path: frontend/test-results
+          if-no-files-found: ignore
 
   sonarcloud:
     name: SonarCloud analysis
     runs-on: ubuntu-latest
     if: always()
-    needs: [lint-api, build-frontend, lint-i18n, test-api, test-frontend]
+    needs:
+      [lint-api, build-frontend, lint-i18n, test-api, test-frontend, test-e2e]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Download API coverage
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: api-coverage
           path: api/coverage
         continue-on-error: true
       - name: Download frontend coverage
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: frontend-coverage
           path: frontend/coverage

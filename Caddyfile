@@ -1,21 +1,34 @@
-{$APP_FQDN} {
-    handle /api/adm/* {
-        reverse_proxy api-adm:8000
-    }
+{$CADDY_ADDRESS} {
+	header {
+		-Server
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		X-Frame-Options "DENY"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+	}
 
-    handle /api/pri/* {
-        reverse_proxy api-pri:8001 {
-            flush_interval -1
-        }
-    }
+	handle /api/adm/* {
+		reverse_proxy api-adm:8000 {
+			header_up X-Real-IP {remote_host}
+		}
+	}
 
-    handle /api/pub/* {
-        reverse_proxy api-pub:8002
-    }
+	handle /api/pri/* {
+		reverse_proxy api-pri:8001 {
+			flush_interval -1
+			header_up X-Real-IP {remote_host}
+		}
+	}
 
-    handle {
-        root * /srv
-        try_files {path} /index.html
-        file_server
-    }
+	handle /api/pub/* {
+		reverse_proxy api-pub:8002 {
+			header_up X-Real-IP {remote_host}
+		}
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
 }

@@ -1,13 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
+import { isAuthenticated } from '../lib/session';
 
 export default function HomePage() {
   const navigate = useNavigate();
   useEffect(() => {
-    const isAuthenticated =
-      !!sessionStorage.getItem('oidc_authenticated') ||
-      !!localStorage.getItem('auth_token');
-    if (isAuthenticated) {
+    if (isAuthenticated()) {
       navigate('/meeting', { replace: true });
     } else {
       navigate('/login', { replace: true });

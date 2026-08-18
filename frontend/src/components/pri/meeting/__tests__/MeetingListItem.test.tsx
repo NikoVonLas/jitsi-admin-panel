@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import type { Meeting222 } from '../../../../types';
 
 vi.mock('qrcode', () => ({
-  toDataURL: vi.fn().mockResolvedValue('data:image/png;base64,test'),
+  toDataURL: vi.fn().mockReturnValue(new Promise(() => {})),
 }));
 
 vi.mock('../../../../lib/api', () => ({
@@ -107,20 +107,14 @@ describe('MeetingListItem', () => {
   });
 
   it('shows next session time when session list has items', () => {
-    render(
-      <MeetingListItem
-        meeting={makeMeeting({ session_list: ['2026-06-25T10:00:00Z'] })}
-      />,
-    );
+    render(<MeetingListItem meeting={makeMeeting({ session_list: ['2026-06-25T10:00:00Z'] })} />);
     // showLocaleDatetime is mocked to return '2026-01-01 12:00'
     expect(screen.getByText('2026-01-01 12:00')).toBeInTheDocument();
   });
 
   it('does not show session info for ephemeral meetings', () => {
     render(
-      <MeetingListItem
-        meeting={makeMeeting({ schedule_type: 'ephemeral', session_list: [] })}
-      />,
+      <MeetingListItem meeting={makeMeeting({ schedule_type: 'ephemeral', session_list: [] })} />
     );
     expect(screen.queryByText('meeting.not_planned')).not.toBeInTheDocument();
   });

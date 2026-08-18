@@ -1,6 +1,7 @@
 import { assertEquals } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
 import { adm, pri, pub } from "../../../lib/http/wrapper.ts";
+import { HttpError } from "../../../lib/http/error.ts";
 
 describe("pub wrapper", () => {
   it("returns 200 with serialised result on success", async () => {
@@ -19,6 +20,23 @@ describe("pub wrapper", () => {
     const req = new Request("http://test/api/pub/fail");
     const res = await pub(fn, req);
     assertEquals(res.status, 500);
+  });
+
+  it("preserves a typed client error", async () => {
+    const req = new Request("http://test");
+    const res = await pri(
+      () => Promise.reject(new HttpError(403, "Forbidden")),
+      req,
+      "identity",
+    );
+    assertEquals(res.status, 403);
+    assertEquals(await res.json(), { error: { message: "Forbidden" } });
+  });
+
+  it("returns 400 for malformed JSON", async () => {
+    const req = new Request("http://test", { method: "POST", body: "{" });
+    const res = await pri((request) => request.json(), req, "identity");
+    assertEquals(res.status, 400);
   });
 
   it("serialises arrays", async () => {

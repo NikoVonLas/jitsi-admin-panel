@@ -39,20 +39,20 @@ describe('PrivateLayout', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('renders Outlet when authenticated via oidc', () => {
-    sessionStorage.setItem('oidc_authenticated', 'ok');
+  it('renders Outlet when the session marker exists', () => {
+    sessionStorage.setItem('session_authenticated', 'ok');
     render(<PrivateLayout />);
     expect(screen.getByTestId('outlet')).toBeInTheDocument();
   });
 
-  it('renders Outlet when authenticated via auth_token', () => {
+  it('does not trust a legacy localStorage token', () => {
     localStorage.setItem('auth_token', 'token123');
     render(<PrivateLayout />);
-    expect(screen.getByTestId('outlet')).toBeInTheDocument();
+    expect(screen.queryByTestId('outlet')).toBeNull();
   });
 
   it('does not redirect when authenticated', () => {
-    sessionStorage.setItem('oidc_authenticated', 'ok');
+    sessionStorage.setItem('session_authenticated', 'ok');
     render(<PrivateLayout />);
     expect(mockNavigate).not.toHaveBeenCalled();
   });

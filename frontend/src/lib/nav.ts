@@ -1,3 +1,5 @@
+import { get } from './api';
+
 export function navigate(url: string, navigateFn?: (path: string) => void): void {
   if (url.startsWith('http://') || url.startsWith('https://')) {
     globalThis.location.href = url;
@@ -17,7 +19,6 @@ export async function ping(): Promise<void> {
     }
     if (now - Number(pingedAt) > 60000) {
       localStorage.setItem('pinged_at', String(now));
-      const { get } = await import('./api');
       await get('/api/pri/identity/ping');
     }
   } finally {

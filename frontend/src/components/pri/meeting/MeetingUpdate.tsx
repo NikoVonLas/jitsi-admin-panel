@@ -46,8 +46,21 @@ export default function MeetingUpdate({ meeting, onDone }: Props) {
     <div style={{ display: 'flex', justifyContent: 'center' }}>
       <div style={{ width: '100%', maxWidth: 540 }}>
         <Form layout="vertical" onFinish={onFinish}>
-          <FormText name="name" label={t('form.name')} value={name} onChange={setName} required disabled={disabled} />
-          <FormTextarea name="info" label={t('form.info')} value={info} onChange={setInfo} disabled={disabled} />
+          <FormText
+            name="name"
+            label={t('form.name')}
+            value={name}
+            onChange={setName}
+            required
+            disabled={disabled}
+          />
+          <FormTextarea
+            name="info"
+            label={t('form.info')}
+            value={info}
+            onChange={setInfo}
+            disabled={disabled}
+          />
 
           {warning && <AlertWarning type="error">{t('err.update')}</AlertWarning>}
 

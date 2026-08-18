@@ -7,7 +7,7 @@ describe('FormActions', () => {
     render(
       <FormActions>
         <button>Submit</button>
-      </FormActions>,
+      </FormActions>
     );
     expect(screen.getByRole('button', { name: 'Submit' })).toBeInTheDocument();
   });
@@ -17,7 +17,7 @@ describe('FormActions', () => {
       <FormActions>
         <button>Cancel</button>
         <button>Save</button>
-      </FormActions>,
+      </FormActions>
     );
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
@@ -28,7 +28,7 @@ describe('FormActions', () => {
       <FormActions>
         <button>A</button>
         <button>B</button>
-      </FormActions>,
+      </FormActions>
     );
     const wrappers = container.querySelectorAll('[style*="flex: 1"]');
     expect(wrappers.length).toBe(2);

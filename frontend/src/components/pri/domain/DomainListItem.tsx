@@ -68,14 +68,26 @@ export default function DomainListItem({ domain: p, onRefresh }: Props) {
                 t,
                 extraActions: [
                   <Tooltip key="edit" title={t('btn.update')}>
-                    <Button type="text" icon={<i className="bi bi-pencil" />} onClick={() => setShowEdit(true)} />
+                    <Button
+                      type="text"
+                      icon={<i className="bi bi-pencil" />}
+                      onClick={() => setShowEdit(true)}
+                    />
                   </Tooltip>,
                 ],
               })
             : undefined
         }
       >
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: 8,
+            marginBottom: 4,
+          }}
+        >
           <span style={{ fontWeight: 600, wordBreak: 'break-word' }}>{p.name}</span>
           <Tag color={p.public ? 'success' : 'default'} style={{ flexShrink: 0 }}>
             {p.public ? t('domain.public') : t('domain.private')}
@@ -83,7 +95,9 @@ export default function DomainListItem({ domain: p, onRefresh }: Props) {
         </div>
         <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{p.url}</div>
         {delError && <AlertWarning type="error">{t('err.delete')}</AlertWarning>}
-        {toggleError && <AlertWarning type="error">{enabled ? t('err.disable') : t('err.enable')}</AlertWarning>}
+        {toggleError && (
+          <AlertWarning type="error">{enabled ? t('err.disable') : t('err.enable')}</AlertWarning>
+        )}
       </Card>
 
       <Modal

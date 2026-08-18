@@ -35,17 +35,11 @@ const ru: Record<string, string> = {
   'btn.show_schedules': 'Расписание',
   'btn.set_default_profile': 'Сделать профилем по умолчанию',
   'btn.update': 'Изменить',
-  'btn.join_now': 'Войти',
   'btn.random': 'Сгенерировать случайный слаг',
   'btn.reset_key': 'Сбросить код',
   'btn.next': 'Далее',
   'btn.add_schedule': 'Добавить расписание',
   'btn.create_meeting': 'Создать собрание',
-  'btn.reject': 'Отклонить',
-  'btn.accept': 'Принять',
-  // Incoming call
-  'call.calling': 'вызов...',
-  'call.unknown': 'Неизвестно',
 
   'page.meetings': 'Собрания',
   'page.profiles': 'Мои профили',
@@ -159,7 +153,6 @@ const ru: Record<string, string> = {
   'profile.default': 'По умолчанию',
 
   // Status / spinner
-  'status.joining': 'подключение...',
 
   // Jitsi token auth
   'jitsi.checking': 'Проверяем сеанс…',
@@ -184,7 +177,8 @@ const ru: Record<string, string> = {
   'setting.mailer': 'Почта (SMTP)',
   'setting.appearance': 'Внешний вид',
   'setting.auth': 'Аутентификация',
-  'setting.oidc_hint': 'Добавьте один или несколько OIDC-провайдеров (Keycloak, Auth0 и т.д.). Как только хотя бы один включён — SSO-вход активируется.',
+  'setting.oidc_hint':
+    'Добавьте один или несколько OIDC-провайдеров (Keycloak, Auth0 и т.д.). Как только хотя бы один включён — SSO-вход активируется.',
   'setting.oidc_no_providers': 'OIDC-провайдеры не настроены — SSO-вход отключён',
   'setting.add_provider': 'Добавить провайдер',
   'setting.edit_provider': 'Редактировать провайдер',

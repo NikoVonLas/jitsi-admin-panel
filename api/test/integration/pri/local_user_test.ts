@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, it } from "@std/testing/bdd";
 import { cleanDb, makeRequest } from "../../helpers/db.ts";
 import { registerFirst } from "../../helpers/auth.ts";
 import routeLocalUser from "../../../lib/pri/local-user.ts";
+import { query } from "../../../lib/database/common.ts";
 
 const EMAIL = "admin@local-user-test.example";
 const PASSWORD = "secure_localuser_test_pass_123";
@@ -44,9 +45,9 @@ describe("pri/user (local user management)", {
     const res = await routeLocalUser(req, "/api/pri/user/add", identityId);
     assertEquals(res.status, 200);
     const body = await res.json();
-    assertEquals(body.email, "newuser@local-user-test.example");
-    assertEquals(body.name, "New User");
-    assertEquals(body.is_superadmin, false);
+    assertEquals(body[0].email, "newuser@local-user-test.example");
+    assertEquals(body[0].name, "New User");
+    assertEquals(body[0].is_superadmin, false);
   });
 
   it("rejects duplicate email on add", async () => {
@@ -57,8 +58,7 @@ describe("pri/user (local user management)", {
       is_superadmin: false,
     });
     const res = await routeLocalUser(req, "/api/pri/user/add", identityId);
-    // conflict → 500 from wrapper (throws "conflict")
-    assertEquals(res.status, 500);
+    assertEquals(res.status, 409);
   });
 
   it("rejects add with short password", async () => {
@@ -69,12 +69,10 @@ describe("pri/user (local user management)", {
       is_superadmin: false,
     });
     const res = await routeLocalUser(req, "/api/pri/user/add", identityId);
-    assertEquals(res.status, 500);
+    assertEquals(res.status, 400);
   });
 
   it("promotes and demotes superadmin flag", async () => {
-    const { query } = await import("../../../lib/database/common.ts");
-
     // Add a second user to promote
     const addReq = makeRequest("POST", "/api/pri/user/add", {
       email: "promote@local-user-test.example",
@@ -88,7 +86,7 @@ describe("pri/user (local user management)", {
       identityId,
     );
     const addBody = await addRes.json();
-    const newId = addBody.id as string;
+    const newId = addBody[0].id as string;
 
     // Promote
     const promoteReq = makeRequest("POST", "/api/pri/user/set-admin", {
@@ -102,7 +100,7 @@ describe("pri/user (local user management)", {
     );
     assertEquals(promoteRes.status, 200);
     const promoteBody = await promoteRes.json();
-    assertEquals(promoteBody.ok, true);
+    assertEquals(promoteBody[0].ok, true);
 
     // Demote back
     const demoteReq = makeRequest("POST", "/api/pri/user/set-admin", {
@@ -136,7 +134,7 @@ describe("pri/user (local user management)", {
       identityId,
     );
     const addBody = await addRes.json();
-    const newId = addBody.id as string;
+    const newId = addBody[0].id as string;
 
     const delReq = makeRequest("POST", "/api/pri/user/del", { id: newId });
     const delRes = await routeLocalUser(
@@ -146,13 +144,72 @@ describe("pri/user (local user management)", {
     );
     assertEquals(delRes.status, 200);
     const delBody = await delRes.json();
-    assertEquals(delBody.ok, true);
+    assertEquals(delBody[0].ok, true);
   });
 
   it("prevents deleting yourself", async () => {
     const req = makeRequest("POST", "/api/pri/user/del", { id: identityId });
     const res = await routeLocalUser(req, "/api/pri/user/del", identityId);
-    assertEquals(res.status, 500);
+    assertEquals(res.status, 409);
+  });
+
+  it("does not mutate non-local identities through local user routes", async () => {
+    const oidcIdentityId = crypto.randomUUID();
+    await query({
+      text: `INSERT INTO identity (id) VALUES ($1)`,
+      args: [oidcIdentityId],
+    });
+
+    const promoteRes = await routeLocalUser(
+      makeRequest("POST", "/api/pri/user/set-admin", {
+        id: oidcIdentityId,
+        is_superadmin: true,
+      }),
+      "/api/pri/user/set-admin",
+      identityId,
+    );
+    assertEquals(promoteRes.status, 404);
+
+    const delRes = await routeLocalUser(
+      makeRequest("POST", "/api/pri/user/del", { id: oidcIdentityId }),
+      "/api/pri/user/del",
+      identityId,
+    );
+    assertEquals(delRes.status, 404);
+
+    const remaining = await query({
+      text: `SELECT id, is_superadmin FROM identity WHERE id = $1`,
+      args: [oidcIdentityId],
+    });
+    assertEquals(remaining.rows, [{
+      id: oidcIdentityId,
+      is_superadmin: false,
+    }]);
+    await query({
+      text: `DELETE FROM identity WHERE id = $1`,
+      args: [oidcIdentityId],
+    });
+  });
+
+  it("rejects user management from a regular user", async () => {
+    const addRes = await routeLocalUser(
+      makeRequest("POST", "/api/pri/user/add", {
+        email: "regular-authz@local-user-test.example",
+        password: "regular_authz_pass_1234",
+        name: "Regular",
+        is_superadmin: false,
+      }),
+      "/api/pri/user/add",
+      identityId,
+    );
+    const regularIdentityId = (await addRes.json())[0].id as string;
+
+    const res = await routeLocalUser(
+      makeRequest("POST", "/api/pri/user/list", {}),
+      "/api/pri/user/list",
+      regularIdentityId,
+    );
+    assertEquals(res.status, 403);
   });
 
   it("returns 404 for unknown path", async () => {

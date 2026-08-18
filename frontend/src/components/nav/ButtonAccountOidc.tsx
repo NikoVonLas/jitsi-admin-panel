@@ -11,8 +11,16 @@ import ProfileUpdate from '../pri/profile/ProfileUpdate';
 const { Text } = Typography;
 
 const AVATAR_COLORS = [
-  '#1a73e8', '#e53935', '#43a047', '#fb8c00', '#8e24aa',
-  '#00897b', '#d81b60', '#3949ab', '#039be5', '#f4511e',
+  '#1a73e8',
+  '#e53935',
+  '#43a047',
+  '#fb8c00',
+  '#8e24aa',
+  '#00897b',
+  '#d81b60',
+  '#3949ab',
+  '#039be5',
+  '#f4511e',
 ];
 
 function avatarInitials(name: string): string {
@@ -49,7 +57,9 @@ export default function ButtonAccountOidc() {
     }
   }
 
-  useEffect(() => { loadProfile().catch(() => {}); }, []);
+  useEffect(() => {
+    loadProfile().catch(() => {});
+  }, []);
 
   function handleTheme(val: Theme) {
     setTheme(val).catch(() => {});
@@ -121,14 +131,24 @@ export default function ButtonAccountOidc() {
           <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
             {t('pref.language')}
           </Text>
-          <Segmented options={langOptions} value={lang ?? 'en'} onChange={(v) => handleLang(v as Lang)} block />
+          <Segmented
+            options={langOptions}
+            value={lang ?? 'en'}
+            onChange={(v) => handleLang(v as Lang)}
+            block
+          />
         </div>
 
         <div style={{ marginBottom: 16 }}>
           <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
             {t('pref.week_start')}
           </Text>
-          <Segmented options={weekStartOptions} value={weekStartValue} onChange={(v) => handleWeekStart(v as string)} block />
+          <Segmented
+            options={weekStartOptions}
+            value={weekStartValue}
+            onChange={(v) => handleWeekStart(v as string)}
+            block
+          />
         </div>
 
         <Divider />

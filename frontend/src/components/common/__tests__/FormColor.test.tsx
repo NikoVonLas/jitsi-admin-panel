@@ -24,13 +24,23 @@ describe('FormColor', () => {
   });
 
   it('renders reset button when value is set and defaultValue provided', () => {
-    render(<FormColor name="color" label="Color" value="#ff0000" defaultValue="" onChange={vi.fn()} />);
+    render(
+      <FormColor name="color" label="Color" value="#ff0000" defaultValue="" onChange={vi.fn()} />
+    );
     expect(screen.getByText('×')).toBeInTheDocument();
   });
 
   it('calls onChange with defaultValue when reset button clicked', () => {
     const onChange = vi.fn();
-    render(<FormColor name="color" label="Color" value="#ff0000" defaultValue="#000000" onChange={onChange} />);
+    render(
+      <FormColor
+        name="color"
+        label="Color"
+        value="#ff0000"
+        defaultValue="#000000"
+        onChange={onChange}
+      />
+    );
     fireEvent.click(screen.getByText('×'));
     expect(onChange).toHaveBeenCalledWith('#000000');
   });

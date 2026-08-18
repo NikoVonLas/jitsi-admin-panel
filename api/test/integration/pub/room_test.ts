@@ -74,6 +74,35 @@ describe("pub/room", { sanitizeResources: false, sanitizeOps: false }, () => {
     assertEquals(body.length, 0);
   });
 
+  it("joins a room on a private system-owned domain with its host key", async () => {
+    const keyReq = makeRequest("POST", "/api/pri/room/get/hostkey", {
+      id: roomId,
+    });
+    const keyRes = await routeRoom(
+      keyReq,
+      "/api/pri/room/get/hostkey",
+      identityId,
+    );
+    const keyBody = await keyRes.json();
+
+    const req = makeRequest("POST", "/api/pub/room/join/asmod/byroom", {
+      room_id: roomId,
+      host_key: keyBody[0].host_key,
+    });
+    const res = await handlePubRoom(
+      req,
+      "/api/pub/room/join/asmod/byroom",
+    );
+    const body = await res.json();
+
+    assertEquals(res.status, 200);
+    assertEquals(typeof body[0].url, "string");
+    assertEquals(
+      body[0].url.startsWith("https://meet.pub-room-test.example/pub-room"),
+      true,
+    );
+  });
+
   it("returns empty array for non-existent short code", async () => {
     const req = makeRequest(
       "POST",

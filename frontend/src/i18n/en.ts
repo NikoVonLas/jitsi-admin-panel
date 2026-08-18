@@ -42,18 +42,11 @@ const en: Record<string, string> = {
   'btn.show_schedules': 'Show schedules',
   'btn.set_default_profile': 'Set as default profile',
   'btn.update': 'Update',
-  'btn.join_now': 'Join Now',
   'btn.random': 'Generate random slug',
   'btn.reset_key': 'Reset code',
   'btn.next': 'Next',
   'btn.add_schedule': 'Add schedule',
   'btn.create_meeting': 'Create meeting',
-  'btn.reject': 'Reject',
-  'btn.accept': 'Accept',
-
-  // Incoming call
-  'call.calling': 'calling...',
-  'call.unknown': 'Unknown',
 
   // Page titles
   'page.meetings': 'Meetings',
@@ -174,15 +167,16 @@ const en: Record<string, string> = {
   'profile.default': 'Default',
 
   // Status / spinner
-  'status.joining': 'joining...',
 
   // Jitsi token auth
   'jitsi.checking': 'Checking your session…',
-  'jitsi.err_no_room': 'Missing "room" parameter. Please set TOKEN_AUTH_URL to include ?room={room}.',
+  'jitsi.err_no_room':
+    'Missing "room" parameter. Please set TOKEN_AUTH_URL to include ?room={room}.',
   'jitsi.redirecting_sso': 'Redirecting to SSO…',
   'jitsi.issuing_token': 'Issuing host token…',
   'jitsi.redirecting_jitsi': 'Redirecting to Jitsi…',
-  'jitsi.err_no_resource': 'Unable to map this room to any resource you can host. Contact your administrator.',
+  'jitsi.err_no_resource':
+    'Unable to map this room to any resource you can host. Contact your administrator.',
 
   // Search, filter, pagination
   'search.placeholder': 'Search...',
@@ -204,7 +198,8 @@ const en: Record<string, string> = {
   'setting.mailer': 'Email (SMTP)',
   'setting.appearance': 'Appearance',
   'setting.auth': 'Authentication',
-  'setting.oidc_hint': 'Add one or more OIDC providers (Keycloak, Auth0, etc.). At least one enabled provider enables SSO login.',
+  'setting.oidc_hint':
+    'Add one or more OIDC providers (Keycloak, Auth0, etc.). At least one enabled provider enables SSO login.',
   'setting.oidc_no_providers': 'No OIDC providers configured — SSO login is disabled',
   'setting.add_provider': 'Add Provider',
   'setting.edit_provider': 'Edit Provider',

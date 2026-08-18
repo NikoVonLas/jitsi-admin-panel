@@ -52,9 +52,20 @@ export default function DomainForm({ onCancel, onDone, domainId }: Props) {
       setWarning(false);
       setDisabled(true);
       if (isUpdate) {
-        await action('/api/pri/domain/update', { id: fetchedId, name, auth_type: authType, domain_attr: domainAttr, public: isPublic });
+        await action('/api/pri/domain/update', {
+          id: fetchedId,
+          name,
+          auth_type: authType,
+          domain_attr: domainAttr,
+          public: isPublic,
+        });
       } else {
-        await action('/api/pri/domain/add', { name, auth_type: authType, domain_attr: domainAttr, public: isPublic });
+        await action('/api/pri/domain/add', {
+          name,
+          auth_type: authType,
+          domain_attr: domainAttr,
+          public: isPublic,
+        });
       }
       onDone?.();
     } catch {
@@ -70,11 +81,27 @@ export default function DomainForm({ onCancel, onDone, domainId }: Props) {
     <div style={{ display: 'flex', justifyContent: 'center' }}>
       <div style={{ width: '100%', maxWidth: 540 }}>
         <Form layout="vertical" onFinish={onFinish}>
-          <DomainFields name={name} onNameChange={setName} authType={authType} onAuthTypeChange={setAuthType} domainAttr={domainAttr} onDomainAttrChange={setDomainAttr} isPublic={isPublic} onPublicChange={setIsPublic} disabled={disabled} />
-          {warning && <AlertWarning type="error">{t(isUpdate ? 'err.update' : 'err.add')}</AlertWarning>}
+          <DomainFields
+            name={name}
+            onNameChange={setName}
+            authType={authType}
+            onAuthTypeChange={setAuthType}
+            domainAttr={domainAttr}
+            onDomainAttrChange={setDomainAttr}
+            isPublic={isPublic}
+            onPublicChange={setIsPublic}
+            disabled={disabled}
+          />
+          {warning && (
+            <AlertWarning type="error">{t(isUpdate ? 'err.update' : 'err.add')}</AlertWarning>
+          )}
           <FormActions>
             <ButtonCancel onClick={onCancel} disabled={disabled} block />
-            <ButtonSubmit disabled={disabled} label={t(isUpdate ? 'btn.update' : 'btn.add')} block />
+            <ButtonSubmit
+              disabled={disabled}
+              label={t(isUpdate ? 'btn.update' : 'btn.add')}
+              block
+            />
           </FormActions>
         </Form>
       </div>

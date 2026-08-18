@@ -21,15 +21,28 @@ import authConfig from "./lib/adm/auth-config.ts";
 import localLogin from "./lib/adm/local-login.ts";
 import localRegister from "./lib/adm/local-register.ts";
 import oidcProvider from "./lib/adm/oidc-provider.ts";
+import { bootstrapOidcProvider } from "./lib/adm/bootstrap-oidc.ts";
+import { isPublicAuthPostPath } from "./lib/adm/public-auth-route.ts";
+import { AUTH_LOCAL } from "./config.ts";
+import { hasEnabledOidcProvider } from "./lib/database/oidc-provider.ts";
+import { validateRuntimeConfig } from "./lib/common/runtime-config.ts";
 
 const PRE = "/api/adm";
 
 const timers = {} as Timers;
 
+validateRuntimeConfig("adm");
+
 // -----------------------------------------------------------------------------
 async function migration() {
   try {
     await migrate();
+    await bootstrapOidcProvider();
+    if (!AUTH_LOCAL && !await hasEnabledOidcProvider()) {
+      throw new Error(
+        "AUTH_LOCAL=false requires at least one enabled OIDC provider",
+      );
+    }
 
     return true;
   } catch (e) {
@@ -67,7 +80,7 @@ async function route(req: Request, path: string): Promise<Response> {
   } else if (path === `${PRE}/oidc/auth-url`) {
     return await oidcAuth(req);
   } else if (path === `${PRE}/oidc/logout-url`) {
-    return await oidcLogout();
+    return await oidcLogout(req);
   } else {
     return notFound();
   }
@@ -93,6 +106,13 @@ async function handler(req: Request): Promise<Response> {
   }
   if (req.method === "POST" && path === `${PRE}/auth/local/register`) {
     return await localRegister(req);
+  }
+
+  // The OIDC authorization-code exchange happens before the panel has issued
+  // its own session cookie. These narrowly scoped endpoints must therefore be
+  // reachable without an existing identity.
+  if (req.method === "POST" && isPublicAuthPostPath(path)) {
+    return await route(req, path);
   }
 
   // OIDC providers CRUD (superadmin only, handled inside wrapper)

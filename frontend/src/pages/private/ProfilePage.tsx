@@ -28,7 +28,9 @@ export default function ProfilePage() {
     }
   }
 
-  useEffect(() => { loadProfiles(); }, []);
+  useEffect(() => {
+    loadProfiles();
+  }, []);
 
   return (
     <div>
@@ -45,12 +47,12 @@ export default function ProfilePage() {
       {error && <AlertWarning type="error">{t('err.generic')}</AlertWarning>}
       {(() => {
         if (loading) return <Spinner />;
-        if (profiles.length === 0) return (
-          <AlertWarning>
-            There is no profile in the list.{' '}
-            <Link to="/profile/add">{t('btn.add')}</Link>
-          </AlertWarning>
-        );
+        if (profiles.length === 0)
+          return (
+            <AlertWarning>
+              There is no profile in the list. <Link to="/profile/add">{t('btn.add')}</Link>
+            </AlertWarning>
+          );
         return (
           <div className="card-grid" style={{ marginTop: 16 }}>
             {profiles.map((p) => (

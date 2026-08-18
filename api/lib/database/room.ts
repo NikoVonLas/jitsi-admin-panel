@@ -1,6 +1,6 @@
 import { fetch } from "./common.ts";
 import { generateRoomUrl } from "../common/helper.ts";
-import { getDefaultProfile, getDefaultProfileByKey } from "./profile.ts";
+import { getDefaultProfile } from "./profile.ts";
 import type {
   Affiliation,
   Id,
@@ -124,8 +124,7 @@ export async function getRoomLinksetByRoomHostKey(
         JOIN identity ir ON r.identity_id = ir.id AND ir.enabled
       WHERE r.id = $1
         AND r.host_key = $2
-        AND r.enabled
-        AND (d.public OR d.identity_id = r.identity_id)`,
+        AND r.enabled`,
     args: [roomId, hostKey],
   };
 
@@ -246,27 +245,6 @@ export async function getRoomUrl(
 }
 
 // -----------------------------------------------------------------------------
-export async function getRoomUrlByKey(
-  keyValue: string,
-  roomLinkset: RoomLinkset,
-  affiliation: Affiliation,
-  exp: number,
-  additionalHash: string,
-) {
-  const profiles = await getDefaultProfileByKey(keyValue);
-  const profile = profiles[0];
-  if (!profile) throw new Error("profile is not available");
-
-  return await generateRoomUrl(
-    roomLinkset,
-    profile,
-    affiliation,
-    exp,
-    additionalHash,
-  );
-}
-
-// -----------------------------------------------------------------------------
 export async function getRoomLinksetByShortCode(shortCode: string) {
   const sql = {
     text: `
@@ -306,7 +284,6 @@ export async function getRoomLinksetByHostKey(
         AND ms.host_key = $2
         AND ms.enabled
         AND ses.ended_at > now()
-        AND (d.public OR d.identity_id = r.identity_id)
       ORDER BY ses.started_at
       LIMIT 1`,
     args: [
@@ -338,7 +315,6 @@ export async function getRoomLinksetByMeetingAndHostKey(
         AND ms.host_key = $2
         AND ms.enabled
         AND ses.ended_at > now()
-        AND (d.public OR d.identity_id = r.identity_id)
       ORDER BY ses.started_at
       LIMIT 1`,
     args: [

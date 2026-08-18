@@ -14,8 +14,20 @@ import {
   updateMeetingScheduleEnabled,
 } from "../database/meeting-schedule.ts";
 import type { Attr } from "../database/types.ts";
+import { checkAttr } from "../database/common.ts";
+import { checkScheduleAttr } from "../database/meeting-session.ts";
+import { HttpError } from "../http/error.ts";
 
 const PRE = "/api/pri/meeting/schedule";
+
+function validateScheduleAttr(scheduleAttr: Attr): void {
+  try {
+    checkAttr(scheduleAttr);
+    checkScheduleAttr(scheduleAttr);
+  } catch {
+    throw new HttpError(400, "Invalid meeting schedule");
+  }
+}
 
 // -----------------------------------------------------------------------------
 async function get(req: Request, identityId: string): Promise<unknown> {
@@ -77,6 +89,7 @@ async function add(req: Request, identityId: string): Promise<unknown> {
   const pl = await req.json();
   const meetingId = pl.meeting_id;
   const scheduleAttr = pl.schedule_attr as Attr;
+  validateScheduleAttr(scheduleAttr);
 
   const roleRows = await getIdentityRole(identityId);
   const isSuperAdmin = roleRows[0]?.is_superadmin === true;
@@ -105,6 +118,7 @@ async function update(req: Request, identityId: string): Promise<unknown> {
   const pl = await req.json();
   const scheduleId = pl.id;
   const scheduleAttr = pl.schedule_attr as Attr;
+  validateScheduleAttr(scheduleAttr);
 
   const roleRows = await getIdentityRole(identityId);
   const isSuperAdmin = roleRows[0]?.is_superadmin === true;

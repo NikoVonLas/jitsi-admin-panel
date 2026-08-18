@@ -12,8 +12,12 @@ interface Props {
 }
 
 export default function ImageUploadField({
-  label, previewUrl, previewStyle, accept = 'image/jpeg,image/png,image/svg+xml,image/webp',
-  onUpload, onReset,
+  label,
+  previewUrl,
+  previewStyle,
+  accept = 'image/jpeg,image/png,image/svg+xml,image/webp',
+  onUpload,
+  onReset,
 }: Props) {
   const t = useTr();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -56,14 +60,29 @@ export default function ImageUploadField({
 
   return (
     <div style={{ marginBottom: 24 }}>
-      <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 8 }}>{label}</div>
+      <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 8 }}>
+        {label}
+      </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <div style={{
-          width: 80, height: 80, border: '1px solid var(--color-border)',
-          borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'var(--color-bg-subtle)', flexShrink: 0, overflow: 'hidden',
-        }}>
-          <img src={previewUrl} alt={label} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', ...previewStyle }} />
+        <div
+          style={{
+            width: 80,
+            height: 80,
+            border: '1px solid var(--color-border)',
+            borderRadius: 8,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'var(--color-bg-subtle)',
+            flexShrink: 0,
+            overflow: 'hidden',
+          }}
+        >
+          <img
+            src={previewUrl}
+            alt={label}
+            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', ...previewStyle }}
+          />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
           <Button
@@ -98,7 +117,13 @@ export default function ImageUploadField({
           )}
         </div>
       </div>
-      <input ref={fileRef} type="file" accept={accept} style={{ display: 'none' }} onChange={handleFile} />
+      <input
+        ref={fileRef}
+        type="file"
+        accept={accept}
+        style={{ display: 'none' }}
+        onChange={handleFile}
+      />
     </div>
   );
 }

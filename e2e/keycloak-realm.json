@@ -1,0 +1,63 @@
+{
+  "realm": "jitsi",
+  "enabled": true,
+  "displayName": "Jitsi E2E",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "jitsi-superadmin",
+        "description": "Jitsi admin panel superadmin"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "jitsi-admin-e2e",
+      "name": "Jitsi Admin E2E",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "e2e-client-secret",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "publicClient": false,
+      "redirectUris": [
+        "http://web/*"
+      ],
+      "webOrigins": [
+        "http://web"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://web/*"
+      },
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "roles",
+        "profile",
+        "email"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "keycloak-admin",
+      "firstName": "Keycloak",
+      "lastName": "Admin",
+      "email": "keycloak-admin@example.test",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "E2eKeycloakPassword123!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "jitsi-superadmin"
+      ]
+    }
+  ]
+}

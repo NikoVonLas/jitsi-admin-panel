@@ -19,7 +19,10 @@ vi.mock('../ScheduleListItem', () => ({
 }));
 
 vi.mock('../ScheduleFields', () => ({
-  default: (_props: unknown, ref: React.Ref<{ normalizeInto: (sa: Record<string, string>) => void }>) => {
+  default: (
+    _props: unknown,
+    ref: React.Ref<{ normalizeInto: (sa: Record<string, string>) => void }>
+  ) => {
     if (ref && typeof ref === 'object' && 'current' in ref) {
       (ref as React.MutableRefObject<unknown>).current = {
         normalizeInto: (_sa: Record<string, string>) => {},
@@ -39,6 +42,7 @@ describe('ScheduleModal', () => {
   });
 
   it('renders without crashing', () => {
+    vi.mocked(api.listById).mockReturnValue(new Promise(() => {}));
     render(<ScheduleModal meetingId="meeting-1" />);
   });
 
@@ -59,9 +63,7 @@ describe('ScheduleModal', () => {
     vi.mocked(api.listById).mockResolvedValue([]);
     render(<ScheduleModal meetingId="meeting-1" />);
     await waitFor(() => {
-      expect(
-        screen.getByText('No schedules yet. Add one to get started.'),
-      ).toBeInTheDocument();
+      expect(screen.getByText('No schedules yet. Add one to get started.')).toBeInTheDocument();
     });
   });
 
@@ -112,16 +114,16 @@ describe('ScheduleModal', () => {
       expect(vi.mocked(api.listById)).toHaveBeenCalledWith(
         '/api/pri/meeting/schedule/list/bymeeting',
         'meeting-1',
-        100,
-      ),
+        100
+      )
     );
     rerender(<ScheduleModal meetingId="meeting-2" />);
     await waitFor(() =>
       expect(vi.mocked(api.listById)).toHaveBeenCalledWith(
         '/api/pri/meeting/schedule/list/bymeeting',
         'meeting-2',
-        100,
-      ),
+        100
+      )
     );
   });
 });

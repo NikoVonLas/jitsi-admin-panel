@@ -1,4 +1,5 @@
 import { internalServerError, ok } from "./response.ts";
+import { asHttpErrorResponse } from "./error.ts";
 
 // -----------------------------------------------------------------------------
 type functionPri = (req: Request, identityId: string) => Promise<unknown>;
@@ -13,6 +14,8 @@ export async function pri(
 
     return ok(JSON.stringify(rows));
   } catch (e) {
+    const response = asHttpErrorResponse(e);
+    if (response) return response;
     console.error("handler error:", e);
     return internalServerError();
   }
@@ -27,6 +30,8 @@ export async function pub(f: functionPub, req: Request): Promise<Response> {
 
     return ok(JSON.stringify(rows));
   } catch (e) {
+    const response = asHttpErrorResponse(e);
+    if (response) return response;
     console.error("handler error:", e);
     return internalServerError();
   }

@@ -13,8 +13,17 @@ export default function ProfileDel({ profile }: Props) {
     <ProfileConfirmAction
       profile={profile}
       endpoint="/api/pri/profile/del"
-      alertNode={<Alert type="warning" message={t('warn.delete_profile')} showIcon style={{ marginBottom: 16 }} />}
-      errorNode={<Alert type="error" message={t('err.delete')} showIcon style={{ marginBottom: 16 }} />}
+      alertNode={
+        <Alert
+          type="warning"
+          message={t('warn.delete_profile')}
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      }
+      errorNode={
+        <Alert type="error" message={t('err.delete')} showIcon style={{ marginBottom: 16 }} />
+      }
       submitLabel={t('btn.delete')}
       danger
     />

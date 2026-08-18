@@ -37,8 +37,9 @@ describe('SettingUsers', () => {
     vi.mocked(api.list).mockResolvedValue([]);
   });
 
-  it('renders without crashing', () => {
+  it('renders without crashing', async () => {
     render(<SettingUsers />);
+    await waitFor(() => expect(document.querySelector('.ant-table')).toBeInTheDocument());
   });
 
   it('shows loading state initially', () => {
@@ -81,6 +82,7 @@ describe('SettingUsers', () => {
   });
 
   it('renders add modal when addOpen is true', () => {
+    vi.mocked(api.list).mockReturnValue(new Promise(() => {}));
     render(<SettingUsers addOpen={true} />);
     // 'user.add' appears in both the modal title and submit button
     expect(screen.getAllByText('user.add').length).toBeGreaterThan(0);
@@ -95,6 +97,7 @@ describe('SettingUsers', () => {
   });
 
   it('accepts onAddClose callback', () => {
+    vi.mocked(api.list).mockReturnValue(new Promise(() => {}));
     const onAddClose = vi.fn();
     render(<SettingUsers addOpen={true} onAddClose={onAddClose} />);
     // Modal renders with title 'user.add' when addOpen=true

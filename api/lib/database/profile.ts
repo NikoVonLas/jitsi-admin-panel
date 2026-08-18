@@ -36,27 +36,6 @@ export async function getDefaultProfile(identityId: string) {
 }
 
 // -----------------------------------------------------------------------------
-export async function getDefaultProfileByKey(keyValue: string) {
-  const sql = {
-    text: `
-      SELECT id, name, email, avatar_url, is_default, created_at, updated_at
-      FROM profile
-      WHERE identity_id = (SELECT identity_id
-                           FROM identity_key
-                           WHERE value = $1
-                             AND enabled
-                          )
-        AND is_default
-      LIMIT 1`,
-    args: [
-      keyValue,
-    ],
-  };
-
-  return await fetch(sql) as Profile[];
-}
-
-// -----------------------------------------------------------------------------
 export async function listProfile(
   identityId: string,
   limit: number,
@@ -172,27 +151,6 @@ export async function delProfile(identityId: string, profileId: string) {
     ],
   };
   await trans.queryObject(sql3);
-
-  // Select the default profile instead of the deleted one in phone.
-  const sql4 = {
-    text: `
-      UPDATE phone
-      SET
-        profile_id = (SELECT id
-                      FROM profile
-                      WHERE identity_id = $1
-                        AND is_default
-                        AND id != $2
-                     ),
-        updated_at = now()
-      WHERE identity_id = $1
-        AND profile_id = $2`,
-    args: [
-      identityId,
-      profileId,
-    ],
-  };
-  await trans.queryObject(sql4);
 
   const sql = {
     text: `

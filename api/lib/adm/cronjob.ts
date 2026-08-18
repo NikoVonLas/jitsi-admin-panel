@@ -1,38 +1,56 @@
 import { mailMeetingSession } from "../common/mail.ts";
-import { listMeetingSessionForReminder } from "../database/meeting-session.ts";
+import {
+  listMeetingSessionForReminder,
+  markMeetingSessionReminderSent,
+} from "../database/meeting-session.ts";
+import type { MeetingSessionForReminder } from "../database/types.ts";
 import { Timers } from "./types.ts";
 
+interface ReminderDependencies {
+  list: () => Promise<MeetingSessionForReminder[]>;
+  mail: (row: MeetingSessionForReminder) => Promise<boolean>;
+  markSent: (sessionId: string) => Promise<unknown>;
+}
+
+const reminderDependencies: ReminderDependencies = {
+  list: listMeetingSessionForReminder,
+  mail: mailMeetingSession,
+  markSent: markMeetingSessionReminderSent,
+};
+
 // -----------------------------------------------------------------------------
-// Run every 30 seconds
-// -----------------------------------------------------------------------------
-async function remindMeetingSession(
-  t: Timers,
+export async function runReminderCycle(
   signal: AbortSignal,
-  lastCheckTime = "2024-10-01T00:00:00.000Z",
+  dependencies = reminderDependencies,
 ) {
   if (signal.aborted) return;
 
-  try {
-    const rows = await listMeetingSessionForReminder(lastCheckTime);
+  const rows = await dependencies.list();
+  for (const row of rows) {
+    if (signal.aborted) break;
 
-    for (const row of rows) {
-      if (signal.aborted) break;
-
-      // Dont care failed mail.
-      // Wait for each mail before processing the next one.
-      // For now, I dont want to send all mails at the same second. One by one.
-      await mailMeetingSession(row);
-
-      lastCheckTime = row.started_at;
+    try {
+      const sent = await dependencies.mail(row);
+      if (sent) await dependencies.markSent(row.session_id);
+    } catch (e) {
+      console.error(e);
     }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Run every 30 seconds.
+async function remindMeetingSession(t: Timers, signal: AbortSignal) {
+  try {
+    await runReminderCycle(signal);
   } catch (e) {
-    console.log(e);
+    console.error(e);
   }
 
   if (signal.aborted) return;
 
   t.cronjobRemindMeetingSession = setTimeout(
-    () => remindMeetingSession(t, signal, lastCheckTime),
+    () => remindMeetingSession(t, signal),
     30 * 1000,
   );
 }
@@ -41,7 +59,6 @@ async function remindMeetingSession(
 export default function startCronjob(t: Timers, signal: AbortSignal) {
   console.log("cronjob is started");
 
-  // dont wait for async functions
-  // each function has its own cycle
+  // Don't wait for async functions; each function has its own cycle.
   remindMeetingSession(t, signal);
 }

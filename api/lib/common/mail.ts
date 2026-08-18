@@ -1,4 +1,4 @@
-import { APP_FQDN } from "../../config.ts";
+import { APP_FQDN, APP_SCHEME } from "../../config.ts";
 import { MAILER_FROM, MAILER_TRANSPORT_OPTIONS } from "../../config.mailer.ts";
 import { getSettingValue } from "../database/setting.ts";
 import { createTransport } from "nodemailer";
@@ -56,30 +56,36 @@ export async function sendMail(
 }
 
 // -----------------------------------------------------------------------------
+export function buildMeetingReminderMessage(
+  meetingSession: MeetingSessionForReminder,
+  baseUrl = `${APP_SCHEME}://${APP_FQDN}`,
+) {
+  const meetingLink = `${baseUrl.replace(/\/+$/, "")}/jm/${meetingSession.id}`;
+  const mailSubject =
+    `You have a meeting in 30 minutes, ${meetingSession.meeting_name}`;
+  const mailText = `
+    You have a meeting in 30 minutes:
+    ${meetingSession.meeting_name}
+
+    ${meetingLink}
+  `.replace(/^ +/gm, "");
+
+  return {
+    to: meetingSession.email,
+    subject: mailSubject,
+    text: mailText,
+  };
+}
+
+// -----------------------------------------------------------------------------
 export async function mailMeetingSession(
   meetingSession: MeetingSessionForReminder,
 ) {
   try {
-    const mailTo = meetingSession.email;
-    if (!mailTo) throw new Error("email not found");
+    const message = buildMeetingReminderMessage(meetingSession);
+    if (!message.to) throw new Error("email not found");
 
-    let meetingName = meetingSession.meeting_name;
-    if (meetingSession.meeting_schedule_name) {
-      meetingName = `${meetingName} (${meetingSession.meeting_schedule_name})`;
-    }
-
-    const baseLinkForRole = `https://${APP_FQDN}/pri/${meetingSession.role}`;
-    const meetingLink = `${baseLinkForRole}/wait/${meetingSession.id}`;
-
-    const mailSubject = `You have a meeting in 30 minutes, ${meetingName}`;
-    const mailText = `
-      You have a meeting in 30 minutes:
-      ${meetingName}
-
-      ${meetingLink}
-    `.replace(/^ +/gm, "");
-
-    const res = await sendMail(mailTo, mailSubject, mailText);
+    const res = await sendMail(message.to, message.subject, message.text);
     if (!res) throw new Error("sendMail failed");
 
     return true;

@@ -20,7 +20,9 @@ vi.mock('../../../../components/common/Spinner', () => ({
 }));
 
 vi.mock('../../../../components/common/AlertWarning', () => ({
-  default: ({ children }: { children: React.ReactNode }) => <div data-testid="alert">{children}</div>,
+  default: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="alert">{children}</div>
+  ),
 }));
 
 vi.mock('../../../../components/common/SubheaderCenter', () => ({
@@ -42,6 +44,7 @@ describe('ProfileUpdatePage', () => {
   it('renders update profile title in subheader', async () => {
     render(<ProfileUpdatePage />);
     expect(screen.getByText('page.update_profile')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByTestId('spinner')).toBeNull());
   });
 
   it('renders ProfileUpdate component with profile', async () => {

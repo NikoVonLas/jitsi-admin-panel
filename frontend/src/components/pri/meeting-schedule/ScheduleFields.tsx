@@ -2,8 +2,15 @@ import { useState, useImperativeHandle, forwardRef } from 'react';
 import { Form, Radio, Checkbox, Row, Col, Space } from 'antd';
 import { useTr } from '../../../i18n';
 import {
-  dateAfterXDays, getDuration, getEndTime, getLastDayOfWeek,
-  getToday, isAllDay, isOver, toLocaleDate, toLocaleTime,
+  dateAfterXDays,
+  getDuration,
+  getEndTime,
+  getLastDayOfWeek,
+  getToday,
+  isAllDay,
+  isOver,
+  toLocaleDate,
+  toLocaleTime,
 } from '../../../lib/common';
 import FormDate from '../../common/FormDate';
 import FormTime from '../../common/FormTime';
@@ -29,7 +36,7 @@ function buildScheduleDaily(
   dur: number,
   timesMode: string,
   times: number,
-  every: number,
+  every: number
 ): void {
   if (timesMode === 'forever') {
     sa.rep_end_type = 'forever';
@@ -49,7 +56,7 @@ function buildScheduleWeekly(
   date0: string,
   date1: string,
   every: number,
-  days: boolean[],
+  days: boolean[]
 ): void {
   if (isOver(ended_at)) throw new Error('already over');
   if (date1 < date0) throw new Error('invalid period');
@@ -73,7 +80,15 @@ interface BuildScheduleMonthlyOptions {
 }
 
 function buildScheduleMonthly({
-  sa, ended_at, date0, date1, everyMonth, monthMode, monthDay, monthPos, monthDow,
+  sa,
+  ended_at,
+  date0,
+  date1,
+  everyMonth,
+  monthMode,
+  monthDay,
+  monthPos,
+  monthDow,
 }: BuildScheduleMonthlyOptions): void {
   if (isOver(ended_at)) throw new Error('already over');
   if (date1 < date0) throw new Error('invalid period');
@@ -107,17 +122,27 @@ const ScheduleFields = forwardRef<ScheduleFieldsRef, Props>(({ initial }, ref) =
     if (initial?.started_at) return toLocaleDate(initial.started_at);
     return getLastDayOfWeek(`${dateAfter90Days}T00:00:00`);
   });
-  const [time0, setTime0] = useState(initial ? toLocaleTime(initial.started_at) : defaultStartTime());
+  const [time0, setTime0] = useState(
+    initial ? toLocaleTime(initial.started_at) : defaultStartTime()
+  );
   const [time1, setTime1] = useState(() => {
     const t0 = initial ? toLocaleTime(initial.started_at) : defaultStartTime();
     const dur = initial ? Number(initial.duration) : 30;
-    try { return getEndTime(t0, dur); } catch { return t0; }
+    try {
+      return getEndTime(t0, dur);
+    } catch {
+      return t0;
+    }
   });
-  const [allDay, setAllDay] = useState(initial ? isAllDay(initial.started_at, initial.duration) : false);
+  const [allDay, setAllDay] = useState(
+    initial ? isAllDay(initial.started_at, initial.duration) : false
+  );
   const [duration, setDuration] = useState(initial ? Number(initial.duration) : 30);
   const [every, setEvery] = useState(Number(initial?.rep_every) || 1);
   const [everyMonth, setEveryMonth] = useState(Number(initial?.rep_every) || 1);
-  const [timesMode, setTimesMode] = useState(initial?.rep_end_type === 'forever' ? 'forever' : 'custom');
+  const [timesMode, setTimesMode] = useState(
+    initial?.rep_end_type === 'forever' ? 'forever' : 'custom'
+  );
   const [times, setTimes] = useState(Number(initial?.rep_end_x) || 10);
   const weekDays = initial?.rep_days
     ? Array.from(initial.rep_days).map((c) => c === '1')
@@ -131,24 +156,34 @@ const ScheduleFields = forwardRef<ScheduleFieldsRef, Props>(({ initial }, ref) =
 
   function handleTime0Change(v: string) {
     setTime0(v);
-    try { setTime1(getEndTime(v, duration)); } catch {}
+    try {
+      setTime1(getEndTime(v, duration));
+    } catch {}
   }
   function handleTime1Change(v: string) {
     setTime1(v);
-    try { setDuration(getDuration(time0, v)); } catch {}
+    try {
+      setDuration(getDuration(time0, v));
+    } catch {}
   }
   function handleDurationChange(v: number) {
     const d = Math.max(1, Math.min(1440, v));
     setDuration(d);
-    try { setTime1(getEndTime(time0, d)); } catch {}
+    try {
+      setTime1(getEndTime(time0, d));
+    } catch {}
   }
 
   useImperativeHandle(ref, () => ({
     normalizeInto(sa: Record<string, string>) {
       sa.timezone_offset = `${timezoneOffset}`;
       sa.type = schedType;
-      let t0 = time0, dur = duration;
-      if (allDay) { t0 = '00:00'; dur = 1440; }
+      let t0 = time0,
+        dur = duration;
+      if (allDay) {
+        t0 = '00:00';
+        dur = 1440;
+      }
       const started_at = new Date(`${date0}T${t0}`);
       const ended_at = new Date(`${date1}T23:59:59`);
 
@@ -159,7 +194,17 @@ const ScheduleFields = forwardRef<ScheduleFieldsRef, Props>(({ initial }, ref) =
       } else if (schedType === 'w') {
         buildScheduleWeekly(sa, started_at, ended_at, date0, date1, every, days);
       } else if (schedType === 'm') {
-        buildScheduleMonthly({ sa, ended_at, date0, date1, everyMonth, monthMode, monthDay, monthPos, monthDow });
+        buildScheduleMonthly({
+          sa,
+          ended_at,
+          date0,
+          date1,
+          everyMonth,
+          monthMode,
+          monthDay,
+          monthPos,
+          monthDow,
+        });
       }
 
       sa.started_at = started_at.toISOString();
@@ -176,15 +221,27 @@ const ScheduleFields = forwardRef<ScheduleFieldsRef, Props>(({ initial }, ref) =
 
   const weekStart = Number(localStorage.getItem('week_start') ?? 1);
   const DOW_KEYS = ['cal.sun', 'cal.mon', 'cal.tue', 'cal.wed', 'cal.thu', 'cal.fri', 'cal.sat'];
-  const DOW_FULL_KEYS = ['cal.sun_full', 'cal.mon_full', 'cal.tue_full', 'cal.wed_full', 'cal.thu_full', 'cal.fri_full', 'cal.sat_full'];
+  const DOW_FULL_KEYS = [
+    'cal.sun_full',
+    'cal.mon_full',
+    'cal.tue_full',
+    'cal.wed_full',
+    'cal.thu_full',
+    'cal.fri_full',
+    'cal.sat_full',
+  ];
   const monthWeekdayOptions: [string, string][] = Array.from({ length: 7 }, (_, i) => {
     const dow = (weekStart + i) % 7;
     return [`${dow}`, t(DOW_FULL_KEYS[dow])];
   });
   const monthPositionOptions: [string, string][] = [
-    ['1', t('sched.pos_1')], ['2', t('sched.pos_2')], ['3', t('sched.pos_3')],
-    ['4', t('sched.pos_4')], ['5', t('sched.pos_5')],
-    ['-2', t('sched.pos_penultimate')], ['-1', t('sched.pos_last')],
+    ['1', t('sched.pos_1')],
+    ['2', t('sched.pos_2')],
+    ['3', t('sched.pos_3')],
+    ['4', t('sched.pos_4')],
+    ['5', t('sched.pos_5')],
+    ['-2', t('sched.pos_penultimate')],
+    ['-1', t('sched.pos_last')],
   ];
 
   return (
@@ -207,18 +264,39 @@ const ScheduleFields = forwardRef<ScheduleFieldsRef, Props>(({ initial }, ref) =
 
       {schedType === 'd' && (
         <>
-          <FormDate name="date0" label={t('form.from')} value={date0} onChange={setDate0} required />
-          <FormNumber name="every" label={t('form.every_days')} value={every} onChange={setEvery} min={1} />
+          <FormDate
+            name="date0"
+            label={t('form.from')}
+            value={date0}
+            onChange={setDate0}
+            required
+          />
+          <FormNumber
+            name="every"
+            label={t('form.every_days')}
+            value={every}
+            onChange={setEvery}
+            min={1}
+          />
           <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0' }}>
             <Radio.Group
-              options={[{ value: 'forever', label: t('sched.rep_forever') }, { value: 'custom', label: t('sched.rep_custom') }]}
+              options={[
+                { value: 'forever', label: t('sched.rep_forever') },
+                { value: 'custom', label: t('sched.rep_custom') },
+              ]}
               value={timesMode}
               onChange={(e) => setTimesMode(e.target.value)}
               optionType="button"
             />
           </div>
           {timesMode === 'custom' && (
-            <FormNumber name="times" label={t('form.rep_count')} value={times} onChange={setTimes} min={1} />
+            <FormNumber
+              name="times"
+              label={t('form.rep_count')}
+              value={times}
+              onChange={setTimes}
+              min={1}
+            />
           )}
         </>
       )}
@@ -226,10 +304,32 @@ const ScheduleFields = forwardRef<ScheduleFieldsRef, Props>(({ initial }, ref) =
       {schedType === 'w' && (
         <>
           <Row gutter={12}>
-            <Col span={12}><FormDate name="date0" label={t('form.from')} value={date0} onChange={setDate0} required /></Col>
-            <Col span={12}><FormDate name="date1" label={t('form.to')} value={date1} onChange={setDate1} required /></Col>
+            <Col span={12}>
+              <FormDate
+                name="date0"
+                label={t('form.from')}
+                value={date0}
+                onChange={setDate0}
+                required
+              />
+            </Col>
+            <Col span={12}>
+              <FormDate
+                name="date1"
+                label={t('form.to')}
+                value={date1}
+                onChange={setDate1}
+                required
+              />
+            </Col>
           </Row>
-          <FormNumber name="every" label={t('form.every_weeks')} value={every} onChange={setEvery} min={1} />
+          <FormNumber
+            name="every"
+            label={t('form.every_weeks')}
+            value={every}
+            onChange={setEvery}
+            min={1}
+          />
           <Form.Item label="">
             <Space wrap>
               {Array.from({ length: 7 }, (_, i) => {
@@ -256,24 +356,72 @@ const ScheduleFields = forwardRef<ScheduleFieldsRef, Props>(({ initial }, ref) =
       {schedType === 'm' && (
         <>
           <Row gutter={12}>
-            <Col span={12}><FormDate name="date0" label={t('form.from')} value={date0} onChange={setDate0} required /></Col>
-            <Col span={12}><FormDate name="date1" label={t('form.to')} value={date1} onChange={setDate1} required /></Col>
+            <Col span={12}>
+              <FormDate
+                name="date0"
+                label={t('form.from')}
+                value={date0}
+                onChange={setDate0}
+                required
+              />
+            </Col>
+            <Col span={12}>
+              <FormDate
+                name="date1"
+                label={t('form.to')}
+                value={date1}
+                onChange={setDate1}
+                required
+              />
+            </Col>
           </Row>
-          <FormNumber name="everyMonth" label={t('form.every_months')} value={everyMonth} onChange={setEveryMonth} min={1} />
+          <FormNumber
+            name="everyMonth"
+            label={t('form.every_months')}
+            value={everyMonth}
+            onChange={setEveryMonth}
+            min={1}
+          />
           <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0' }}>
             <Radio.Group
-              options={[{ value: 'd', label: t('form.month_mode_d') }, { value: 'w', label: t('form.month_mode_w') }]}
+              options={[
+                { value: 'd', label: t('form.month_mode_d') },
+                { value: 'w', label: t('form.month_mode_w') },
+              ]}
               value={monthMode}
               onChange={(e) => setMonthMode(e.target.value)}
               optionType="button"
             />
           </div>
           {monthMode === 'd' ? (
-            <FormNumber name="monthDay" label={t('form.month_day')} value={monthDay} onChange={setMonthDay} min={1} max={31} />
+            <FormNumber
+              name="monthDay"
+              label={t('form.month_day')}
+              value={monthDay}
+              onChange={setMonthDay}
+              min={1}
+              max={31}
+            />
           ) : (
             <Row gutter={12}>
-              <Col span={12}><FormSelect name="monthPos" label={t('form.month_position')} value={monthPos} onChange={setMonthPos} options={monthPositionOptions} /></Col>
-              <Col span={12}><FormSelect name="monthDow" label={t('form.month_weekday')} value={monthDow} onChange={setMonthDow} options={monthWeekdayOptions} /></Col>
+              <Col span={12}>
+                <FormSelect
+                  name="monthPos"
+                  label={t('form.month_position')}
+                  value={monthPos}
+                  onChange={setMonthPos}
+                  options={monthPositionOptions}
+                />
+              </Col>
+              <Col span={12}>
+                <FormSelect
+                  name="monthDow"
+                  label={t('form.month_weekday')}
+                  value={monthDow}
+                  onChange={setMonthDow}
+                  options={monthWeekdayOptions}
+                />
+              </Col>
             </Row>
           )}
         </>
@@ -285,8 +433,24 @@ const ScheduleFields = forwardRef<ScheduleFieldsRef, Props>(({ initial }, ref) =
 
       {!allDay && (
         <Row gutter={12}>
-          <Col span={12}><FormTime name="time0" label={t('form.start_time')} value={time0} onChange={handleTime0Change} required /></Col>
-          <Col span={12}><FormTime name="time1" label={t('form.end_time')} value={time1} onChange={handleTime1Change} required /></Col>
+          <Col span={12}>
+            <FormTime
+              name="time0"
+              label={t('form.start_time')}
+              value={time0}
+              onChange={handleTime0Change}
+              required
+            />
+          </Col>
+          <Col span={12}>
+            <FormTime
+              name="time1"
+              label={t('form.end_time')}
+              value={time1}
+              onChange={handleTime1Change}
+              required
+            />
+          </Col>
         </Row>
       )}
     </div>

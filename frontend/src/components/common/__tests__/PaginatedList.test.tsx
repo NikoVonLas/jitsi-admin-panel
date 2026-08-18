@@ -48,16 +48,18 @@ describe('PaginatedList', () => {
         {...defaultProps}
         items={items}
         total={2}
-        renderItem={(item) => <div key={item.id} data-testid="item">{item.id}</div>}
-      />,
+        renderItem={(item) => (
+          <div key={item.id} data-testid="item">
+            {item.id}
+          </div>
+        )}
+      />
     );
     expect(screen.getAllByTestId('item')).toHaveLength(2);
   });
 
   it('does not render pagination when total <= pageSize', () => {
-    render(
-      <PaginatedList {...defaultProps} items={[{ id: '1' }]} total={5} pageSize={10} />,
-    );
+    render(<PaginatedList {...defaultProps} items={[{ id: '1' }]} total={5} pageSize={10} />);
     expect(document.querySelector('.ant-pagination')).toBeNull();
   });
 
@@ -70,15 +72,13 @@ describe('PaginatedList', () => {
         total={25}
         pageSize={10}
         renderItem={(item) => <div key={item.id}>{item.id}</div>}
-      />,
+      />
     );
     expect(document.querySelector('.ant-pagination')).toBeInTheDocument();
   });
 
   it('applies opacity when loading', () => {
-    const { container } = render(
-      <PaginatedList {...defaultProps} loading />,
-    );
+    const { container } = render(<PaginatedList {...defaultProps} loading />);
     const grid = container.querySelector('.card-grid');
     expect(grid).toHaveStyle({ opacity: '0.4' });
   });

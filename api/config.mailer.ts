@@ -9,11 +9,13 @@
 // See https://nodemailer.com/smtp for details.
 // -----------------------------------------------------------------------------
 
+import { getBooleanEnv } from "./lib/common/env.ts";
+
 // transporter settings
 export const MAILER_TRANSPORT_OPTIONS = {
   host: Deno.env.get("MAILER_HOST") || "",
   port: Number(Deno.env.get("MAILER_PORT") || 465),
-  secure: Boolean(Deno.env.get("MAILER_SECURE") || true),
+  secure: getBooleanEnv("MAILER_SECURE", true),
   auth: {
     user: Deno.env.get("MAILER_USER") || "",
     pass: Deno.env.get("MAILER_PASS") || "",

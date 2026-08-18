@@ -58,8 +58,11 @@ describe('getToday', () => {
 
   it('returns current date', () => {
     const now = new Date();
-    const expected = now.getFullYear() + '-' +
-      ('0' + (now.getMonth() + 1)).slice(-2) + '-' +
+    const expected =
+      now.getFullYear() +
+      '-' +
+      ('0' + (now.getMonth() + 1)).slice(-2) +
+      '-' +
       ('0' + now.getDate()).slice(-2);
     expect(getToday()).toBe(expected);
   });

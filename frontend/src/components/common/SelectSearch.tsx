@@ -14,11 +14,15 @@ interface Props {
   readonly placeholder?: string;
 }
 
-export default function SelectSearch({ options, value, allLabel, onChange, style, placeholder }: Props) {
-  const opts = [
-    ...(allLabel ? [{ value: '', label: allLabel }] : []),
-    ...options,
-  ];
+export default function SelectSearch({
+  options,
+  value,
+  allLabel,
+  onChange,
+  style,
+  placeholder,
+}: Props) {
+  const opts = [...(allLabel ? [{ value: '', label: allLabel }] : []), ...options];
 
   return (
     <Select

@@ -51,24 +51,59 @@ export default function RoomPage() {
     }
   }
 
-  useEffect(() => { loadRooms(); }, [page, search, enabledFilter, domainFilter]);
+  useEffect(() => {
+    loadRooms();
+  }, [page, search, enabledFilter, domainFilter]);
 
   return (
     <div>
-      <Subheader title={t('page.rooms')} onAdd={() => setAddOpen(true)} addTitle={t('page.add_room')} />
+      <Subheader
+        title={t('page.rooms')}
+        onAdd={() => setAddOpen(true)}
+        addTitle={t('page.add_room')}
+      />
       {error && <AlertWarning type="error">{t('err.generic')}</AlertWarning>}
       <RoomList
-        rooms={rooms} total={total} page={page} loading={loading} pageSize={PAGE_SIZE}
-        search={search} enabledFilter={enabledFilter} domains={domains}
+        rooms={rooms}
+        total={total}
+        page={page}
+        loading={loading}
+        pageSize={PAGE_SIZE}
+        search={search}
+        enabledFilter={enabledFilter}
+        domains={domains}
         domainFilter={domainFilter}
-        onRefresh={loadRooms} onAdd={() => setAddOpen(true)}
+        onRefresh={loadRooms}
+        onAdd={() => setAddOpen(true)}
         onPageChange={(p) => setPage(p)}
-        onSearchChange={(s) => { setSearch(s); setPage(0); }}
-        onEnabledChange={(f) => { setEnabledFilter(f); setPage(0); }}
-        onDomainChange={(id) => { setDomainFilter(id); setPage(0); }}
+        onSearchChange={(s) => {
+          setSearch(s);
+          setPage(0);
+        }}
+        onEnabledChange={(f) => {
+          setEnabledFilter(f);
+          setPage(0);
+        }}
+        onDomainChange={(id) => {
+          setDomainFilter(id);
+          setPage(0);
+        }}
       />
-      <Modal open={addOpen} onCancel={() => setAddOpen(false)} title={t('page.add_room')} footer={null} width={600}>
-        <RoomAdd onCancel={() => setAddOpen(false)} onDone={() => { setAddOpen(false); setPage(0); loadRooms(); }} />
+      <Modal
+        open={addOpen}
+        onCancel={() => setAddOpen(false)}
+        title={t('page.add_room')}
+        footer={null}
+        width={600}
+      >
+        <RoomAdd
+          onCancel={() => setAddOpen(false)}
+          onDone={() => {
+            setAddOpen(false);
+            setPage(0);
+            loadRooms();
+          }}
+        />
       </Modal>
     </div>
   );

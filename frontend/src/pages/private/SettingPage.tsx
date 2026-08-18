@@ -54,10 +54,14 @@ export default function SettingPage() {
       setDomainsError(false);
       const res = await list('/api/pri/domain/list', 100);
       setDomains(Array.isArray(res) ? res : (res.items ?? []));
-    } catch { setDomainsError(true); }
+    } catch {
+      setDomainsError(true);
+    }
   }
 
-  useEffect(() => { loadDomains(); }, []);
+  useEffect(() => {
+    loadDomains();
+  }, []);
 
   function switchTab(tab: Tab) {
     setActiveTab(tab);
@@ -83,8 +87,10 @@ export default function SettingPage() {
       return <DomainList domains={domains} onRefresh={loadDomains} />;
     }
     if (activeTab === 'mailer') return <SettingMailer settings={settings} />;
-    if (activeTab === 'auth') return <SettingAuth addOpen={authAddOpen} onAddClose={() => setAuthAddOpen(false)} />;
-    if (activeTab === 'users') return <SettingUsers addOpen={usersAddOpen} onAddClose={() => setUsersAddOpen(false)} />;
+    if (activeTab === 'auth')
+      return <SettingAuth addOpen={authAddOpen} onAddClose={() => setAuthAddOpen(false)} />;
+    if (activeTab === 'users')
+      return <SettingUsers addOpen={usersAddOpen} onAddClose={() => setUsersAddOpen(false)} />;
     return null;
   }
 
@@ -104,13 +110,30 @@ export default function SettingPage() {
         addTitle={t('sub.add')}
         addHidden={activeTab !== 'domains' && activeTab !== 'users' && activeTab !== 'auth'}
       />
-      <Tabs activeKey={activeTab} onChange={(k) => switchTab(k as Tab)} items={tabItems.map((item) => ({ key: item.key, label: item.label, children: null }))} style={{ marginTop: 8 }} />
+      <Tabs
+        activeKey={activeTab}
+        onChange={(k) => switchTab(k as Tab)}
+        items={tabItems.map((item) => ({ key: item.key, label: item.label, children: null }))}
+        style={{ marginTop: 8 }}
+      />
       <div style={{ marginTop: 8 }}>
         {settingsError && <AlertWarning type="error">{t('err.generic')}</AlertWarning>}
         {settingsLoading ? <Spinner /> : renderActiveTab()}
       </div>
-      <Modal open={addOpen} onCancel={() => setAddOpen(false)} title={t('page.add_domain')} footer={null} width={600}>
-        <DomainAdd onCancel={() => setAddOpen(false)} onDone={() => { setAddOpen(false); loadDomains(); }} />
+      <Modal
+        open={addOpen}
+        onCancel={() => setAddOpen(false)}
+        title={t('page.add_domain')}
+        footer={null}
+        width={600}
+      >
+        <DomainAdd
+          onCancel={() => setAddOpen(false)}
+          onDone={() => {
+            setAddOpen(false);
+            loadDomains();
+          }}
+        />
       </Modal>
     </div>
   );

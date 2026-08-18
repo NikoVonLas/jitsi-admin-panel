@@ -8,9 +8,15 @@ vi.stubGlobal('fetch', mockFetch);
 const store: Record<string, string> = {};
 vi.stubGlobal('localStorage', {
   getItem: (k: string) => store[k] ?? null,
-  setItem: (k: string, v: string) => { store[k] = v; },
-  removeItem: (k: string) => { delete store[k]; },
-  clear: () => { Object.keys(store).forEach((k) => delete store[k]); },
+  setItem: (k: string, v: string) => {
+    store[k] = v;
+  },
+  removeItem: (k: string) => {
+    delete store[k];
+  },
+  clear: () => {
+    Object.keys(store).forEach((k) => delete store[k]);
+  },
 });
 
 import { applyConfig, applyFavicon, useAppConfig } from '../../store/appconfig';
@@ -20,17 +26,32 @@ describe('applyFavicon', () => {
     expect(() => applyFavicon('')).not.toThrow();
   });
 
-  it('does not throw with valid html', () => {
-    expect(() =>
-      applyFavicon('<link rel="icon" href="/favicon.ico" />')
-    ).not.toThrow();
+  it('adds a generated same-origin favicon link', () => {
+    applyFavicon('<link rel="icon" href="/api/pub/favicon/favicon.ico" />');
+
+    const link = document.querySelector<HTMLLinkElement>('link[data-gx-fav]');
+    expect(link?.rel).toBe('icon');
+    expect(new URL(link!.href).pathname).toBe('/api/pub/favicon/favicon.ico');
   });
 
   it('does not re-apply the same html twice', () => {
-    const html = '<link rel="icon" href="/favicon2.ico" />';
+    const html = '<link rel="icon" href="/api/pub/favicon/favicon2.ico" />';
     applyFavicon(html);
     // calling again with same html should be a no-op (no throw)
     applyFavicon(html);
+  });
+
+  it('rejects executable metadata, stylesheets, and external links', () => {
+    applyFavicon(`
+      <meta http-equiv="refresh" content="0;url=https://evil.example" />
+      <script src="/api/pub/favicon/payload.js"></script>
+      <link rel="stylesheet" href="/api/pub/favicon/payload.css" />
+      <link rel="icon" href="https://evil.example/favicon.ico" />
+    `);
+
+    expect(document.querySelector('meta[data-gx-fav]')).toBeNull();
+    expect(document.querySelector('script[data-gx-fav]')).toBeNull();
+    expect(document.querySelector('link[data-gx-fav]')).toBeNull();
   });
 });
 
@@ -49,6 +70,32 @@ describe('applyConfig', () => {
 
   it('does not throw when called with empty object', () => {
     expect(() => applyConfig({} as any)).not.toThrow();
+  });
+
+  it('applies valid light and dark branding colors', () => {
+    applyConfig({
+      color_bg_light: '#fff',
+      color_text_light: '#123456',
+      color_link_dark: '#abcdefcc',
+      color_navbar_dark: '#000',
+    });
+
+    const css = document.querySelector<HTMLStyleElement>('#galaxy-dynamic-theme')?.textContent;
+    expect(css).toContain(":root,[data-theme='light']{--color-bg:#fff;--color-text:#123456}");
+    expect(css).toContain("[data-theme='dark']{--color-link:#abcdefcc;--color-navbar:#000}");
+  });
+
+  it('rejects values that could escape a CSS declaration', () => {
+    applyConfig({
+      color_bg_light: '#fff}body{display:none',
+      color_text_dark: 'red',
+      color_link_light: '#123456',
+    });
+
+    const css = document.querySelector<HTMLStyleElement>('#galaxy-dynamic-theme')?.textContent;
+    expect(css).toContain('--color-link:#123456');
+    expect(css).not.toContain('display:none');
+    expect(css).not.toContain('color-text');
   });
 });
 
@@ -90,10 +137,14 @@ describe('useAppConfig.load', () => {
     const cfg = {
       logo_url: 'https://logo.example.com/logo.png',
       favicon_html: '',
-      color_bg_light: '', color_bg_dark: '',
-      color_text_light: '', color_text_dark: '',
-      color_link_light: '', color_link_dark: '',
-      color_navbar_light: '', color_navbar_dark: '',
+      color_bg_light: '',
+      color_bg_dark: '',
+      color_text_light: '',
+      color_text_dark: '',
+      color_link_light: '',
+      color_link_dark: '',
+      color_navbar_light: '',
+      color_navbar_dark: '',
     };
     useAppConfig.getState().setConfig(cfg);
     expect(useAppConfig.getState().config.logo_url).toBe('https://logo.example.com/logo.png');
@@ -104,7 +155,7 @@ describe('getCachedConfig (via store init)', () => {
   it('loads from localStorage when valid JSON present', () => {
     localStorage.setItem(
       'galaxy-config',
-      JSON.stringify({ logo_url: 'https://cached.example.com/logo.png' }),
+      JSON.stringify({ logo_url: 'https://cached.example.com/logo.png' })
     );
     // Re-importing after setting cache is complex in vitest; verify applyConfig
     // round-trips correctly instead.

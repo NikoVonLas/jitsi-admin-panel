@@ -7,6 +7,7 @@ export function internalServerError(): Response {
 
   return new Response(JSON.stringify(body), {
     status: 500,
+    headers: { "Content-Type": "application/json" },
   });
 }
 
@@ -20,6 +21,7 @@ export function methodNotAllowed(): Response {
 
   return new Response(JSON.stringify(body), {
     status: 405,
+    headers: { "Content-Type": "application/json" },
   });
 }
 
@@ -33,20 +35,20 @@ export function notFound(): Response {
 
   return new Response(JSON.stringify(body), {
     status: 404,
+    headers: { "Content-Type": "application/json" },
   });
 }
 
 // -----------------------------------------------------------------------------
 export function ok(body: string, headers?: Headers): Response {
-  if (headers) {
-    return new Response(body, {
-      status: 200,
-      headers: headers,
-    });
+  const responseHeaders = new Headers(headers);
+  if (!responseHeaders.has("Content-Type")) {
+    responseHeaders.set("Content-Type", "application/json");
   }
 
   return new Response(body, {
     status: 200,
+    headers: responseHeaders,
   });
 }
 
@@ -60,6 +62,7 @@ export function forbidden(): Response {
 
   return new Response(JSON.stringify(body), {
     status: 403,
+    headers: { "Content-Type": "application/json" },
   });
 }
 
@@ -73,12 +76,16 @@ export function conflict(): Response {
 
   return new Response(JSON.stringify(body), {
     status: 409,
+    headers: { "Content-Type": "application/json" },
   });
 }
 
 // -----------------------------------------------------------------------------
 export function badRequest(message = "Bad Request"): Response {
-  return new Response(JSON.stringify({ error: { message } }), { status: 400 });
+  return new Response(JSON.stringify({ error: { message } }), {
+    status: 400,
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 // -----------------------------------------------------------------------------
@@ -91,5 +98,20 @@ export function unauthorized(): Response {
 
   return new Response(JSON.stringify(body), {
     status: 401,
+    headers: { "Content-Type": "application/json" },
   });
+}
+
+// -----------------------------------------------------------------------------
+export function tooManyRequests(retryAfterSeconds = 300): Response {
+  return new Response(
+    JSON.stringify({ error: { message: "Too Many Requests" } }),
+    {
+      status: 429,
+      headers: {
+        "Content-Type": "application/json",
+        "Retry-After": String(retryAfterSeconds),
+      },
+    },
+  );
 }

@@ -1,6 +1,7 @@
 import { APP_FQDN, APP_SCHEME } from "../../config.ts";
-import { getAuthEndpoint, resolveProvider } from "../common/oidc.ts";
+import { getOidcDiscovery, resolveProvider } from "../common/oidc.ts";
 import { getSettingValue } from "../database/setting.ts";
+import { createOidcTransaction } from "../common/oidc-transaction.ts";
 
 // -----------------------------------------------------------------------------
 export default async function handleOidcRedirect(
@@ -20,8 +21,8 @@ export default async function handleOidcRedirect(
       });
     }
 
-    const authEndpoint = await getAuthEndpoint(provider.id);
-    if (!authEndpoint) {
+    const discovery = await getOidcDiscovery(provider.id);
+    if (!discovery?.auth) {
       return new Response("OIDC not configured", { status: 503 });
     }
 
@@ -29,22 +30,26 @@ export default async function handleOidcRedirect(
     const fqdn = (await getSettingValue("app_fqdn")) || APP_FQDN;
     const redirectUri = `${scheme}://${fqdn}/oidc/validate`;
 
-    // Encode provider_id in state so callback knows which provider to use
-    const state = encodeURIComponent(
-      btoa(JSON.stringify({ next, pid: provider.id })),
-    );
+    const headers = new Headers();
+    const transaction = await createOidcTransaction(headers, {
+      next,
+      providerId: provider.id,
+    });
+    const authUrl = new URL(discovery.auth);
+    authUrl.searchParams.set("client_id", provider.client_id);
+    authUrl.searchParams.set("scope", provider.scopes);
+    authUrl.searchParams.set("response_type", "code");
+    authUrl.searchParams.set("prompt", prompt);
+    authUrl.searchParams.set("state", transaction.state);
+    authUrl.searchParams.set("nonce", transaction.nonce);
+    authUrl.searchParams.set("code_challenge", transaction.codeChallenge);
+    authUrl.searchParams.set("code_challenge_method", "S256");
+    authUrl.searchParams.set("redirect_uri", redirectUri);
 
-    const authUrl = `${authEndpoint}` +
-      `?client_id=${encodeURIComponent(provider.client_id)}` +
-      `&scope=${encodeURIComponent(provider.scopes)}` +
-      `&response_type=code` +
-      `&prompt=${prompt}` +
-      `&state=${state}` +
-      `&redirect_uri=${encodeURIComponent(redirectUri)}`;
-
+    headers.set("Location", authUrl.toString());
     return new Response(null, {
       status: 302,
-      headers: { "Location": authUrl },
+      headers,
     });
   } catch (e) {
     console.error("oidcRedirect error:", e);

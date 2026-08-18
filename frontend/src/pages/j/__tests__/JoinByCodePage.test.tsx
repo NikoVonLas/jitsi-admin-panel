@@ -4,7 +4,9 @@ import JoinByCodePage from '../JoinByCodePage';
 
 vi.mock('../../FetchAndRedirectPage', () => ({
   default: ({ endpoint }: { endpoint: string }) => (
-    <div data-testid="fetch-redirect" data-endpoint={endpoint}>loading</div>
+    <div data-testid="fetch-redirect" data-endpoint={endpoint}>
+      loading
+    </div>
   ),
 }));
 

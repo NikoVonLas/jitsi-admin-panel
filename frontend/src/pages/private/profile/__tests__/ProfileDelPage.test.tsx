@@ -20,7 +20,9 @@ vi.mock('../../../../components/common/Spinner', () => ({
 }));
 
 vi.mock('../../../../components/common/AlertWarning', () => ({
-  default: ({ children }: { children: React.ReactNode }) => <div data-testid="alert">{children}</div>,
+  default: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="alert">{children}</div>
+  ),
 }));
 
 vi.mock('../../../../components/common/SubheaderCenter', () => ({
@@ -42,6 +44,7 @@ describe('ProfileDelPage', () => {
   it('renders delete title in subheader', async () => {
     render(<ProfileDelPage />);
     expect(screen.getByText('page.del_profile')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByTestId('spinner')).toBeNull());
   });
 
   it('renders ProfileDel component with profile', async () => {

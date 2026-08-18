@@ -1,7 +1,11 @@
 .env
+.DS_Store
+.idea/
 node_modules/
 frontend/.svelte-kit/
 frontend/build/
 api/cov_profile/
 api/coverage/
 frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/

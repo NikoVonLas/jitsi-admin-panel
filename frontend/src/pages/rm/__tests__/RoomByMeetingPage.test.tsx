@@ -34,7 +34,10 @@ vi.mock('../../../hooks/useModJoinPage', () => ({
   }),
   JoinPageError: class JoinPageError extends Error {
     code: string;
-    constructor(code: string) { super(code); this.code = code; }
+    constructor(code: string) {
+      super(code);
+      this.code = code;
+    }
   },
 }));
 
@@ -55,9 +58,17 @@ describe('RoomByMeetingPage', () => {
 
   it('renders spinner when not ready', () => {
     vi.mocked(useModJoinPage).mockReturnValue({
-      ready: false, joining: false, error: '', name: '', participantUrl: '',
-      qrDataUrl: '', canShare: false, copiedUrl: false,
-      onSubmit: vi.fn(), onCopyUrl: vi.fn(), onShareUrl: vi.fn(),
+      ready: false,
+      joining: false,
+      error: '',
+      name: '',
+      participantUrl: '',
+      qrDataUrl: '',
+      canShare: false,
+      copiedUrl: false,
+      onSubmit: vi.fn(),
+      onCopyUrl: vi.fn(),
+      onShareUrl: vi.fn(),
     });
     render(<RoomByMeetingPage />);
     expect(screen.getByTestId('spinner')).toBeInTheDocument();
@@ -65,10 +76,17 @@ describe('RoomByMeetingPage', () => {
 
   it('renders ModJoin when ready', () => {
     vi.mocked(useModJoinPage).mockReturnValue({
-      ready: true, joining: false, error: '', name: 'Test Room',
+      ready: true,
+      joining: false,
+      error: '',
+      name: 'Test Room',
       participantUrl: 'http://example.com/r/xyz',
-      qrDataUrl: '', canShare: false, copiedUrl: false,
-      onSubmit: vi.fn(), onCopyUrl: vi.fn(), onShareUrl: vi.fn(),
+      qrDataUrl: '',
+      canShare: false,
+      copiedUrl: false,
+      onSubmit: vi.fn(),
+      onCopyUrl: vi.fn(),
+      onShareUrl: vi.fn(),
     });
     render(<RoomByMeetingPage />);
     expect(screen.getByTestId('mod-join')).toBeInTheDocument();

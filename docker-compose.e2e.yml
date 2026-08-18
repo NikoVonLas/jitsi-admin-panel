@@ -1,0 +1,265 @@
+x-jitsi-environment: &jitsi-environment
+  AUTH_TYPE: jwt
+  ENABLE_AUTH: "1"
+  ENABLE_GUESTS: "1"
+  JICOFO_AUTH_PASSWORD: e2e-jicofo-password
+  JICOFO_AUTH_USER: focus
+  JVB_AUTH_PASSWORD: e2e-jvb-password
+  JVB_AUTH_USER: jvb
+  JWT_ACCEPTED_AUDIENCES: jitsi-admin-e2e
+  JWT_ACCEPTED_ISSUERS: jitsi-admin-e2e
+  JWT_APP_ID: jitsi-admin-e2e
+  JWT_APP_SECRET: e2e-jitsi-secret
+  PUBLIC_URL: https://jitsi-web:8443
+  TZ: UTC
+  XMPP_AUTH_DOMAIN: auth.meet.jitsi
+  XMPP_DOMAIN: meet.jitsi
+  XMPP_GUEST_DOMAIN: guest.meet.jitsi
+  XMPP_INTERNAL_MUC_DOMAIN: internal-muc.meet.jitsi
+  XMPP_MUC_DOMAIN: muc.meet.jitsi
+  XMPP_SERVER: prosody
+
+services:
+  mailpit:
+    image: ghcr.io/axllent/mailpit:v1.30.6
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    networks:
+      - e2e
+
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: jitsi
+      POSTGRES_USER: jitsi
+      POSTGRES_PASSWORD: e2e-db-password
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jitsi -d jitsi"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    networks:
+      - e2e
+
+  api-adm:
+    build:
+      context: .
+      dockerfile: docker/adm.Dockerfile
+    environment:
+      ALLOW_UNSECURE_CERT: "true"
+      API_SECRET: e2e-api-secret-change-me-32-characters
+      API_TIMEOUT: "3600"
+      APP_FQDN: web
+      APP_SCHEME: http
+      AUTH_LOCAL: "${E2E_AUTH_LOCAL:-true}"
+      DB_HOST: db
+      DB_PASSWD: e2e-db-password
+      LANG_UI: en
+      MAILER_FROM: reminders@example.test
+      MAILER_HOST: mailpit
+      MAILER_PASS: e2e-mail-password
+      MAILER_PORT: "1025"
+      MAILER_SECURE: "false"
+      MAILER_USER: e2e
+      OIDC_CLIENT_ID: "${E2E_OIDC_CLIENT_ID:-}"
+      OIDC_CLIENT_SECRET: "${E2E_OIDC_CLIENT_SECRET:-}"
+      OIDC_ISSUER_URL: "${E2E_OIDC_ISSUER_URL:-}"
+      OIDC_PROVIDER_NAME: Keycloak
+      OIDC_SCOPES: openid profile email
+      SUPERADMIN_ROLE: jitsi-superadmin
+      SESSION_COOKIE_SECURE: "false"
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      db:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "deno",
+          "eval",
+          "const conn=await Deno.connect({hostname:'127.0.0.1',port:8000});conn.close()",
+        ]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    networks:
+      - e2e
+
+  api-pri:
+    build:
+      context: .
+      dockerfile: docker/pri.Dockerfile
+    environment:
+      API_SECRET: e2e-api-secret-change-me-32-characters
+      ALLOW_UNSECURE_CERT: "true"
+      APP_FQDN: web
+      APP_SCHEME: http
+      AUTH_LOCAL: "${E2E_AUTH_LOCAL:-true}"
+      DB_HOST: db
+      DB_PASSWD: e2e-db-password
+      LANG_UI: en
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - uploads:/data
+    depends_on:
+      api-adm:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "deno",
+          "eval",
+          "const conn=await Deno.connect({hostname:'127.0.0.1',port:8001});conn.close()",
+        ]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    networks:
+      - e2e
+
+  api-pub:
+    build:
+      context: .
+      dockerfile: docker/pub.Dockerfile
+    environment:
+      DB_HOST: db
+      DB_PASSWD: e2e-db-password
+      LANG_UI: en
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - uploads:/data
+    depends_on:
+      api-adm:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "deno",
+          "eval",
+          "const conn=await Deno.connect({hostname:'127.0.0.1',port:8002});conn.close()",
+        ]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    networks:
+      - e2e
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    environment:
+      CADDY_ADDRESS: http://web
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - api-adm
+      - api-pri
+      - api-pub
+    networks:
+      - e2e
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.3.2
+    profiles: ["keycloak"]
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: e2e-keycloak-admin
+    volumes:
+      - ./e2e/keycloak-realm.json:/opt/keycloak/data/import/jitsi-realm.json:ro
+    networks:
+      - e2e
+
+  prosody:
+    image: ghcr.io/jitsi/prosody:stable-11146-2
+    environment:
+      <<: *jitsi-environment
+      JWT_ALLOW_EMPTY: "0"
+      JWT_AUTH_TYPE: token
+      JWT_TOKEN_AUTH_MODULE: token_verification
+    networks:
+      e2e:
+        aliases:
+          - xmpp.meet.jitsi
+
+  jicofo:
+    image: ghcr.io/jitsi/jicofo:stable-11146-2
+    environment:
+      <<: *jitsi-environment
+      ENABLE_AUTO_OWNER: "1"
+    depends_on:
+      - prosody
+    networks:
+      - e2e
+
+  jvb:
+    image: ghcr.io/jitsi/jvb:stable-11146-2
+    environment:
+      <<: *jitsi-environment
+      COLIBRI_REST_ENABLED: "true"
+      JVB_ADVERTISE_PRIVATE_CANDIDATES: "true"
+      JVB_DISABLE_STUN: "1"
+    depends_on:
+      - prosody
+    networks:
+      - e2e
+
+  jitsi-web:
+    image: ghcr.io/jitsi/web:stable-11146-2
+    environment:
+      <<: *jitsi-environment
+      DISABLE_HTTPS: "0"
+      ENABLE_HTTP_REDIRECT: "1"
+      ENABLE_P2P: "0"
+      ENABLE_PREJOIN_PAGE: "0"
+      ENABLE_WELCOME_PAGE: "0"
+      START_WITH_AUDIO_MUTED: "1"
+      START_WITH_VIDEO_MUTED: "1"
+    depends_on:
+      - jicofo
+      - jvb
+    networks:
+      - e2e
+
+  e2e:
+    build:
+      context: .
+      dockerfile: docker/e2e.Dockerfile
+    init: true
+    ipc: host
+    environment:
+      CI: "true"
+      E2E_MODE: "${E2E_MODE:-local}"
+      JITSI_BASE_URL: https://jitsi-web:8443
+      PLAYWRIGHT_BASE_URL: http://web
+    volumes:
+      - ./frontend/test-results:/work/frontend/test-results
+    depends_on:
+      - web
+      - jitsi-web
+    networks:
+      - e2e
+
+volumes:
+  database:
+  uploads:
+
+networks:
+  e2e:

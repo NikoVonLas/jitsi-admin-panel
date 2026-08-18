@@ -35,7 +35,9 @@ vi.mock('../../../../components/common/Subheader', () => ({
 }));
 
 vi.mock('../../../../components/common/AlertWarning', () => ({
-  default: ({ children }: { children: React.ReactNode }) => <div data-testid="alert">{children}</div>,
+  default: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="alert">{children}</div>
+  ),
 }));
 
 vi.mock('../../../../components/common/Spinner', () => ({

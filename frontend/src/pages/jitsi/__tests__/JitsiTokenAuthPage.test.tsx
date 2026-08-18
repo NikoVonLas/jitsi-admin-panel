@@ -23,13 +23,23 @@ let locationHrefSetter: ReturnType<typeof vi.fn>;
 describe('JitsiTokenAuthPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(action).mockResolvedValue({ url: 'https://jitsi.example.com/room' });
+    vi.mocked(httpPost).mockResolvedValue({
+      status: 200,
+      json: async () => ({}),
+    } as Response);
     locationReplaceMock = vi.fn();
     locationHrefSetter = vi.fn();
     let _href = 'http://localhost/';
     vi.stubGlobal('location', {
       replace: locationReplaceMock,
-      get href() { return _href; },
-      set href(v: string) { _href = v; locationHrefSetter(v); },
+      get href() {
+        return _href;
+      },
+      set href(v: string) {
+        _href = v;
+        locationHrefSetter(v);
+      },
       origin: 'http://localhost',
       search: '?room=testroom',
       pathname: '/jitsi/token',
@@ -42,10 +52,12 @@ describe('JitsiTokenAuthPage', () => {
   });
 
   it('renders without crashing', () => {
+    vi.mocked(httpPost).mockReturnValue(new Promise(() => {}));
     render(<JitsiTokenAuthPage />);
   });
 
   it('shows initial checking message', () => {
+    vi.mocked(httpPost).mockReturnValue(new Promise(() => {}));
     render(<JitsiTokenAuthPage />);
     expect(screen.getByText('jitsi.checking')).toBeInTheDocument();
   });
@@ -73,7 +85,9 @@ describe('JitsiTokenAuthPage', () => {
     vi.mocked(httpPost).mockResolvedValue({ status: 200, json: async () => ({}) } as Response);
     vi.mocked(action).mockResolvedValue({ url: 'https://jitsi.example.com/myroom' });
     render(<JitsiTokenAuthPage />);
-    await waitFor(() => expect(locationReplaceMock).toHaveBeenCalledWith('https://jitsi.example.com/myroom'));
+    await waitFor(() =>
+      expect(locationReplaceMock).toHaveBeenCalledWith('https://jitsi.example.com/myroom')
+    );
   });
 
   it('shows error when link not found', async () => {

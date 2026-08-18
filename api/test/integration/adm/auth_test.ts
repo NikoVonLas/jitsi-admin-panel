@@ -1,4 +1,4 @@
-import { assertEquals, assertMatch } from "@std/assert";
+import { assertEquals } from "@std/assert";
 import {
   afterAll,
   beforeAll,
@@ -41,14 +41,12 @@ describe("POST /api/adm/auth/local/register", {
     await cleanDb();
   });
 
-  it("registers first user and returns a token", async () => {
+  it("registers first user without exposing the session token", async () => {
     const res = await registerUser();
     assertEquals(res.status, 200);
     const body = await res.json();
-    assertMatch(
-      body.token,
-      /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/,
-    );
+    assertEquals(body, { authenticated: true, method: "local" });
+    assertEquals(body.token, undefined);
   });
 
   it("sets token httpOnly cookie", async () => {
@@ -64,7 +62,15 @@ describe("POST /api/adm/auth/local/register", {
     await registerUser();
     // Second attempt should be rejected
     const res2 = await registerUser("second@test.example", PASSWORD);
-    assertEquals(res2.status, 401);
+    assertEquals(res2.status, 409);
+  });
+
+  it("allows only one winner across concurrent first-user registrations", async () => {
+    const [first, second] = await Promise.all([
+      registerUser("first@test.example", PASSWORD),
+      registerUser("second@test.example", PASSWORD),
+    ]);
+    assertEquals([first.status, second.status].sort(), [200, 409]);
   });
 
   it("rejects short password (< 14 chars)", async () => {
@@ -109,7 +115,7 @@ describe("POST /api/adm/auth/local/login", {
     await cleanDb();
   });
 
-  it("logs in with correct credentials", async () => {
+  it("logs in with correct credentials without exposing the session token", async () => {
     const req = makeRequest("POST", "/api/adm/auth/local/login", {
       email: EMAIL,
       password: PASSWORD,
@@ -117,10 +123,8 @@ describe("POST /api/adm/auth/local/login", {
     const res = await handleLocalLogin(req);
     assertEquals(res.status, 200);
     const body = await res.json();
-    assertMatch(
-      body.token,
-      /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/,
-    );
+    assertEquals(body, { authenticated: true, method: "local" });
+    assertEquals(body.token, undefined);
   });
 
   it("returns 401 for wrong password", async () => {
@@ -167,5 +171,19 @@ describe("POST /api/adm/auth/local/login", {
     const res = await handleLocalLogin(req);
     const setCookie = res.headers.get("set-cookie");
     assertEquals(setCookie?.includes("token="), true);
+  });
+
+  it("rate-limits repeated invalid passwords", async () => {
+    let response: Response | undefined;
+    for (let attempt = 0; attempt < 11; attempt++) {
+      response = await handleLocalLogin(
+        makeRequest("POST", "/api/adm/auth/local/login", {
+          email: EMAIL,
+          password: `wrong_password_${attempt}_123!`,
+        }, { "X-Forwarded-For": "192.0.2.10" }),
+      );
+    }
+    assertEquals(response?.status, 429);
+    assertEquals(response?.headers.get("Retry-After"), "300");
   });
 });

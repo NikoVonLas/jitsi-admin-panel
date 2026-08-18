@@ -63,17 +63,26 @@ export default function RoomForm({ onCancel, onDone, initialRoom }: Props) {
       <div style={{ width: '100%', maxWidth: 540 }}>
         <Form layout="vertical" onFinish={onFinish}>
           <RoomFields
-            label={label} onLabelChange={setLabel}
-            slug={slug} onSlugChange={setSlug}
-            domainId={domainId} onDomainIdChange={setDomainId}
+            label={label}
+            onLabelChange={setLabel}
+            slug={slug}
+            onSlugChange={setSlug}
+            domainId={domainId}
+            onDomainIdChange={setDomainId}
             disabled={disabled}
           />
 
-          {warning && <AlertWarning type="error">{t(isUpdate ? 'err.update' : 'err.add')}</AlertWarning>}
+          {warning && (
+            <AlertWarning type="error">{t(isUpdate ? 'err.update' : 'err.add')}</AlertWarning>
+          )}
 
           <FormActions>
             <ButtonCancel onClick={onCancel} disabled={disabled} block />
-            <ButtonSubmit disabled={disabled} label={t(isUpdate ? 'btn.update' : 'btn.add')} block />
+            <ButtonSubmit
+              disabled={disabled}
+              label={t(isUpdate ? 'btn.update' : 'btn.add')}
+              block
+            />
           </FormActions>
         </Form>
       </div>

@@ -20,9 +20,7 @@ describe('FormTextarea', () => {
 
   it('calls onChange when value changes', () => {
     const onChange = vi.fn();
-    render(
-      <FormTextarea label="Notes" name="notes" value="" onChange={onChange} />,
-    );
+    render(<FormTextarea label="Notes" name="notes" value="" onChange={onChange} />);
     fireEvent.change(screen.getByRole('textbox'), {
       target: { value: 'new text' },
     });

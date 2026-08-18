@@ -23,7 +23,9 @@ describe('FormTime', () => {
   });
 
   it('renders with a pre-set time', () => {
-    const { container } = render(<FormTime name="meeting_time" label="Meeting Time" value="14:30" />);
+    const { container } = render(
+      <FormTime name="meeting_time" label="Meeting Time" value="14:30" />
+    );
     expect(container.querySelector('input')).toBeInTheDocument();
   });
 

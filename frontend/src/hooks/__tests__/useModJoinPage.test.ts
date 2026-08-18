@@ -82,7 +82,7 @@ describe('useModJoinPage', () => {
   });
 
   it('redirects when oidc session exists and mod url is returned', async () => {
-    sessionStorage.setItem('oidc_authenticated', 'ok');
+    sessionStorage.setItem('session_authenticated', 'ok');
     const modUrl = 'https://jitsi.example.com/mod';
     mockFetchModeratorLink.mockResolvedValue(modUrl);
     renderHook(() => useModJoinPage(defaultConfig));
@@ -90,7 +90,7 @@ describe('useModJoinPage', () => {
   });
 
   it('sets ready=true when oidc session exists but no mod url', async () => {
-    sessionStorage.setItem('oidc_authenticated', 'ok');
+    sessionStorage.setItem('session_authenticated', 'ok');
     mockFetchModeratorLink.mockResolvedValue(undefined);
     const { result } = renderHook(() => useModJoinPage(defaultConfig));
     await waitFor(() => expect(result.current.ready).toBe(true));
@@ -130,10 +130,14 @@ describe('useModJoinPage', () => {
     mockSubmitJoin.mockRejectedValue(new JoinPageError('too_early'));
     const { result } = renderHook(() => useModJoinPage(defaultConfig));
     await waitFor(() => expect(result.current.ready).toBe(true));
-    await act(async () => { await result.current.onSubmit('abc123xyz'); });
+    await act(async () => {
+      await result.current.onSubmit('abc123xyz');
+    });
     expect(result.current.error).toBe('too_early');
     mockSubmitJoin.mockResolvedValue({ url: 'https://ok.example.com' });
-    await act(async () => { await result.current.onSubmit('abc123xyz'); });
+    await act(async () => {
+      await result.current.onSubmit('abc123xyz');
+    });
     expect(result.current.error).toBe('');
   });
 

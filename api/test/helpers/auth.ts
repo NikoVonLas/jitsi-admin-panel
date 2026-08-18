@@ -15,6 +15,13 @@ function decodeJwt(token: string): Record<string, unknown> {
   return JSON.parse(atob(padded));
 }
 
+function sessionToken(res: Response): string {
+  const setCookie = res.headers.get("set-cookie") ?? "";
+  const token = /(?:^|,\s*)token=([^;,]+)/.exec(setCookie)?.[1];
+  if (!token) throw new Error("Session cookie not found");
+  return token;
+}
+
 // Register a new user and return their token + identityId.
 // Assumes cleanDb() has been called so no users exist yet.
 export async function registerFirst(
@@ -31,8 +38,7 @@ export async function registerFirst(
   if (res.status !== 200) {
     throw new Error(`Register failed: ${res.status}`);
   }
-  const body = await res.json();
-  const token = body.token as string;
+  const token = sessionToken(res);
   const payload = decodeJwt(token);
   const identityId = payload.userId as string;
   return { token, identityId };
@@ -51,8 +57,7 @@ export async function login(
   if (res.status !== 200) {
     throw new Error(`Login failed: ${res.status}`);
   }
-  const body = await res.json();
-  const token = body.token as string;
+  const token = sessionToken(res);
   const payload = decodeJwt(token);
   const identityId = payload.userId as string;
   return { token, identityId };

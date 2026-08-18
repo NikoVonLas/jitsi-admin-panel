@@ -7,11 +7,23 @@ vi.mock('../../../../i18n', () => ({
 }));
 
 vi.mock('../../../common/FormSelect', () => ({
-  default: ({ label, value, options }: { label: string; value?: string; options: [string, string][] }) => (
+  default: ({
+    label,
+    value,
+    options,
+  }: {
+    label: string;
+    value?: string;
+    options: [string, string][];
+  }) => (
     <div>
       <label>{label}</label>
       <select defaultValue={value ?? ''}>
-        {(options ?? []).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        {(options ?? []).map(([v, l]) => (
+          <option key={v} value={v}>
+            {l}
+          </option>
+        ))}
       </select>
     </div>
   ),
@@ -52,9 +64,12 @@ describe('MeetingFields', () => {
     render(
       <MeetingFields
         {...defaultProps}
-        rooms={[['r1', 'Room One'], ['r2', 'Room Two']]}
+        rooms={[
+          ['r1', 'Room One'],
+          ['r2', 'Room Two'],
+        ]}
         roomId="r1"
-      />,
+      />
     );
     expect(screen.getByText('Room One')).toBeInTheDocument();
   });

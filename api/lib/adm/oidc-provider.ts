@@ -7,6 +7,9 @@ import {
   toggleOidcProvider,
   updateOidcProvider,
 } from "../database/oidc-provider.ts";
+import { isValidOidcIssuerUrl } from "../common/validate.ts";
+import { ALLOW_UNSECURE_CERT } from "../../config.ts";
+import { ensureOidcProviderRemovalDoesNotLockOut } from "../common/oidc-provider-policy.ts";
 
 const PRE = "/api/adm/oidc-provider";
 
@@ -33,6 +36,9 @@ async function handleAdd(req: Request): Promise<Response> {
       "name, issuer_url, client_id and client_secret are required",
     );
   }
+  if (!isValidOidcIssuerUrl(issuer_url, ALLOW_UNSECURE_CERT)) {
+    return badRequest("Invalid OIDC issuer URL");
+  }
   return wrapper(async () => {
     await addOidcProvider(
       name,
@@ -50,6 +56,9 @@ async function handleUpdate(req: Request): Promise<Response> {
   const body = await req.json();
   const { id, name, issuer_url, client_id, client_secret, scopes } = body;
   if (!id) return badRequest("id is required");
+  if (!isValidOidcIssuerUrl(issuer_url, ALLOW_UNSECURE_CERT)) {
+    return badRequest("Invalid OIDC issuer URL");
+  }
   return wrapper(async () => {
     await updateOidcProvider(
       id,
@@ -78,6 +87,7 @@ async function handleDisable(req: Request): Promise<Response> {
   const { id } = await req.json();
   if (!id) return badRequest("id is required");
   return wrapper(async () => {
+    await ensureOidcProviderRemovalDoesNotLockOut(id);
     await toggleOidcProvider(id, false);
     return { ok: true };
   }, req);
@@ -88,6 +98,7 @@ async function handleDel(req: Request): Promise<Response> {
   const { id } = await req.json();
   if (!id) return badRequest("id is required");
   return wrapper(async () => {
+    await ensureOidcProviderRemovalDoesNotLockOut(id);
     await deleteOidcProvider(id);
     return { ok: true };
   }, req);

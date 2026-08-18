@@ -33,8 +33,22 @@ export default function ProfileAdd() {
     <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
       <div style={{ width: '100%', maxWidth: 540 }}>
         <Form layout="vertical" onFinish={onFinish}>
-          <FormText name="name" label={t('form.name')} value={name} onChange={setName} required disabled={disabled} />
-          <FormEmail name="email" label={t('form.email_optional')} value={email} onChange={setEmail} required={false} disabled={disabled} />
+          <FormText
+            name="name"
+            label={t('form.name')}
+            value={name}
+            onChange={setName}
+            required
+            disabled={disabled}
+          />
+          <FormEmail
+            name="email"
+            label={t('form.email_optional')}
+            value={email}
+            onChange={setEmail}
+            required={false}
+            disabled={disabled}
+          />
 
           {warning && <AlertWarning type="error">{t('err.add')}</AlertWarning>}
 

@@ -2,8 +2,20 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 vi.mock('react-router-dom', () => ({
-  Link: ({ children, to, onClick, style }: { children: React.ReactNode; to: string; onClick?: () => void; style?: React.CSSProperties }) => (
-    <a href={to} onClick={onClick} style={style}>{children}</a>
+  Link: ({
+    children,
+    to,
+    onClick,
+    style,
+  }: {
+    children: React.ReactNode;
+    to: string;
+    onClick?: () => void;
+    style?: React.CSSProperties;
+  }) => (
+    <a href={to} onClick={onClick} style={style}>
+      {children}
+    </a>
   ),
   useLocation: () => ({ pathname: '/meeting' }),
 }));

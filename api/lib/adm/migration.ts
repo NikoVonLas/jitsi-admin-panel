@@ -10,6 +10,43 @@ import {
 
 import { MAILER_FROM, MAILER_TRANSPORT_OPTIONS } from "../../config.mailer.ts";
 
+interface SchemaBootstrapDependencies {
+  hasMetadata: () => Promise<boolean>;
+  initialize: () => Promise<void>;
+}
+
+async function hasMetadata(): Promise<boolean> {
+  using client = await pool.connect();
+  const result = await client.queryObject<{ metadata: string | null }>(
+    "SELECT to_regclass('public.metadata')::text AS metadata",
+  );
+  return result.rows[0]?.metadata === "metadata";
+}
+
+async function initializeSchema(): Promise<void> {
+  const schemaUrl = new URL(
+    "../../database/02-create-jitsi-tables.sql",
+    import.meta.url,
+  );
+  const schema = await Deno.readTextFile(schemaUrl);
+  using client = await pool.connect();
+  await client.queryArray(schema);
+}
+
+export async function bootstrapSchema(
+  dependencies: SchemaBootstrapDependencies = {
+    hasMetadata,
+    initialize: initializeSchema,
+  },
+): Promise<boolean> {
+  if (await dependencies.hasMetadata()) return false;
+
+  console.log("Initializing database schema...");
+  await dependencies.initialize();
+  console.log("Database schema initialized");
+  return true;
+}
+
 // -----------------------------------------------------------------------------
 // Migrate template.
 // -----------------------------------------------------------------------------
@@ -25,7 +62,11 @@ async function migrateTo(upgradeTo: string, sqls: (string | QueryObject)[]) {
 
     // run migration sqls
     for (const sql of sqls) {
-      await trans.queryObject(sql);
+      if (typeof sql === "string") {
+        await trans.queryObject(sql);
+      } else {
+        await trans.queryObject(sql.text, sql.args);
+      }
     }
 
     // set the new version in metadata
@@ -407,12 +448,6 @@ async function migrateTo2026032103() {
 async function migrateTo2026032104() {
   const upgradeTo = "20260321.04";
   const sqls = [
-    `DROP TABLE IF EXISTS meeting_member_candidate`,
-    `DROP TABLE IF EXISTS meeting_member`,
-    `DROP TABLE IF EXISTS contact_invite`,
-    `DROP TABLE IF EXISTS contact`,
-    `DROP TABLE IF EXISTS identity_key`,
-    `DROP TABLE IF EXISTS phone`,
     `ALTER TABLE setting ALTER COLUMN mvalue TYPE text`,
   ];
 
@@ -781,8 +816,75 @@ async function migrateTo2026062201() {
 }
 
 // -----------------------------------------------------------------------------
+// Restore meeting membership tables accidentally removed by an older upgrade.
+// IF NOT EXISTS repairs affected installations without changing intact ones.
+async function migrateTo2026081801() {
+  const upgradeTo = "20260818.01";
+  const sqls = [
+    `CREATE TABLE IF NOT EXISTS meeting_member (
+       "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+       "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+       "meeting_id" uuid NOT NULL REFERENCES meeting(id) ON DELETE CASCADE,
+       "profile_id" uuid NOT NULL REFERENCES profile(id) ON DELETE NO ACTION,
+       "join_as" meeting_affiliation_type NOT NULL DEFAULT 'guest',
+       "enabled" boolean NOT NULL DEFAULT true,
+       "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+       "updated_at" timestamp with time zone NOT NULL DEFAULT now()
+     )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS meeting_member_identity_id_meeting_id_join_as_idx
+       ON meeting_member("identity_id", "meeting_id", "join_as")`,
+    `CREATE TABLE IF NOT EXISTS meeting_member_candidate (
+       "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+       "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+       "meeting_id" uuid NOT NULL REFERENCES meeting(id) ON DELETE CASCADE,
+       "join_as" meeting_affiliation_type NOT NULL DEFAULT 'guest',
+       "status" candidate_status NOT NULL DEFAULT 'pending',
+       "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+       "updated_at" timestamp with time zone NOT NULL DEFAULT now(),
+       "expired_at" timestamp with time zone NOT NULL
+         DEFAULT now() + interval '7 days'
+     )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS meeting_member_candidate_identity_id_meeting_id_join_as_idx
+       ON meeting_member_candidate("identity_id", "meeting_id", "join_as")`,
+    `CREATE INDEX IF NOT EXISTS meeting_member_candidate_expired_at_idx
+       ON meeting_member_candidate("expired_at")`,
+  ];
+
+  await migrateTo(upgradeTo, sqls);
+}
+
+// -----------------------------------------------------------------------------
+// Retire the unreachable contact/invite/phone/intercom model and add durable
+// scheduling state used by reminders and rolling recurring sessions.
+async function migrateTo2026081802() {
+  const upgradeTo = "20260818.02";
+  const sqls = [
+    `ALTER TABLE meeting_session
+       ADD COLUMN IF NOT EXISTS reminder_sent_at timestamp with time zone`,
+    `DELETE FROM meeting_session a
+       USING meeting_session b
+       WHERE a.meeting_schedule_id = b.meeting_schedule_id
+         AND a.started_at = b.started_at
+         AND a.id > b.id`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS meeting_session_schedule_started_at_idx
+       ON meeting_session("meeting_schedule_id", "started_at")`,
+    `DROP TABLE IF EXISTS intercom`,
+    `DROP TABLE IF EXISTS contact_invite`,
+    `DROP TABLE IF EXISTS contact`,
+    `DROP TABLE IF EXISTS identity_key`,
+    `DROP TABLE IF EXISTS phone`,
+    `DROP TYPE IF EXISTS intercom_message_type`,
+    `DROP TYPE IF EXISTS intercom_status_type`,
+  ];
+
+  await migrateTo(upgradeTo, sqls);
+}
+
+// -----------------------------------------------------------------------------
 export default async function runMigration() {
   console.log("migration...");
+
+  await bootstrapSchema();
 
   const version = await getVersion();
   console.log(`Database version: ${version}`);
@@ -819,4 +921,6 @@ export default async function runMigration() {
   await migrateTo2026061804();
   await migrateTo2026061805();
   await migrateTo2026062201();
+  await migrateTo2026081801();
+  await migrateTo2026081802();
 }

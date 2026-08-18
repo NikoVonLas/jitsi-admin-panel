@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Form, Input, Tooltip } from 'antd';
+import { Button, Form, Input, Space, Tooltip } from 'antd';
 import { useTr } from '../../../i18n';
 import { list } from '../../../lib/api';
 import type { Domain333 } from '../../../types';
@@ -25,9 +25,12 @@ function generateSlug(): string {
 }
 
 export default function RoomFields({
-  label, onLabelChange,
-  slug, onSlugChange,
-  domainId, onDomainIdChange,
+  label,
+  onLabelChange,
+  slug,
+  onSlugChange,
+  domainId,
+  onDomainIdChange,
   hideDomain,
   disabled,
 }: Props) {
@@ -51,27 +54,33 @@ export default function RoomFields({
 
   return (
     <>
-      <FormText name="label" label={t('form.label')} value={label} onChange={onLabelChange} required disabled={disabled} />
+      <FormText
+        name="label"
+        label={t('form.label')}
+        value={label}
+        onChange={onLabelChange}
+        required
+        disabled={disabled}
+      />
 
-      <Form.Item label={t('form.slug')} required style={{ marginBottom: 16 }}>
-        <Input
-          value={slug}
-          onChange={(e) => onSlugChange(e.target.value)}
-          disabled={disabled}
-          addonAfter={
-            <Tooltip title={t('btn.random')}>
-              <button
-                type="button"
-                tabIndex={0}
-                style={{ cursor: disabled ? 'not-allowed' : 'pointer', padding: '0 4px', background: 'none', border: 'none' }}
-                onClick={() => !disabled && onSlugChange(generateSlug())}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { if (!disabled) onSlugChange(generateSlug()); } }}
-              >
-                <i className="bi bi-shuffle" />
-              </button>
-            </Tooltip>
-          }
-        />
+      <Form.Item label={t('form.slug')} htmlFor="slug" required style={{ marginBottom: 16 }}>
+        <Space.Compact block>
+          <Input
+            id="slug"
+            name="slug"
+            value={slug}
+            onChange={(e) => onSlugChange(e.target.value)}
+            disabled={disabled}
+          />
+          <Tooltip title={t('btn.random')}>
+            <Button
+              aria-label={t('btn.random')}
+              disabled={disabled}
+              icon={<i className="bi bi-shuffle" />}
+              onClick={() => onSlugChange(generateSlug())}
+            />
+          </Tooltip>
+        </Space.Compact>
       </Form.Item>
 
       {!hideDomain && (

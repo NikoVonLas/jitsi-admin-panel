@@ -14,11 +14,7 @@ export default function FormColor({ name, label, value, defaultValue = '', onCha
   return (
     <Form.Item label={label} style={{ marginBottom: 16 }}>
       <Space.Compact style={{ width: '100%' }}>
-        <ColorPicker
-          value={hex}
-          onChange={(_, hexStr) => onChange?.(hexStr)}
-          showText={false}
-        />
+        <ColorPicker value={hex} onChange={(_, hexStr) => onChange?.(hexStr)} showText={false} />
         <Input
           id={name}
           name={name}

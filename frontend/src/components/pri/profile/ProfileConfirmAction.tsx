@@ -42,11 +42,18 @@ export default function ProfileConfirmAction({
   return (
     <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
       <div style={{ width: '100%', maxWidth: 540 }}>
-        <p><strong>{profile.name}</strong></p>
+        <p>
+          <strong>{profile.name}</strong>
+        </p>
         {warning ? errorNode : alertNode}
         <Space>
           <ButtonCancel onClick={() => navigate('/profile')} disabled={disabled} />
-          <ButtonSubmit onClick={onSubmit} disabled={disabled} label={submitLabel} danger={danger} />
+          <ButtonSubmit
+            onClick={onSubmit}
+            disabled={disabled}
+            label={submitLabel}
+            danger={danger}
+          />
         </Space>
       </div>
     </div>

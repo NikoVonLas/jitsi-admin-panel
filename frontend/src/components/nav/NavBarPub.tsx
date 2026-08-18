@@ -7,6 +7,7 @@ export default function NavBarPub() {
   const t = useTr();
   return (
     <nav
+      className="app-navbar"
       style={{
         position: 'fixed',
         top: 0,
@@ -31,10 +32,7 @@ export default function NavBarPub() {
         }}
       >
         <Brand />
-        <Button
-          type="primary"
-          href="/api/adm/oidc/redirect?prompt=consent"
-        >
+        <Button type="primary" href="/api/adm/oidc/redirect?prompt=consent">
           {t('btn.sign_in')}
         </Button>
       </div>

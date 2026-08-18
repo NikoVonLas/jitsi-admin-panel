@@ -3,7 +3,9 @@ import { render, screen, waitFor } from '@testing-library/react';
 import ProfilePage from '../ProfilePage';
 
 vi.mock('react-router-dom', () => ({
-  Link: ({ children, to }: { children: React.ReactNode; to: string }) => <a href={to}>{children}</a>,
+  Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
+    <a href={to}>{children}</a>
+  ),
 }));
 
 vi.mock('../../../i18n', () => ({
@@ -19,7 +21,9 @@ vi.mock('../../../components/common/Spinner', () => ({
 }));
 
 vi.mock('../../../components/common/AlertWarning', () => ({
-  default: ({ children }: { children: React.ReactNode }) => <div data-testid="alert">{children}</div>,
+  default: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="alert">{children}</div>
+  ),
 }));
 
 vi.mock('../../../components/common/Subheader', () => ({

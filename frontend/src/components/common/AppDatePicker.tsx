@@ -16,7 +16,14 @@ interface Props {
   readonly placeholder?: string;
 }
 
-export default function AppDatePicker({ value, onChange, allowClear, disabled, style, placeholder }: Props) {
+export default function AppDatePicker({
+  value,
+  onChange,
+  allowClear,
+  disabled,
+  style,
+  placeholder,
+}: Props) {
   const storeLang = usePrefStore((s) => s.lang);
   const { lang: i18nLang } = useI18n();
   const lang = storeLang ?? i18nLang;

@@ -7,11 +7,6 @@ interface Props {
 
 export default function AlertWarning({ children, type = 'warning' }: Props) {
   return (
-    <Alert
-      type={type}
-      message={children}
-      showIcon
-      style={{ marginTop: 8, marginBottom: 8 }}
-    />
+    <Alert type={type} message={children} showIcon style={{ marginTop: 8, marginBottom: 8 }} />
   );
 }

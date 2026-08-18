@@ -11,7 +11,19 @@ vi.mock('../../../../lib/api', () => ({
     id: 'domain-1',
     name: 'Loaded Domain',
     auth_type: 'none',
-    domain_attr: { url: 'https://jitsi.example.com', app_id: '', app_secret: '', app_alg: 'HS256', jaas_url: '', jaas_app_id: '', jaas_kid: '', jaas_key: '', jaas_alg: '', jaas_aud: '', jaas_iss: '' },
+    domain_attr: {
+      url: 'https://jitsi.example.com',
+      app_id: '',
+      app_secret: '',
+      app_alg: 'HS256',
+      jaas_url: '',
+      jaas_app_id: '',
+      jaas_kid: '',
+      jaas_key: '',
+      jaas_alg: '',
+      jaas_aud: '',
+      jaas_iss: '',
+    },
     public: false,
   }),
   action: vi.fn().mockResolvedValue({ id: 'domain-1' }),
@@ -20,6 +32,8 @@ vi.mock('../../../../lib/api', () => ({
 vi.mock('../../../../lib/config', () => ({
   TOKEN_ALGO: 'HS256',
 }));
+
+import { getById } from '../../../../lib/api';
 
 describe('DomainForm (add mode)', () => {
   it('renders the name field', () => {
@@ -41,6 +55,7 @@ describe('DomainForm (add mode)', () => {
 
 describe('DomainForm (update mode)', () => {
   it('shows spinner initially when loading', () => {
+    vi.mocked(getById).mockReturnValue(new Promise(() => {}));
     render(<DomainForm domainId="domain-1" />);
     // Spinner is shown while data loads
     expect(document.querySelector('.ant-spin') ?? screen.queryByText('form.name')).toBeTruthy();

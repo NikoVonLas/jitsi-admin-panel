@@ -1,12 +1,18 @@
+import { clearAuthentication, isAuthenticated } from './session';
+
 function handleUnauthorized() {
-  if (sessionStorage.getItem('oidc_authenticated')) {
-    sessionStorage.removeItem('oidc_authenticated');
+  if (isAuthenticated()) {
+    clearAuthentication();
     location.replace('/oidc/logout');
   }
 }
 
 export async function httpGet(url: string) {
-  const res = await fetch(url, { credentials: 'include', headers: { Accept: 'application/json' }, mode: 'cors' });
+  const res = await fetch(url, {
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+    mode: 'cors',
+  });
   if (res.status === 401) handleUnauthorized();
   return res;
 }

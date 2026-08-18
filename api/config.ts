@@ -1,11 +1,13 @@
 // server
+import { getBooleanEnv } from "./lib/common/env.ts";
+
 export const HOSTNAME = "0.0.0.0";
 export const PORT_ADMIN = 8000;
 export const PORT_PRIVATE = 8001;
 export const PORT_PUBLIC = 8002;
 
 // postgres
-export const DB_VERSION = "20260622.01";
+export const DB_VERSION = "20260818.02";
 export const DB_NAME = Deno.env.get("DB_NAME") || "jitsi";
 export const DB_USER = Deno.env.get("DB_USER") || "jitsi";
 export const DB_PASSWD = Deno.env.get("DB_PASSWD") || "";
@@ -20,7 +22,14 @@ export const MAX_LIST_SIZE = Number(Deno.env.get("MAX_LIST_SIZE") || 2000);
 // application
 export const APP_FQDN = Deno.env.get("APP_FQDN") || "";
 export const APP_SCHEME = Deno.env.get("APP_SCHEME") || "https";
-export const ALLOW_UNSECURE_CERT = Boolean(Deno.env.get("ALLOW_UNSECURE_CERT"));
+export const ALLOW_UNSECURE_CERT = getBooleanEnv(
+  "ALLOW_UNSECURE_CERT",
+  false,
+);
+export const SESSION_COOKIE_SECURE = getBooleanEnv(
+  "SESSION_COOKIE_SECURE",
+  APP_SCHEME === "https",
+);
 
 // contact
 export const CONTACT_EMAIL = Deno.env.get("CONTACT_EMAIL") || "";
@@ -37,4 +46,4 @@ export const FAVICON_DIR = Deno.env.get("FAVICON_DIR") || "/data/favicons";
 export const LOGO_DIR = Deno.env.get("LOGO_DIR") || "/data/logo";
 
 // auth: local email/password (true by default; OIDC providers are managed via UI Settings)
-export const AUTH_LOCAL = Deno.env.get("AUTH_LOCAL") !== "false";
+export const AUTH_LOCAL = getBooleanEnv("AUTH_LOCAL", true);

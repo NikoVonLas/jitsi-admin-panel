@@ -48,6 +48,7 @@ describe('ButtonAccountOidc', () => {
   });
 
   it('renders account button', () => {
+    vi.mocked(get).mockReturnValue(new Promise(() => {}));
     render(<ButtonAccountOidc />);
     const button = document.querySelector('button');
     expect(button).toBeInTheDocument();

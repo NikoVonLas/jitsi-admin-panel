@@ -22,7 +22,9 @@ export default function MeetingPage() {
   const [roomFilter, setRoomFilter] = useState('');
   const [domainFilter, setDomainFilter] = useState('');
 
-  const [dateFilter, setDateFilter] = useState(() => new URLSearchParams(globalThis.location.search).get('date') ?? '');
+  const [dateFilter, setDateFilter] = useState(
+    () => new URLSearchParams(globalThis.location.search).get('date') ?? ''
+  );
   const [rooms, setRooms] = useState<Room333[]>([]);
   const [domains, setDomains] = useState<Domain333[]>([]);
   const [addOpen, setAddOpen] = useState(false);
@@ -42,37 +44,90 @@ export default function MeetingPage() {
       setError(false);
       setLoading(true);
       const result = await listFiltered<Meeting222>('/api/pri/meeting/list', {
-        limit: PAGE_SIZE, offset: page * PAGE_SIZE, search,
+        limit: PAGE_SIZE,
+        offset: page * PAGE_SIZE,
+        search,
         enabled: enabledFilter === 'all' ? null : enabledFilter === 'enabled',
-        room_id: roomFilter || undefined, domain_id: domainFilter || undefined,
-        identity_id: undefined, session_date: dateFilter || undefined,
+        room_id: roomFilter || undefined,
+        domain_id: domainFilter || undefined,
+        identity_id: undefined,
+        session_date: dateFilter || undefined,
       });
       setMeetings(result.items);
       setTotal(result.total);
-    } catch { setError(true); }
-    finally { setLoading(false); }
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  useEffect(() => { loadMeetings(); }, [page, search, enabledFilter, roomFilter, domainFilter, dateFilter]);
+  useEffect(() => {
+    loadMeetings();
+  }, [page, search, enabledFilter, roomFilter, domainFilter, dateFilter]);
 
   return (
     <div>
-      <Subheader title={t('page.meetings')} onAdd={() => setAddOpen(true)} addTitle={t('sub.add_meeting')} hrefCalendar="/calendar/month" hrefCalendarTitle={t('sub.calendar_view')} />
+      <Subheader
+        title={t('page.meetings')}
+        onAdd={() => setAddOpen(true)}
+        addTitle={t('sub.add_meeting')}
+        hrefCalendar="/calendar/month"
+        hrefCalendarTitle={t('sub.calendar_view')}
+      />
       {error && <AlertWarning type="error">{t('err.generic')}</AlertWarning>}
       <MeetingList
-        meetings={meetings} total={total} page={page} loading={loading} pageSize={PAGE_SIZE}
-        search={search} enabledFilter={enabledFilter} rooms={rooms} domains={domains}
-        roomFilter={roomFilter} domainFilter={domainFilter} dateFilter={dateFilter}
-        onRefresh={loadMeetings} onAdd={() => setAddOpen(true)}
+        meetings={meetings}
+        total={total}
+        page={page}
+        loading={loading}
+        pageSize={PAGE_SIZE}
+        search={search}
+        enabledFilter={enabledFilter}
+        rooms={rooms}
+        domains={domains}
+        roomFilter={roomFilter}
+        domainFilter={domainFilter}
+        dateFilter={dateFilter}
+        onRefresh={loadMeetings}
+        onAdd={() => setAddOpen(true)}
         onPageChange={(p) => setPage(p)}
-        onSearchChange={(s) => { setSearch(s); setPage(0); }}
-        onEnabledChange={(f) => { setEnabledFilter(f); setPage(0); }}
-        onRoomChange={(id) => { setRoomFilter(id); setPage(0); }}
-        onDomainChange={(id) => { setDomainFilter(id); setPage(0); }}
-        onDateChange={(d) => { setDateFilter(d); setPage(0); }}
+        onSearchChange={(s) => {
+          setSearch(s);
+          setPage(0);
+        }}
+        onEnabledChange={(f) => {
+          setEnabledFilter(f);
+          setPage(0);
+        }}
+        onRoomChange={(id) => {
+          setRoomFilter(id);
+          setPage(0);
+        }}
+        onDomainChange={(id) => {
+          setDomainFilter(id);
+          setPage(0);
+        }}
+        onDateChange={(d) => {
+          setDateFilter(d);
+          setPage(0);
+        }}
       />
-      <Modal open={addOpen} onCancel={() => setAddOpen(false)} title={t('page.add_meeting')} footer={null} width={680}>
-        <MeetingAdd onCancel={() => setAddOpen(false)} onSuccess={() => { setAddOpen(false); setPage(0); loadMeetings(); }} />
+      <Modal
+        open={addOpen}
+        onCancel={() => setAddOpen(false)}
+        title={t('page.add_meeting')}
+        footer={null}
+        width={680}
+      >
+        <MeetingAdd
+          onCancel={() => setAddOpen(false)}
+          onSuccess={() => {
+            setAddOpen(false);
+            setPage(0);
+            loadMeetings();
+          }}
+        />
       </Modal>
     </div>
   );

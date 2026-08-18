@@ -29,7 +29,9 @@ describe('FormDate', () => {
   });
 
   it('renders with a pre-set date', () => {
-    const { container } = render(<FormDate name="start_date" label="Start Date" value="2024-06-15" />);
+    const { container } = render(
+      <FormDate name="start_date" label="Start Date" value="2024-06-15" />
+    );
     expect(container.querySelector('input')).toBeInTheDocument();
   });
 

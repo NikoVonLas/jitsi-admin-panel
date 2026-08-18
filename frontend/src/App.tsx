@@ -1,82 +1,86 @@
+import type { ComponentType } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import Layout from './pages/Layout';
 import PrivateLayout from './pages/PrivateLayout';
-import HomePage from './pages/HomePage';
-import LoginPage from './pages/LoginPage';
 
-// OIDC
-import OidcValidate from './pages/oidc/OidcValidate';
-import OidcLogout from './pages/oidc/OidcLogout';
-import OidcClean from './pages/oidc/OidcClean';
+type PageModule = Promise<{ default: ComponentType }>;
 
-// Public
-import JoinByCodePage from './pages/j/JoinByCodePage';
-import RoomByCodePage from './pages/r/RoomByCodePage';
-import JoinByMeetingPage from './pages/jm/JoinByMeetingPage';
-import RoomByMeetingPage from './pages/rm/RoomByMeetingPage';
-import JitsiTokenAuthPage from './pages/jitsi/JitsiTokenAuthPage';
-
-// Private
-import MeetingPage from './pages/private/MeetingPage';
-import DomainPage from './pages/private/DomainPage';
-import RoomPage from './pages/private/RoomPage';
-import ProfilePage from './pages/private/ProfilePage';
-import SettingPage from './pages/private/SettingPage';
-import CalendarPage from './pages/private/CalendarPage';
-
-import DomainDelPage from './pages/private/domain/DomainDelPage';
-import DomainDisablePage from './pages/private/domain/DomainDisablePage';
-import DomainEnablePage from './pages/private/domain/DomainEnablePage';
-
-import MeetingDelPage from './pages/private/meeting/MeetingDelPage';
-import MeetingDisablePage from './pages/private/meeting/MeetingDisablePage';
-import MeetingEnablePage from './pages/private/meeting/MeetingEnablePage';
-
-import ProfileAddPage from './pages/private/profile/ProfileAddPage';
-import ProfileDelPage from './pages/private/profile/ProfileDelPage';
-import ProfileUpdatePage from './pages/private/profile/ProfileUpdatePage';
-import ProfileSetDefaultPage from './pages/private/profile/ProfileSetDefaultPage';
-
-import CalendarMonthPage from './pages/private/calendar/CalendarMonthPage';
-import CallJoinPage from './pages/private/call/CallJoinPage';
+function lazyPage(importer: () => PageModule) {
+  return async () => ({ Component: (await importer()).default });
+}
 
 const router = createBrowserRouter([
   {
     path: '/',
     element: <Layout />,
     children: [
-      { index: true, element: <HomePage /> },
-      { path: 'login', element: <LoginPage /> },
-      { path: 'oidc/validate', element: <OidcValidate /> },
-      { path: 'oidc/logout', element: <OidcLogout /> },
-      { path: 'oidc/clean', element: <OidcClean /> },
-      { path: 'j/:code', element: <JoinByCodePage /> },
-      { path: 'r/:code', element: <RoomByCodePage /> },
-      { path: 'jm/:uuid', element: <JoinByMeetingPage /> },
-      { path: 'rm/:uuid', element: <RoomByMeetingPage /> },
-      { path: 'jitsi/token-auth', element: <JitsiTokenAuthPage /> },
+      { index: true, lazy: lazyPage(() => import('./pages/HomePage')) },
+      { path: 'login', lazy: lazyPage(() => import('./pages/LoginPage')) },
+      { path: 'oidc/validate', lazy: lazyPage(() => import('./pages/oidc/OidcValidate')) },
+      { path: 'oidc/logout', lazy: lazyPage(() => import('./pages/oidc/OidcLogout')) },
+      { path: 'oidc/clean', lazy: lazyPage(() => import('./pages/oidc/OidcClean')) },
+      { path: 'j/:code', lazy: lazyPage(() => import('./pages/j/JoinByCodePage')) },
+      { path: 'r/:code', lazy: lazyPage(() => import('./pages/r/RoomByCodePage')) },
+      { path: 'jm/:uuid', lazy: lazyPage(() => import('./pages/jm/JoinByMeetingPage')) },
+      { path: 'rm/:uuid', lazy: lazyPage(() => import('./pages/rm/RoomByMeetingPage')) },
+      {
+        path: 'jitsi/token-auth',
+        lazy: lazyPage(() => import('./pages/jitsi/JitsiTokenAuthPage')),
+      },
       {
         element: <PrivateLayout />,
         children: [
-          { path: 'meeting', element: <MeetingPage /> },
-          { path: 'meeting/del/:uuid', element: <MeetingDelPage /> },
-          { path: 'meeting/disable/:uuid', element: <MeetingDisablePage /> },
-          { path: 'meeting/enable/:uuid', element: <MeetingEnablePage /> },
-          { path: 'domain', element: <DomainPage /> },
-          { path: 'domain/del/:uuid', element: <DomainDelPage /> },
-          { path: 'domain/disable/:uuid', element: <DomainDisablePage /> },
-          { path: 'domain/enable/:uuid', element: <DomainEnablePage /> },
-          { path: 'room', element: <RoomPage /> },
-          { path: 'profile', element: <ProfilePage /> },
-          { path: 'profile/add', element: <ProfileAddPage /> },
-          { path: 'profile/del/:uuid', element: <ProfileDelPage /> },
-          { path: 'profile/update/:uuid', element: <ProfileUpdatePage /> },
-          { path: 'profile/set/default/:uuid', element: <ProfileSetDefaultPage /> },
-          { path: 'setting', element: <SettingPage /> },
-          { path: 'calendar', element: <CalendarPage /> },
-          { path: 'calendar/month', element: <CalendarPage /> },
-          { path: 'calendar/month/:date', element: <CalendarMonthPage /> },
-          { path: 'call/join/:uuid', element: <CallJoinPage /> },
+          { path: 'meeting', lazy: lazyPage(() => import('./pages/private/MeetingPage')) },
+          {
+            path: 'meeting/del/:uuid',
+            lazy: lazyPage(() => import('./pages/private/meeting/MeetingDelPage')),
+          },
+          {
+            path: 'meeting/disable/:uuid',
+            lazy: lazyPage(() => import('./pages/private/meeting/MeetingDisablePage')),
+          },
+          {
+            path: 'meeting/enable/:uuid',
+            lazy: lazyPage(() => import('./pages/private/meeting/MeetingEnablePage')),
+          },
+          { path: 'domain', lazy: lazyPage(() => import('./pages/private/DomainPage')) },
+          {
+            path: 'domain/del/:uuid',
+            lazy: lazyPage(() => import('./pages/private/domain/DomainDelPage')),
+          },
+          {
+            path: 'domain/disable/:uuid',
+            lazy: lazyPage(() => import('./pages/private/domain/DomainDisablePage')),
+          },
+          {
+            path: 'domain/enable/:uuid',
+            lazy: lazyPage(() => import('./pages/private/domain/DomainEnablePage')),
+          },
+          { path: 'room', lazy: lazyPage(() => import('./pages/private/RoomPage')) },
+          { path: 'profile', lazy: lazyPage(() => import('./pages/private/ProfilePage')) },
+          {
+            path: 'profile/add',
+            lazy: lazyPage(() => import('./pages/private/profile/ProfileAddPage')),
+          },
+          {
+            path: 'profile/del/:uuid',
+            lazy: lazyPage(() => import('./pages/private/profile/ProfileDelPage')),
+          },
+          {
+            path: 'profile/update/:uuid',
+            lazy: lazyPage(() => import('./pages/private/profile/ProfileUpdatePage')),
+          },
+          {
+            path: 'profile/set/default/:uuid',
+            lazy: lazyPage(() => import('./pages/private/profile/ProfileSetDefaultPage')),
+          },
+          { path: 'setting', lazy: lazyPage(() => import('./pages/private/SettingPage')) },
+          { path: 'calendar', lazy: lazyPage(() => import('./pages/private/CalendarPage')) },
+          { path: 'calendar/month', lazy: lazyPage(() => import('./pages/private/CalendarPage')) },
+          {
+            path: 'calendar/month/:date',
+            lazy: lazyPage(() => import('./pages/private/calendar/CalendarMonthPage')),
+          },
         ],
       },
     ],

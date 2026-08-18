@@ -3,6 +3,11 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import FormText from '../../common/FormText';
 
 describe('FormText', () => {
+  it('associates the label with the input', () => {
+    render(<FormText name="name" label="Name" value="" />);
+    expect(screen.getByLabelText('Name')).toHaveAttribute('name', 'name');
+  });
+
   it('renders an input with the provided value', () => {
     render(<FormText label="Name" name="name" value="John" />);
     expect(screen.getByDisplayValue('John')).toBeInTheDocument();
