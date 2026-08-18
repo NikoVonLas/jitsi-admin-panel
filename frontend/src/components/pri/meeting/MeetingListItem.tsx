@@ -6,223 +6,15 @@ import { isOnline, isToday, showLocaleDatetime, copyText } from '../../../lib/co
 import { useRoleStore } from '../../../store/role';
 import { toDataURL } from 'qrcode';
 import type { Meeting, Meeting222 } from '../../../types';
-import AlertWarning from '../../common/AlertWarning';
+import { HostKeyPanel, JoinLinks } from '../../common/ConferenceAccess';
 import MeetingUpdate from './MeetingUpdate';
 import ScheduleModal from '../meeting-schedule/ScheduleModal';
-
-function formatKey(key: string): string {
-  return key.replace(/(.{3})(?=.)/g, '$1 ');
-}
 
 function getSessionColor(sessionList: string[]): string {
   if (!sessionList[0]) return 'var(--color-text-secondary)';
   if (isOnline(sessionList[0])) return '#3949ab';
   if (isToday(sessionList[0])) return '#d97706';
   return 'var(--color-text-secondary)';
-}
-
-interface KeyModalBodyProps {
-  readonly keyError: boolean;
-  readonly keyLoading: boolean;
-  readonly hostKey: string;
-  readonly keyResetting: boolean;
-  readonly keyCopied: boolean;
-  readonly t: (k: string) => string;
-  readonly onCopy: () => void;
-  readonly onReset: () => void;
-}
-
-function KeyModalBody({
-  keyError,
-  keyLoading,
-  hostKey,
-  keyResetting,
-  keyCopied,
-  t,
-  onCopy,
-  onReset,
-}: KeyModalBodyProps) {
-  if (keyError) return <AlertWarning type="error">{t('err.generic')}</AlertWarning>;
-  if (keyLoading)
-    return (
-      <div style={{ textAlign: 'center', padding: 24 }}>
-        <i className="bi bi-hourglass-split" />
-      </div>
-    );
-  return (
-    <>
-      <p style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
-        {t('meeting.host_key_hint')}
-      </p>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-        <code
-          style={{
-            flex: 1,
-            background: 'var(--color-bg-hover)',
-            padding: '6px 12px',
-            borderRadius: 6,
-            fontFamily: 'monospace',
-            letterSpacing: '0.1em',
-          }}
-        >
-          {formatKey(hostKey)}
-        </code>
-        <Button
-          onClick={onCopy}
-          icon={
-            keyCopied ? (
-              <i className="bi bi-check-lg" style={{ color: '#16a34a' }} />
-            ) : (
-              <i className="bi bi-clipboard" />
-            )
-          }
-        />
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Button
-          danger
-          onClick={onReset}
-          loading={keyResetting}
-          icon={<i className="bi bi-arrow-clockwise" />}
-        >
-          {t('btn.reset_key')}
-        </Button>
-        <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
-          {t('meeting.host_key_reset_warn')}
-        </span>
-      </div>
-    </>
-  );
-}
-
-interface MeetingUrlSectionProps {
-  readonly url: string;
-  readonly moderatorUrl: string;
-  readonly meetingName: string;
-  readonly copiedUrl: boolean;
-  readonly copiedMod: boolean;
-  readonly canShare: boolean;
-  readonly keyLoading: boolean;
-  readonly t: (k: string) => string;
-  readonly onCopyUrl: () => void;
-  readonly onCopyMod: () => void;
-  readonly onShareUrl: () => void;
-  readonly onShareMod: () => void;
-  readonly onDownloadQr: () => void;
-  readonly onOpenKeyModal: () => void;
-}
-
-function MeetingUrlSection({
-  url,
-  moderatorUrl,
-  meetingName,
-  copiedUrl,
-  copiedMod,
-  canShare,
-  keyLoading,
-  t,
-  onCopyUrl,
-  onCopyMod,
-  onShareUrl,
-  onShareMod,
-  onDownloadQr,
-  onOpenKeyModal,
-}: MeetingUrlSectionProps) {
-  return (
-    <div
-      style={{
-        marginTop: 8,
-        borderTop: '1px solid var(--color-border)',
-        paddingTop: 8,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 4,
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            flex: 1,
-            fontSize: 12,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {t('meeting.link')}
-        </a>
-        <Tooltip title={t('btn.download_qr')}>
-          <Button type="text" icon={<i className="bi bi-qr-code" />} onClick={onDownloadQr} />
-        </Tooltip>
-        <Tooltip title={t('btn.copy')}>
-          <Button
-            type="text"
-            onClick={onCopyUrl}
-            icon={
-              copiedUrl ? (
-                <i className="bi bi-check-lg" style={{ color: '#16a34a' }} />
-              ) : (
-                <i className="bi bi-clipboard" />
-              )
-            }
-          />
-        </Tooltip>
-        {canShare && (
-          <Tooltip title={t('btn.share')}>
-            <Button type="text" icon={<i className="bi bi-share" />} onClick={onShareUrl} />
-          </Tooltip>
-        )}
-      </div>
-
-      {moderatorUrl && moderatorUrl !== url && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <a
-            href={moderatorUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              flex: 1,
-              fontSize: 12,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {t('meeting.moderator_link')}
-          </a>
-          <Tooltip title={t('meeting.host_key')}>
-            <Button
-              type="text"
-              loading={keyLoading}
-              icon={<i className="bi bi-key" />}
-              onClick={onOpenKeyModal}
-            />
-          </Tooltip>
-          <Tooltip title={t('btn.copy')}>
-            <Button
-              type="text"
-              onClick={onCopyMod}
-              icon={
-                copiedMod ? (
-                  <i className="bi bi-check-lg" style={{ color: '#16a34a' }} />
-                ) : (
-                  <i className="bi bi-clipboard" />
-                )
-              }
-            />
-          </Tooltip>
-          {canShare && (
-            <Tooltip title={t('btn.share')}>
-              <Button type="text" icon={<i className="bi bi-share" />} onClick={onShareMod} />
-            </Tooltip>
-          )}
-        </div>
-      )}
-    </div>
-  );
 }
 
 interface BuildActionsOptions {
@@ -519,21 +311,22 @@ export default function MeetingListItem({ meeting: p, onRefresh }: Props) {
         )}
 
         {url && (
-          <MeetingUrlSection
-            url={url}
+          <JoinLinks
+            guestUrl={url}
             moderatorUrl={moderatorUrl}
-            meetingName={p.name}
-            copiedUrl={copiedUrl}
-            copiedMod={copiedMod}
+            guestCopied={copiedUrl}
+            moderatorCopied={copiedMod}
             canShare={canShare}
             keyLoading={keyLoading}
             t={t}
-            onCopyUrl={handleCopyUrl}
-            onCopyMod={handleCopyMod}
-            onShareUrl={() => navigator.share({ title: p.name, url }).catch(() => {})}
-            onShareMod={() => navigator.share({ title: p.name, url: moderatorUrl }).catch(() => {})}
+            onCopyGuest={handleCopyUrl}
+            onCopyModerator={handleCopyMod}
+            onShareGuest={() => navigator.share({ title: p.name, url }).catch(() => {})}
+            onShareModerator={() =>
+              navigator.share({ title: p.name, url: moderatorUrl }).catch(() => {})
+            }
             onDownloadQr={downloadQr}
-            onOpenKeyModal={openKeyModal}
+            onOpenKey={openKeyModal}
           />
         )}
       </Card>
@@ -579,12 +372,12 @@ export default function MeetingListItem({ meeting: p, onRefresh }: Props) {
         title={`${t('meeting.host_key')} — ${p.name}`}
         footer={null}
       >
-        <KeyModalBody
-          keyError={keyError}
-          keyLoading={keyLoading}
+        <HostKeyPanel
+          error={keyError}
+          loading={keyLoading}
           hostKey={hostKey}
-          keyResetting={keyResetting}
-          keyCopied={keyCopied}
+          resetting={keyResetting}
+          copied={keyCopied}
           t={t}
           onCopy={handleKeyCopy}
           onReset={resetKey}

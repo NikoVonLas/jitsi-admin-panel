@@ -28,7 +28,7 @@ function base64Url(bytes: Uint8Array): string {
     .replace(/=+$/, "");
 }
 
-function decodeBase64Url(value: string): Uint8Array {
+function decodeBase64Url(value: string): Uint8Array<ArrayBuffer> {
   const normalized = value.replaceAll("-", "+").replaceAll("_", "/");
   const padded = normalized.padEnd(
     normalized.length + ((4 - normalized.length % 4) % 4),
