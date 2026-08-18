@@ -88,6 +88,7 @@
     "packageJson": {
       "dependencies": [
         "npm:@fontsource-variable/inter@^5.2.8",
+        "npm:@playwright/test@^1.62.1",
         "npm:@tanstack/react-query@5",
         "npm:@testing-library/jest-dom@6",
         "npm:@testing-library/react@16",
@@ -109,7 +110,7 @@
         "npm:qrcode@^1.5.4",
         "npm:react-dom@19",
         "npm:react-hook-form@7",
-        "npm:react-router-dom@6",
+        "npm:react-router-dom@^7.18.2",
         "npm:react@19",
         "npm:typescript@^5.9.3",
         "npm:vite@6",

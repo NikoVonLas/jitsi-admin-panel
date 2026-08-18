@@ -17,11 +17,12 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.0.0",
-    "react-router-dom": "^6.0.0",
+    "react-router-dom": "^7.18.2",
     "zod": "^3.0.0",
     "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@testing-library/jest-dom": "^6.0.0",
     "@testing-library/react": "^16.0.0",
     "@testing-library/user-event": "^14.0.0",
@@ -45,6 +46,9 @@
     "format": "prettier --write .",
     "i18n:lint": "deno run --allow-read scripts/i18n-lint.ts",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "npm run test:e2e:local && npm run test:e2e:keycloak",
+    "test:e2e:local": "../e2e/run.sh local",
+    "test:e2e:keycloak": "../e2e/run.sh keycloak"
   }
 }

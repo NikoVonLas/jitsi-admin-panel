@@ -3,13 +3,13 @@ name: Dockerfile lint
 on:
   push:
     paths:
-      - 'docker/**'
-      - 'Caddyfile'
+      - "docker/**"
+      - "Caddyfile"
   pull_request:
     branches: [main]
     paths:
-      - 'docker/**'
-      - 'Caddyfile'
+      - "docker/**"
+      - "Caddyfile"
 
 jobs:
   lint-dockerfiles:
@@ -32,4 +32,8 @@ jobs:
       - uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: docker/web.Dockerfile
+          config: .hadolint.yaml
+      - uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: docker/e2e.Dockerfile
           config: .hadolint.yaml
