@@ -101,3 +101,17 @@ export function unauthorized(): Response {
     headers: { "Content-Type": "application/json" },
   });
 }
+
+// -----------------------------------------------------------------------------
+export function tooManyRequests(retryAfterSeconds = 300): Response {
+  return new Response(
+    JSON.stringify({ error: { message: "Too Many Requests" } }),
+    {
+      status: 429,
+      headers: {
+        "Content-Type": "application/json",
+        "Retry-After": String(retryAfterSeconds),
+      },
+    },
+  );
+}

@@ -23,6 +23,8 @@ import localRegister from "./lib/adm/local-register.ts";
 import oidcProvider from "./lib/adm/oidc-provider.ts";
 import { bootstrapOidcProvider } from "./lib/adm/bootstrap-oidc.ts";
 import { isPublicAuthPostPath } from "./lib/adm/public-auth-route.ts";
+import { AUTH_LOCAL } from "./config.ts";
+import { hasEnabledOidcProvider } from "./lib/database/oidc-provider.ts";
 
 const PRE = "/api/adm";
 
@@ -33,6 +35,11 @@ async function migration() {
   try {
     await migrate();
     await bootstrapOidcProvider();
+    if (!AUTH_LOCAL && !await hasEnabledOidcProvider()) {
+      throw new Error(
+        "AUTH_LOCAL=false requires at least one enabled OIDC provider",
+      );
+    }
 
     return true;
   } catch (e) {
@@ -70,7 +77,7 @@ async function route(req: Request, path: string): Promise<Response> {
   } else if (path === `${PRE}/oidc/auth-url`) {
     return await oidcAuth(req);
   } else if (path === `${PRE}/oidc/logout-url`) {
-    return await oidcLogout();
+    return await oidcLogout(req);
   } else {
     return notFound();
   }

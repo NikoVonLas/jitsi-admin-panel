@@ -48,6 +48,22 @@ export async function getOidcProvider(
 }
 
 // -----------------------------------------------------------------------------
+export async function getEnabledOidcProvider(
+  id: string,
+): Promise<OidcProviderRow | undefined> {
+  const sql = {
+    text: `
+      SELECT id, name, issuer_url, client_id, client_secret, scopes, enabled,
+             created_at, updated_at
+      FROM oidc_provider
+      WHERE id = $1 AND enabled = true`,
+    args: [id],
+  };
+  const rows = await fetch(sql) as OidcProviderRow[];
+  return rows[0];
+}
+
+// -----------------------------------------------------------------------------
 export async function getFirstEnabledOidcProvider(): Promise<
   OidcProviderRow | undefined
 > {
@@ -71,6 +87,21 @@ export async function hasEnabledOidcProvider(): Promise<boolean> {
   };
   const rows = await fetch(sql) as { cnt: string }[];
   return Number(rows[0]?.cnt ?? 0) > 0;
+}
+
+// -----------------------------------------------------------------------------
+export async function hasOtherEnabledOidcProvider(
+  id: string,
+): Promise<boolean> {
+  const sql = {
+    text: `
+      SELECT EXISTS(
+        SELECT 1 FROM oidc_provider WHERE enabled = true AND id != $1
+      ) AS exists`,
+    args: [id],
+  };
+  const rows = await fetch(sql) as { exists: boolean }[];
+  return rows[0]?.exists ?? false;
 }
 
 // -----------------------------------------------------------------------------

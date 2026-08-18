@@ -11,6 +11,7 @@ import {
 import { getIsSuperAdmin } from "../database/identity.ts";
 import { isValidOidcIssuerUrl } from "../common/validate.ts";
 import { ALLOW_UNSECURE_CERT } from "../../config.ts";
+import { ensureOidcProviderRemovalDoesNotLockOut } from "../common/oidc-provider-policy.ts";
 
 const PRE = "/api/pri/oidc-provider";
 
@@ -76,6 +77,7 @@ async function del(req: Request, _identityId: string): Promise<unknown> {
   const id: string = pl.id ?? "";
   if (!id) throw new HttpError(400, "id is required");
 
+  await ensureOidcProviderRemovalDoesNotLockOut(id);
   await deleteOidcProvider(id);
   return [{ ok: true }];
 }
@@ -87,6 +89,7 @@ async function toggle(req: Request, _identityId: string): Promise<unknown> {
   const enabled: boolean = Boolean(pl.enabled);
   if (!id) throw new HttpError(400, "id is required");
 
+  if (!enabled) await ensureOidcProviderRemovalDoesNotLockOut(id);
   await toggleOidcProvider(id, enabled);
   return [{ ok: true }];
 }

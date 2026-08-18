@@ -1,9 +1,17 @@
-import { setCookie } from "@std/http/cookie";
-import { ok, unauthorized } from "../http/response.ts";
+import { ok, tooManyRequests, unauthorized } from "../http/response.ts";
 import { getIdentityByEmail } from "../database/identity-local.ts";
 import { verifyPassword } from "../common/password.ts";
 import { generateAPIToken } from "../common/token-oidc.ts";
-import { ALLOW_UNSECURE_CERT } from "../../config.ts";
+import {
+  clearOidcProviderCookie,
+  setSessionCookie,
+} from "../common/session-cookie.ts";
+import {
+  loginRateLimitKey,
+  SlidingWindowRateLimiter,
+} from "../common/rate-limit.ts";
+
+const loginLimiter = new SlidingWindowRateLimiter(10, 5 * 60 * 1000);
 
 // POST /api/adm/auth/local/login
 // body: { email, password }
@@ -17,6 +25,8 @@ export default async function handleLocalLogin(
     const password: string = body.password ?? "";
 
     if (!email || !password) return unauthorized();
+    const rateLimitKey = loginRateLimitKey(req, email);
+    if (!loginLimiter.take(rateLimitKey)) return tooManyRequests();
 
     const rows = await getIdentityByEmail(email);
     if (!rows[0]) return unauthorized();
@@ -26,22 +36,21 @@ export default async function handleLocalLogin(
     const valid = await verifyPassword(password, password_hash);
     if (!valid) return unauthorized();
 
+    loginLimiter.reset(rateLimitKey);
+
     const token = await generateAPIToken(identity_id);
 
     // Set httpOnly cookie so the private API can authenticate the request
     const headers = new Headers();
-    setCookie(headers, {
-      name: "token",
-      value: token,
-      path: "/api",
-      secure: !ALLOW_UNSECURE_CERT,
-      httpOnly: true,
-      sameSite: "Lax",
-    });
+    setSessionCookie(headers, token);
+    clearOidcProviderCookie(headers);
 
     headers.set("Content-Type", "application/json");
 
-    return ok(JSON.stringify({ token }), headers);
+    return ok(
+      JSON.stringify({ authenticated: true, method: "local" }),
+      headers,
+    );
   } catch (e) {
     console.error("login failed:", e);
     return unauthorized();

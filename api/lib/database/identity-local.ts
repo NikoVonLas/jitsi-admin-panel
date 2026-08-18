@@ -63,6 +63,44 @@ export async function createLocalIdentity(
 }
 
 // -----------------------------------------------------------------------------
+// Atomically claim first-user setup. The advisory transaction lock prevents
+// two concurrent registration requests from both becoming superadmins.
+// -----------------------------------------------------------------------------
+export async function createFirstLocalIdentity(
+  email: string,
+  passwordHash: string,
+): Promise<Id[]> {
+  using client = await pool.connect();
+  const trans = client.createTransaction("create_first_local_identity");
+  await trans.begin();
+  await trans.queryObject({
+    text:
+      `SELECT pg_advisory_xact_lock(hashtext('jitsi-admin-panel:first-user'))`,
+  });
+  const existing = await trans.queryObject<{ exists: boolean }>({
+    text: `SELECT EXISTS(SELECT 1 FROM identity_local) AS exists`,
+  });
+  if (existing.rows[0]?.exists) {
+    await trans.commit();
+    return [];
+  }
+
+  const identityId = crypto.randomUUID();
+  await trans.queryObject({
+    text: `INSERT INTO identity (id) VALUES ($1)`,
+    args: [identityId],
+  });
+  await trans.queryObject({
+    text: `
+      INSERT INTO identity_local (identity_id, email, password_hash)
+      VALUES ($1, $2, $3)`,
+    args: [identityId, email, passwordHash],
+  });
+  await trans.commit();
+  return [{ id: identityId, at: new Date().toISOString() }] as Id[];
+}
+
+// -----------------------------------------------------------------------------
 // Update the password hash for an existing local identity
 // -----------------------------------------------------------------------------
 export async function updateLocalPasswordHash(

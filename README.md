@@ -60,8 +60,10 @@ All configuration is done via environment variables. Copy `.env.example` to `.en
 | `DB_PASSWD`           | Yes                 | `changeme`             | PostgreSQL password                                                               |
 | `API_SECRET`          | Yes                 | —                      | Secret key for JWT signing — use a strong random string                           |
 | `APP_FQDN`            | Yes                 | `localhost`            | Public domain (`example.com`), `localhost` for local TLS, or `:80` for plain HTTP |
+| `APP_SCHEME`          | No                  | `https`                | Public URL scheme used for links and OIDC callbacks                               |
 | `AUTH_LOCAL`          | No                  | `true`                 | Enable email/password login and local-user management                             |
 | `ALLOW_UNSECURE_CERT` | No                  | `false`                | Skip TLS certificate verification (dev only)                                      |
+| `SESSION_COOKIE_SECURE` | No                | derived from scheme    | Set `false` only when the panel itself is served over plain HTTP                   |
 | `API_TIMEOUT`         | No                  | `86400`                | Authentication session lifetime in seconds                                        |
 | `OIDC_PROVIDER_NAME`  | No                  | `Keycloak`             | Display name used when bootstrapping the first OIDC provider                      |
 | `OIDC_ISSUER_URL`     | Keycloak-only setup | —                      | Realm issuer URL, for example `https://keycloak.example.com/realms/jitsi`         |
@@ -97,6 +99,10 @@ Keycloak client. Assign the `SUPERADMIN_ROLE` realm role to at least one user.
 If the database has no OIDC providers, `api-adm` creates the first one from
 these variables. Providers subsequently managed through the UI are not
 overwritten by environment configuration.
+
+OIDC uses authorization-code flow with signed, short-lived state, PKCE S256,
+nonce, and provider JWKS validation. The browser never receives either the
+provider tokens or the panel session JWT.
 
 ## Architecture
 

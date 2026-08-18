@@ -58,13 +58,13 @@ describe('Layout', () => {
   });
 
   it('renders NavBarPri when authenticated', () => {
-    sessionStorage.setItem('oidc_authenticated', 'ok');
+    sessionStorage.setItem('session_authenticated', 'ok');
     render(<Layout />);
     expect(screen.getByTestId('navbar-pri')).toBeInTheDocument();
   });
 
   it('renders MessageList when authenticated', () => {
-    sessionStorage.setItem('oidc_authenticated', 'ok');
+    sessionStorage.setItem('session_authenticated', 'ok');
     render(<Layout />);
     expect(screen.getByTestId('message-list')).toBeInTheDocument();
   });

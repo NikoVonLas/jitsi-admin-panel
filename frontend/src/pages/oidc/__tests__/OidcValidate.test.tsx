@@ -16,13 +16,13 @@ describe('OidcValidate', () => {
     vi.clearAllMocks();
     localStorage.clear();
     sessionStorage.clear();
-    vi.mocked(action).mockResolvedValue({ id: 'x' });
+    vi.mocked(action).mockResolvedValue({ id: 'x', next: '/' });
     locationReplaceMock = vi.fn();
     vi.stubGlobal('location', {
       replace: locationReplaceMock,
       href: 'http://localhost/',
       origin: 'http://localhost',
-      search: '?code=test-code',
+      search: '?code=test-code&state=test-state',
       pathname: '/',
       hash: '',
     });
@@ -43,14 +43,15 @@ describe('OidcValidate', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('sets oidc_authenticated in sessionStorage', async () => {
+  it('sets the unified session marker in sessionStorage', async () => {
     render(<OidcValidate />);
     await new Promise((r) => setTimeout(r, 20));
-    expect(sessionStorage.getItem('oidc_authenticated')).toBe('ok');
+    expect(sessionStorage.getItem('session_authenticated')).toBe('ok');
+    expect(sessionStorage.getItem('session_auth_method')).toBe('oidc');
   });
 
   it('does not mark the session authenticated before code exchange succeeds', async () => {
-    let resolveExchange!: (value: { id: string }) => void;
+    let resolveExchange!: (value: { id: string; next: string }) => void;
     vi.mocked(action).mockReturnValue(
       new Promise((resolve) => {
         resolveExchange = resolve;
@@ -60,22 +61,38 @@ describe('OidcValidate', () => {
     render(<OidcValidate />);
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(sessionStorage.getItem('oidc_authenticated')).toBeNull();
+    expect(sessionStorage.getItem('session_authenticated')).toBeNull();
 
-    resolveExchange({ id: 'x' });
-    await waitFor(() => expect(sessionStorage.getItem('oidc_authenticated')).toBe('ok'));
+    resolveExchange({ id: 'x', next: '/' });
+    await waitFor(() => expect(sessionStorage.getItem('session_authenticated')).toBe('ok'));
   });
 
-  it('sets auth_token in localStorage on success', async () => {
+  it('does not store a token in localStorage on success', async () => {
     render(<OidcValidate />);
     await new Promise((r) => setTimeout(r, 20));
-    expect(localStorage.getItem('auth_token')).toBe('oidc');
+    expect(localStorage.getItem('auth_token')).toBeNull();
   });
 
   it('redirects to / on success (default next)', async () => {
     render(<OidcValidate />);
     await new Promise((r) => setTimeout(r, 20));
     expect(locationReplaceMock).toHaveBeenCalledWith('/');
+  });
+
+  it('passes both code and state to the backend and uses its next path', async () => {
+    vi.mocked(action).mockResolvedValue({ id: 'x', next: '/meeting?view=list' });
+    render(<OidcValidate />);
+    await waitFor(() => expect(locationReplaceMock).toHaveBeenCalledWith('/meeting?view=list'));
+    expect(action).toHaveBeenCalledWith('/api/adm/identity/get/bycode', {
+      code: 'test-code',
+      state: 'test-state',
+    });
+  });
+
+  it('rejects a protocol-relative next path returned by the backend', async () => {
+    vi.mocked(action).mockResolvedValue({ id: 'x', next: '//evil.example' });
+    render(<OidcValidate />);
+    await waitFor(() => expect(locationReplaceMock).toHaveBeenCalledWith('/'));
   });
 
   it('redirects to /login when no code in URL', async () => {

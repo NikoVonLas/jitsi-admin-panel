@@ -82,7 +82,7 @@ describe('useModJoinPage', () => {
   });
 
   it('redirects when oidc session exists and mod url is returned', async () => {
-    sessionStorage.setItem('oidc_authenticated', 'ok');
+    sessionStorage.setItem('session_authenticated', 'ok');
     const modUrl = 'https://jitsi.example.com/mod';
     mockFetchModeratorLink.mockResolvedValue(modUrl);
     renderHook(() => useModJoinPage(defaultConfig));
@@ -90,7 +90,7 @@ describe('useModJoinPage', () => {
   });
 
   it('sets ready=true when oidc session exists but no mod url', async () => {
-    sessionStorage.setItem('oidc_authenticated', 'ok');
+    sessionStorage.setItem('session_authenticated', 'ok');
     mockFetchModeratorLink.mockResolvedValue(undefined);
     const { result } = renderHook(() => useModJoinPage(defaultConfig));
     await waitFor(() => expect(result.current.ready).toBe(true));

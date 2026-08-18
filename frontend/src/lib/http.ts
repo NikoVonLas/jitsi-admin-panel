@@ -1,6 +1,8 @@
+import { clearAuthentication, isAuthenticated } from './session';
+
 function handleUnauthorized() {
-  if (sessionStorage.getItem('oidc_authenticated')) {
-    sessionStorage.removeItem('oidc_authenticated');
+  if (isAuthenticated()) {
+    clearAuthentication();
     location.replace('/oidc/logout');
   }
 }

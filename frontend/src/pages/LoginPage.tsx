@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Form, Input, Button, Divider, Alert, Typography, Space } from 'antd';
 import { UserOutlined, LockOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useTr } from '../i18n';
+import { isAuthenticated, markAuthenticated } from '../lib/session';
 
 const { Title, Text } = Typography;
 
@@ -26,9 +27,7 @@ export default function LoginPage() {
   const [form] = Form.useForm();
 
   useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    const oidcAuth = sessionStorage.getItem('oidc_authenticated');
-    if (token || oidcAuth) {
+    if (isAuthenticated()) {
       navigate('/meeting', { replace: true });
       return;
     }
@@ -64,9 +63,7 @@ export default function LoginPage() {
         setError(t('login.err_create_user'));
         return;
       }
-      const data = await res.json();
-      if (data.token) localStorage.setItem('auth_token', data.token);
-      sessionStorage.setItem('oidc_authenticated', 'ok');
+      markAuthenticated('local');
       navigate('/', { replace: true });
     } catch {
       setError(t('login.err_retry'));
@@ -92,9 +89,7 @@ export default function LoginPage() {
         setError(t('login.err_invalid_credentials'));
         return;
       }
-      const data = await res.json();
-      if (data.token) localStorage.setItem('auth_token', data.token);
-      sessionStorage.setItem('oidc_authenticated', 'ok');
+      markAuthenticated('local');
       navigate('/', { replace: true });
     } catch {
       setError(t('login.err_login'));

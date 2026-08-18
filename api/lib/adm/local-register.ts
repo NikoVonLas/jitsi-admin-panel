@@ -1,7 +1,6 @@
-import { setCookie } from "@std/http/cookie";
 import { conflict, ok, unauthorized } from "../http/response.ts";
 import {
-  createLocalIdentity,
+  createFirstLocalIdentity,
   getIdentityByEmail,
   hasAnyLocalUser,
 } from "../database/identity-local.ts";
@@ -9,7 +8,11 @@ import { hashPassword } from "../common/password.ts";
 import { generateAPIToken } from "../common/token-oidc.ts";
 import { addProfile } from "../database/profile.ts";
 import { setIdentityEmail, setSuperAdmin } from "../database/identity.ts";
-import { ALLOW_UNSECURE_CERT, AUTH_LOCAL } from "../../config.ts";
+import { AUTH_LOCAL } from "../../config.ts";
+import {
+  clearOidcProviderCookie,
+  setSessionCookie,
+} from "../common/session-cookie.ts";
 
 // POST /api/adm/auth/local/register
 // body: { email, password, name? }
@@ -19,7 +22,8 @@ export default async function handleLocalRegister(
 ): Promise<Response> {
   try {
     // Setup mode only — once a user exists, register is closed
-    if (!AUTH_LOCAL || await hasAnyLocalUser()) return unauthorized();
+    if (!AUTH_LOCAL) return unauthorized();
+    if (await hasAnyLocalUser()) return conflict();
 
     const body = await req.json();
     const email: string = (body.email ?? "").trim().toLowerCase();
@@ -33,8 +37,8 @@ export default async function handleLocalRegister(
     if (existing[0]) return conflict();
 
     const passwordHash = await hashPassword(password);
-    const rows = await createLocalIdentity(email, passwordHash);
-    if (!rows[0]) return unauthorized();
+    const rows = await createFirstLocalIdentity(email, passwordHash);
+    if (!rows[0]) return conflict();
 
     const identityId = rows[0].id;
 
@@ -48,18 +52,15 @@ export default async function handleLocalRegister(
 
     // Set httpOnly cookie so the private API can authenticate the request
     const headers = new Headers();
-    setCookie(headers, {
-      name: "token",
-      value: token,
-      path: "/api",
-      secure: !ALLOW_UNSECURE_CERT,
-      httpOnly: true,
-      sameSite: "Lax",
-    });
+    setSessionCookie(headers, token);
+    clearOidcProviderCookie(headers);
 
     headers.set("Content-Type", "application/json");
 
-    return ok(JSON.stringify({ token }), headers);
+    return ok(
+      JSON.stringify({ authenticated: true, method: "local" }),
+      headers,
+    );
   } catch (e) {
     console.error("register failed:", e);
     return unauthorized();

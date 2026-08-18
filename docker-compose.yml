@@ -29,6 +29,7 @@ services:
       - ALLOW_UNSECURE_CERT
       - API_SECRET
       - API_TIMEOUT
+      - APP_SCHEME
       - AUTH_LOCAL
       - DB_HOST=db
       - DB_PASSWD
@@ -40,6 +41,7 @@ services:
       - OIDC_PROVIDER_NAME
       - OIDC_SCOPES
       - SUPERADMIN_ROLE
+      - SESSION_COOKIE_SECURE
       - MAILER_HOST
       - MAILER_PORT
       - MAILER_SECURE
@@ -64,6 +66,8 @@ services:
     restart: always
     environment:
       - API_SECRET
+      - ALLOW_UNSECURE_CERT
+      - APP_SCHEME
       - AUTH_LOCAL
       - DB_HOST=db
       - DB_PASSWD

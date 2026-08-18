@@ -9,6 +9,7 @@ import {
 } from "../database/oidc-provider.ts";
 import { isValidOidcIssuerUrl } from "../common/validate.ts";
 import { ALLOW_UNSECURE_CERT } from "../../config.ts";
+import { ensureOidcProviderRemovalDoesNotLockOut } from "../common/oidc-provider-policy.ts";
 
 const PRE = "/api/adm/oidc-provider";
 
@@ -86,6 +87,7 @@ async function handleDisable(req: Request): Promise<Response> {
   const { id } = await req.json();
   if (!id) return badRequest("id is required");
   return wrapper(async () => {
+    await ensureOidcProviderRemovalDoesNotLockOut(id);
     await toggleOidcProvider(id, false);
     return { ok: true };
   }, req);
@@ -96,6 +98,7 @@ async function handleDel(req: Request): Promise<Response> {
   const { id } = await req.json();
   if (!id) return badRequest("id is required");
   return wrapper(async () => {
+    await ensureOidcProviderRemovalDoesNotLockOut(id);
     await deleteOidcProvider(id);
     return { ok: true };
   }, req);

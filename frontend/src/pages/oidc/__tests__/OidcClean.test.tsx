@@ -37,23 +37,25 @@ describe('OidcClean', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('clears localStorage on mount', async () => {
-    localStorage.setItem('key', 'value');
+  it('clears legacy authentication data without deleting preferences', async () => {
+    localStorage.setItem('auth_token', 'legacy');
+    localStorage.setItem('theme', 'dark');
     render(<OidcClean />);
     await new Promise((r) => setTimeout(r, 10));
-    expect(localStorage.getItem('key')).toBeNull();
+    expect(localStorage.getItem('auth_token')).toBeNull();
+    expect(localStorage.getItem('theme')).toBe('dark');
   });
 
-  it('clears sessionStorage on mount', async () => {
-    sessionStorage.setItem('key', 'value');
+  it('clears the authentication session marker on mount', async () => {
+    sessionStorage.setItem('session_authenticated', 'ok');
     render(<OidcClean />);
     await new Promise((r) => setTimeout(r, 10));
-    expect(sessionStorage.getItem('key')).toBeNull();
+    expect(sessionStorage.getItem('session_authenticated')).toBeNull();
   });
 
-  it('redirects to OIDC redirect URL', async () => {
+  it('redirects to the login page', async () => {
     render(<OidcClean />);
     await new Promise((r) => setTimeout(r, 10));
-    expect(locationReplaceMock).toHaveBeenCalledWith('/api/adm/oidc/redirect?prompt=consent');
+    expect(locationReplaceMock).toHaveBeenCalledWith('/login');
   });
 });

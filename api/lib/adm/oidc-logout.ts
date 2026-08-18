@@ -2,10 +2,14 @@ import { ok } from "../http/response.ts";
 import { getLogoutEndpoint, resolveProvider } from "../common/oidc.ts";
 import { APP_FQDN, APP_SCHEME } from "../../config.ts";
 import { getSettingValue } from "../database/setting.ts";
+import { getOidcProviderCookie } from "../common/session-cookie.ts";
 
 // -----------------------------------------------------------------------------
-export default async function handleOidcLogout(): Promise<Response> {
-  const provider = await resolveProvider();
+export default async function handleOidcLogout(
+  req: Request,
+): Promise<Response> {
+  const providerId = getOidcProviderCookie(req);
+  const provider = providerId ? await resolveProvider(providerId) : undefined;
   if (!provider) return ok(JSON.stringify([{ logout_url: "" }]));
 
   const logoutEndpoint = await getLogoutEndpoint(provider.id);

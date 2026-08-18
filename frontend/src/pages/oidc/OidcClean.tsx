@@ -1,15 +1,15 @@
 import { useEffect } from 'react';
 import { get } from '../../lib/api';
+import { clearAuthentication } from '../../lib/session';
 
 export default function OidcClean() {
   useEffect(() => {
     async function load() {
-      localStorage.clear();
-      sessionStorage.clear();
+      clearAuthentication();
       try {
         await get('/api/adm/identity/clear');
       } catch {}
-      globalThis.location.replace('/api/adm/oidc/redirect?prompt=consent');
+      globalThis.location.replace('/login');
     }
     load();
   }, []);

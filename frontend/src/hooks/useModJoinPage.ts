@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toDataURL } from 'qrcode';
+import { isAuthenticated } from '../lib/session';
 
 export type JoinError = '' | 'too_early' | 'invalid';
 
@@ -57,8 +58,7 @@ export function useModJoinPage(config: ModJoinPageConfig) {
         // ignore — page still renders without name/shortCode
       }
 
-      const isAuth = sessionStorage.getItem('oidc_authenticated');
-      if (isAuth) {
+      if (isAuthenticated()) {
         setJoining(true);
         try {
           const modUrl = await fetchModeratorLink(uuid);

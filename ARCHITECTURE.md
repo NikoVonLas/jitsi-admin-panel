@@ -71,20 +71,29 @@ healthcheck, поэтому не стартуют посреди миграци�
 **Local:** `POST /api/adm/auth/local/login` → PBKDF2-верификация пароля →
 HS256 JWT (`API_SECRET`) → `Set-Cookie: token=...; HttpOnly; Path=/api`.
 
-**OIDC:** SPA получает `auth_url` → редирект на провайдер → колбэк на
-`/oidc/validate` → api-adm обменивает code на токен, достаёт `sub`, создаёт
-или обновляет identity → тот же HS256 JWT в cookie.
+**OIDC:** api-adm создаёт подписанную одноразовую auth-транзакцию в
+HttpOnly-cookie (state, provider, safe next, nonce, PKCE verifier) → SPA
+редиректит на провайдер с PKCE S256 → колбэк `/oidc/validate` передаёт только
+code и state → api-adm проверяет транзакцию, подпись ID/access token через
+JWKS, issuer, audience, expiry, nonce и совпадение `sub` с userinfo → создаёт
+или обновляет identity → тот же HS256 JWT в cookie. Идентификатор identity
+строится из пары `(issuer, sub)`, поэтому одинаковые `sub` разных провайдеров
+не пересекаются.
 
-SPA помечает OIDC-сессию активной только после успешного обмена code. Это не
-даёт приватным фоновых запросам запустить logout до установки cookie.
+SPA хранит только несекретный session-marker после успешного local/OIDC
+входа. JWT панели, ID token и access token в Web Storage не попадают.
 
 Для Keycloak-only установки первый OIDC-провайдер создаётся из `OIDC_*` env,
 если таблица провайдеров пуста. Дальше записи управляются через UI и имеют
 приоритет над env. Пользователи создаются в Keycloak; Admin REST API Keycloak
 не используется. Локальные identity/profile создаются JIT при первом входе.
 
-Суперадмин-флаг: для local auth — первый зарегистрированный пользователь;
+Суперадмин-флаг: для local auth — единственный победитель атомарной регистрации
+первого пользователя;
 для OIDC — роль `SUPERADMIN_ROLE` из `realm_access.roles` токена провайдера.
+
+При `AUTH_LOCAL=false` api-adm не стартует без активного OIDC-провайдера, а
+последний активный провайдер нельзя отключить или удалить.
 
 api-pri верифицирует cookie на каждом запросе; api-pub cookie игнорирует.
 

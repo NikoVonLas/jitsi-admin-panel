@@ -26,6 +26,10 @@ export const ALLOW_UNSECURE_CERT = getBooleanEnv(
   "ALLOW_UNSECURE_CERT",
   false,
 );
+export const SESSION_COOKIE_SECURE = getBooleanEnv(
+  "SESSION_COOKIE_SECURE",
+  APP_SCHEME === "https",
+);
 
 // contact
 export const CONTACT_EMAIL = Deno.env.get("CONTACT_EMAIL") || "";

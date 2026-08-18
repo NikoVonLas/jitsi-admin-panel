@@ -56,6 +56,7 @@ services:
       OIDC_PROVIDER_NAME: Keycloak
       OIDC_SCOPES: openid profile email
       SUPERADMIN_ROLE: jitsi-superadmin
+      SESSION_COOKIE_SECURE: "false"
     depends_on:
       db:
         condition: service_healthy
@@ -79,7 +80,9 @@ services:
       dockerfile: docker/pri.Dockerfile
     environment:
       API_SECRET: e2e-api-secret-change-me
+      ALLOW_UNSECURE_CERT: "true"
       APP_FQDN: web
+      APP_SCHEME: http
       AUTH_LOCAL: "${E2E_AUTH_LOCAL:-true}"
       DB_HOST: db
       DB_PASSWD: e2e-db-password

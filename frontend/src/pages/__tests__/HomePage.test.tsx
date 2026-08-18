@@ -29,14 +29,14 @@ describe('HomePage', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
   });
 
-  it('navigates to /meeting when auth_token is set', async () => {
+  it('does not trust a legacy localStorage token', async () => {
     localStorage.setItem('auth_token', 'token123');
     render(<HomePage />);
-    expect(mockNavigate).toHaveBeenCalledWith('/meeting', { replace: true });
+    expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
   });
 
-  it('navigates to /meeting when oidc_authenticated is set', async () => {
-    sessionStorage.setItem('oidc_authenticated', 'ok');
+  it('navigates to /meeting when the current session marker is set', async () => {
+    sessionStorage.setItem('session_authenticated', 'ok');
     render(<HomePage />);
     expect(mockNavigate).toHaveBeenCalledWith('/meeting', { replace: true });
   });

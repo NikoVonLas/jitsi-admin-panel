@@ -7,6 +7,7 @@ import MessageList from '../components/pri/message/MessageList';
 import { useIntercomMessages } from '../hooks/useIntercom';
 import { ping } from '../lib/nav';
 import type { IntercomMessage222 } from '../types';
+import { isAuthenticated } from '../lib/session';
 
 const NO_NAV_PREFIXES = ['/r/', '/rm/', '/jm/', '/oidc/'];
 const NO_NAV_EXACT = new Set(['/', '/login']);
@@ -22,7 +23,7 @@ function shouldShowNav(pathname: string): boolean {
 export default function Layout() {
   const location = useLocation();
   const { load } = useAppConfig();
-  const isAuthenticated = !!sessionStorage.getItem('oidc_authenticated');
+  const authenticated = isAuthenticated();
   const showNav = shouldShowNav(location.pathname);
 
   const [messages, setMessages] = useState<IntercomMessage222[]>([]);
@@ -41,21 +42,21 @@ export default function Layout() {
     setMessages(msgs);
   }, []);
 
-  useIntercomMessages(isAuthenticated, handleMessagesChange);
+  useIntercomMessages(authenticated, handleMessagesChange);
 
   useEffect(() => {
     load();
   }, [load]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (authenticated) {
       ping();
     }
-  }, [isAuthenticated]);
+  }, [authenticated]);
 
   return (
     <div className="app-layout">
-      {showNav && (isAuthenticated ? <NavBarPri /> : <NavBarPub />)}
+      {showNav && (authenticated ? <NavBarPri /> : <NavBarPub />)}
 
       <div
         className="container"
@@ -64,14 +65,14 @@ export default function Layout() {
           margin: '0 auto',
           padding: '0 16px',
           paddingTop: showNav && isDesktop ? 72 : 0,
-          paddingBottom: isAuthenticated ? 80 : 16,
+          paddingBottom: authenticated ? 80 : 16,
           minHeight: 0,
         }}
       >
         <Outlet />
       </div>
 
-      {isAuthenticated && <MessageList messages={messages} />}
+      {authenticated && <MessageList messages={messages} />}
     </div>
   );
 }
