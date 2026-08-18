@@ -2,6 +2,7 @@ name: Dockerfile lint
 
 on:
   push:
+    branches: [main]
     paths:
       - "docker/**"
       - "Caddyfile"

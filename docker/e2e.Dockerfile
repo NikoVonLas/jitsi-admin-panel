@@ -11,7 +11,7 @@ WORKDIR /work/frontend
 
 COPY --from=dependencies /work/frontend/node_modules ./node_modules
 COPY frontend/ ./
-RUN chown -R pwuser:pwuser /work/frontend
+RUN chown -R 1001:1001 /work/frontend
 
-USER pwuser
+USER 1001
 ENTRYPOINT ["npx", "playwright", "test"]
