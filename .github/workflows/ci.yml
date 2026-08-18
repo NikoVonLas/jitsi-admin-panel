@@ -122,7 +122,7 @@ jobs:
       - name: Fix lcov paths (make relative to repo root)
         run: sed -i "s|SF:$(pwd)/|SF:|g" api/coverage/lcov.info
       - name: Upload API coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: api-coverage
           path: api/coverage/lcov.info
@@ -144,7 +144,7 @@ jobs:
         run: npm run test:coverage
         working-directory: frontend
       - name: Upload frontend coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: frontend-coverage
           path: frontend/coverage/lcov.info
@@ -172,7 +172,7 @@ jobs:
         run: ./e2e/run.sh ${{ matrix.auth }}
       - name: Upload Playwright report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: playwright-${{ matrix.auth }}
           path: frontend/test-results
@@ -189,13 +189,13 @@ jobs:
         with:
           fetch-depth: 0
       - name: Download API coverage
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: api-coverage
           path: api/coverage
         continue-on-error: true
       - name: Download frontend coverage
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: frontend-coverage
           path: frontend/coverage
