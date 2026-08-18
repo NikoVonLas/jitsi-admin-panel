@@ -68,7 +68,9 @@ describe('LoginPage', () => {
   it('shows OIDC provider buttons when oidc is enabled', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       json: async () => ({
-        local: false, oidc: true, setup: false,
+        local: false,
+        oidc: true,
+        setup: false,
         oidc_providers: [{ id: 'google', name: 'Google' }],
       }),
     });

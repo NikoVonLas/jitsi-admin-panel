@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import type { Room333 } from '../../../../types';
 
 vi.mock('qrcode', () => ({
-  toDataURL: vi.fn().mockResolvedValue('data:image/png;base64,test'),
+  toDataURL: vi.fn().mockReturnValue(new Promise(() => {})),
 }));
 
 vi.mock('../../../../lib/api', () => ({
@@ -63,9 +63,7 @@ describe('RoomListItem', () => {
 
   it('renders room path including domain and room name', () => {
     render(
-      <RoomListItem
-        room={makeRoom({ domain_url: 'https://jitsi.example.com', name: 'myroom' })}
-      />,
+      <RoomListItem room={makeRoom({ domain_url: 'https://jitsi.example.com', name: 'myroom' })} />
     );
     expect(screen.getByText('jitsi.example.com/myroom')).toBeInTheDocument();
   });

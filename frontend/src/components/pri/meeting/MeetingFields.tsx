@@ -15,15 +15,42 @@ interface Props {
 }
 
 export default function MeetingFields({
-  name, onNameChange, info, onInfoChange,
-  roomId, onRoomIdChange, rooms, disabled,
+  name,
+  onNameChange,
+  info,
+  onInfoChange,
+  roomId,
+  onRoomIdChange,
+  rooms,
+  disabled,
 }: Props) {
   const t = useTr();
   return (
     <>
-      <FormText name="name" label={t('form.name')} value={name} onChange={onNameChange} required disabled={disabled} />
-      <FormTextarea name="info" label={t('form.info')} value={info} onChange={onInfoChange} disabled={disabled} />
-      <FormSelect name="room_id" label={t('form.room')} value={roomId} onChange={onRoomIdChange} options={rooms} disabled={disabled} required />
+      <FormText
+        name="name"
+        label={t('form.name')}
+        value={name}
+        onChange={onNameChange}
+        required
+        disabled={disabled}
+      />
+      <FormTextarea
+        name="info"
+        label={t('form.info')}
+        value={info}
+        onChange={onInfoChange}
+        disabled={disabled}
+      />
+      <FormSelect
+        name="room_id"
+        label={t('form.room')}
+        value={roomId}
+        onChange={onRoomIdChange}
+        options={rooms}
+        disabled={disabled}
+        required
+      />
     </>
   );
 }

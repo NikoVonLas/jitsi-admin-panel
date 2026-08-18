@@ -24,23 +24,64 @@ interface RoomKeyModalBodyProps {
   readonly onReset: () => void;
 }
 
-function RoomKeyModalBody({ keyError, keyLoading, hostKey, keyResetting, keyCopied, t, onCopy, onReset }: RoomKeyModalBodyProps) {
+function RoomKeyModalBody({
+  keyError,
+  keyLoading,
+  hostKey,
+  keyResetting,
+  keyCopied,
+  t,
+  onCopy,
+  onReset,
+}: RoomKeyModalBodyProps) {
   if (keyError) return <AlertWarning type="error">{t('err.generic')}</AlertWarning>;
-  if (keyLoading) return <div style={{ textAlign: 'center', padding: 24 }}><i className="bi bi-hourglass-split" /></div>;
+  if (keyLoading)
+    return (
+      <div style={{ textAlign: 'center', padding: 24 }}>
+        <i className="bi bi-hourglass-split" />
+      </div>
+    );
   return (
     <>
-      <p style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>{t('meeting.host_key_hint')}</p>
+      <p style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>
+        {t('meeting.host_key_hint')}
+      </p>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-        <code style={{ flex: 1, background: 'var(--color-bg-hover)', padding: '6px 12px', borderRadius: 6, fontFamily: 'monospace', letterSpacing: '0.1em' }}>
+        <code
+          style={{
+            flex: 1,
+            background: 'var(--color-bg-hover)',
+            padding: '6px 12px',
+            borderRadius: 6,
+            fontFamily: 'monospace',
+            letterSpacing: '0.1em',
+          }}
+        >
           {formatKey(hostKey)}
         </code>
-        <Button onClick={onCopy} icon={keyCopied ? <i className="bi bi-check-lg" style={{ color: '#16a34a' }} /> : <i className="bi bi-clipboard" />} />
+        <Button
+          onClick={onCopy}
+          icon={
+            keyCopied ? (
+              <i className="bi bi-check-lg" style={{ color: '#16a34a' }} />
+            ) : (
+              <i className="bi bi-clipboard" />
+            )
+          }
+        />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Button danger onClick={onReset} loading={keyResetting} icon={<i className="bi bi-arrow-clockwise" />}>
+        <Button
+          danger
+          onClick={onReset}
+          loading={keyResetting}
+          icon={<i className="bi bi-arrow-clockwise" />}
+        >
           {t('btn.reset_key')}
         </Button>
-        <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{t('meeting.host_key_reset_warn')}</span>
+        <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+          {t('meeting.host_key_reset_warn')}
+        </span>
       </div>
     </>
   );
@@ -64,39 +105,114 @@ interface RoomUrlSectionProps {
 }
 
 function RoomUrlSection({
-  guestUrl, modUrl, roomTitle, copiedGuest, copiedMod, canShareUrl,
-  keyLoading, t, onCopyGuest, onCopyMod, onShareGuest, onShareMod,
-  onDownloadQr, onOpenKeyModal,
+  guestUrl,
+  modUrl,
+  roomTitle,
+  copiedGuest,
+  copiedMod,
+  canShareUrl,
+  keyLoading,
+  t,
+  onCopyGuest,
+  onCopyMod,
+  onShareGuest,
+  onShareMod,
+  onDownloadQr,
+  onOpenKeyModal,
 }: RoomUrlSectionProps) {
   return (
-    <div style={{ marginTop: 8, borderTop: '1px solid var(--color-border)', paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <div
+      style={{
+        marginTop: 8,
+        borderTop: '1px solid var(--color-border)',
+        paddingTop: 8,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4,
+      }}
+    >
       {/* Guest link */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        <a href={guestUrl} target="_blank" rel="noopener noreferrer" style={{ flex: 1, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <a
+          href={guestUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            flex: 1,
+            fontSize: 12,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
           {t('meeting.link')}
         </a>
-        <Tooltip title={t('btn.download_qr')}><Button type="text" icon={<i className="bi bi-qr-code" />} onClick={onDownloadQr} /></Tooltip>
-        <Tooltip title={t('btn.copy')}>
-          <Button type="text" onClick={onCopyGuest}
-            icon={copiedGuest ? <i className="bi bi-check-lg" style={{ color: '#16a34a' }} /> : <i className="bi bi-clipboard" />} />
+        <Tooltip title={t('btn.download_qr')}>
+          <Button type="text" icon={<i className="bi bi-qr-code" />} onClick={onDownloadQr} />
         </Tooltip>
-        {canShareUrl && <Tooltip title={t('btn.share')}><Button type="text" icon={<i className="bi bi-share" />} onClick={onShareGuest} /></Tooltip>}
+        <Tooltip title={t('btn.copy')}>
+          <Button
+            type="text"
+            onClick={onCopyGuest}
+            icon={
+              copiedGuest ? (
+                <i className="bi bi-check-lg" style={{ color: '#16a34a' }} />
+              ) : (
+                <i className="bi bi-clipboard" />
+              )
+            }
+          />
+        </Tooltip>
+        {canShareUrl && (
+          <Tooltip title={t('btn.share')}>
+            <Button type="text" icon={<i className="bi bi-share" />} onClick={onShareGuest} />
+          </Tooltip>
+        )}
       </div>
 
       {/* Mod link */}
       {modUrl && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <a href={modUrl} target="_blank" rel="noopener noreferrer" style={{ flex: 1, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <a
+            href={modUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              flex: 1,
+              fontSize: 12,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
             {t('meeting.moderator_link')}
           </a>
           <Tooltip title={t('meeting.host_key')}>
-            <Button type="text" loading={keyLoading} icon={<i className="bi bi-key" />} onClick={onOpenKeyModal} />
+            <Button
+              type="text"
+              loading={keyLoading}
+              icon={<i className="bi bi-key" />}
+              onClick={onOpenKeyModal}
+            />
           </Tooltip>
           <Tooltip title={t('btn.copy')}>
-            <Button type="text" onClick={onCopyMod}
-              icon={copiedMod ? <i className="bi bi-check-lg" style={{ color: '#16a34a' }} /> : <i className="bi bi-clipboard" />} />
+            <Button
+              type="text"
+              onClick={onCopyMod}
+              icon={
+                copiedMod ? (
+                  <i className="bi bi-check-lg" style={{ color: '#16a34a' }} />
+                ) : (
+                  <i className="bi bi-clipboard" />
+                )
+              }
+            />
           </Tooltip>
-          {canShareUrl && <Tooltip title={t('btn.share')}><Button type="text" icon={<i className="bi bi-share" />} onClick={onShareMod} /></Tooltip>}
+          {canShareUrl && (
+            <Tooltip title={t('btn.share')}>
+              <Button type="text" icon={<i className="bi bi-share" />} onClick={onShareMod} />
+            </Tooltip>
+          )}
         </div>
       )}
     </div>
@@ -128,7 +244,8 @@ export default function RoomListItem({ room: p, onRefresh }: Props) {
   const [keyError, setKeyError] = useState(false);
   const [keyCopied, setKeyCopied] = useState(false);
 
-  const guestUrl = p.chain_enabled && p.short_code ? `${globalThis.location.origin}/r/${p.short_code}` : '';
+  const guestUrl =
+    p.chain_enabled && p.short_code ? `${globalThis.location.origin}/r/${p.short_code}` : '';
   const modUrl = p.chain_enabled ? `${globalThis.location.origin}/rm/${p.id}` : '';
   const roomPath = `${(p.domain_url ?? '').replace(/^https?:\/\//, '')}/${p.name}`;
   const roomTitle = p.label || p.name;
@@ -136,7 +253,9 @@ export default function RoomListItem({ room: p, onRefresh }: Props) {
   useEffect(() => {
     setCanShareUrl(typeof navigator !== 'undefined' && !!navigator.share);
     if (guestUrl) {
-      toDataURL(guestUrl, { width: 512, margin: 2 }).then(setQrDataUrl).catch(() => {});
+      toDataURL(guestUrl, { width: 512, margin: 2 })
+        .then(setQrDataUrl)
+        .catch(() => {});
     }
   }, [guestUrl]);
 
@@ -247,8 +366,14 @@ export default function RoomListItem({ room: p, onRefresh }: Props) {
         })}
       >
         <div style={{ marginBottom: 4 }}>
-          <div style={{ fontWeight: 600, wordBreak: 'break-word', marginBottom: 2 }}>{roomTitle}</div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontFamily: 'monospace' }}>{roomPath}</div>
+          <div style={{ fontWeight: 600, wordBreak: 'break-word', marginBottom: 2 }}>
+            {roomTitle}
+          </div>
+          <div
+            style={{ fontSize: 12, color: 'var(--color-text-secondary)', fontFamily: 'monospace' }}
+          >
+            {roomPath}
+          </div>
         </div>
 
         {guestUrl && (
@@ -263,7 +388,9 @@ export default function RoomListItem({ room: p, onRefresh }: Props) {
             t={t}
             onCopyGuest={handleCopyGuest}
             onCopyMod={handleCopyMod}
-            onShareGuest={() => navigator.share({ title: roomTitle, url: guestUrl }).catch(() => {})}
+            onShareGuest={() =>
+              navigator.share({ title: roomTitle, url: guestUrl }).catch(() => {})
+            }
             onShareMod={() => navigator.share({ title: roomTitle, url: modUrl }).catch(() => {})}
             onDownloadQr={downloadQr}
             onOpenKeyModal={openKeyModal}
@@ -272,12 +399,39 @@ export default function RoomListItem({ room: p, onRefresh }: Props) {
       </Card>
 
       {/* Edit modal */}
-      <Modal open={showEdit} onCancel={() => { setShowEdit(false); setRoomData(null); }} title={`${t('page.update_room')} ${roomTitle}`} footer={null} width={600}>
-        {roomData && <RoomUpdate room={roomData} onCancel={() => { setShowEdit(false); setRoomData(null); }} onDone={() => { setShowEdit(false); setRoomData(null); onRefresh?.(); }} />}
+      <Modal
+        open={showEdit}
+        onCancel={() => {
+          setShowEdit(false);
+          setRoomData(null);
+        }}
+        title={`${t('page.update_room')} ${roomTitle}`}
+        footer={null}
+        width={600}
+      >
+        {roomData && (
+          <RoomUpdate
+            room={roomData}
+            onCancel={() => {
+              setShowEdit(false);
+              setRoomData(null);
+            }}
+            onDone={() => {
+              setShowEdit(false);
+              setRoomData(null);
+              onRefresh?.();
+            }}
+          />
+        )}
       </Modal>
 
       {/* Host key modal */}
-      <Modal open={keyModalOpen} onCancel={() => setKeyModalOpen(false)} title={`${t('meeting.host_key')} — ${roomTitle}`} footer={null}>
+      <Modal
+        open={keyModalOpen}
+        onCancel={() => setKeyModalOpen(false)}
+        title={`${t('meeting.host_key')} — ${roomTitle}`}
+        footer={null}
+      >
         <RoomKeyModalBody
           keyError={keyError}
           keyLoading={keyLoading}

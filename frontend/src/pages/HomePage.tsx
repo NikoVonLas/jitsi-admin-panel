@@ -5,8 +5,7 @@ export default function HomePage() {
   const navigate = useNavigate();
   useEffect(() => {
     const isAuthenticated =
-      !!sessionStorage.getItem('oidc_authenticated') ||
-      !!localStorage.getItem('auth_token');
+      !!sessionStorage.getItem('oidc_authenticated') || !!localStorage.getItem('auth_token');
     if (isAuthenticated) {
       navigate('/meeting', { replace: true });
     } else {

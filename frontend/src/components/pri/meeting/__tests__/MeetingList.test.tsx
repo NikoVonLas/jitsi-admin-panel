@@ -23,23 +23,71 @@ vi.mock('../MeetingListItem', () => ({
 }));
 
 const domains: Domain333[] = [
-  { id: 'd1', name: 'Domain 1', auth_type: 'none', url: 'https://d1.example.com', public: false, enabled: true, updated_at: '2024-01-01' },
-  { id: 'd2', name: 'Domain 2', auth_type: 'none', url: 'https://d2.example.com', public: false, enabled: true, updated_at: '2024-01-01' },
+  {
+    id: 'd1',
+    name: 'Domain 1',
+    auth_type: 'none',
+    url: 'https://d1.example.com',
+    public: false,
+    enabled: true,
+    updated_at: '2024-01-01',
+  },
+  {
+    id: 'd2',
+    name: 'Domain 2',
+    auth_type: 'none',
+    url: 'https://d2.example.com',
+    public: false,
+    enabled: true,
+    updated_at: '2024-01-01',
+  },
 ];
 
 const rooms: Room333[] = [
-  { id: 'r1', name: 'room-1', label: 'Room One', short_code: 'abc', domain_name: 'Domain 1', domain_url: 'https://d1.example.com', enabled: true, chain_enabled: true, updated_at: '2024-01-01' },
-  { id: 'r2', name: 'room-2', label: 'Room Two', short_code: 'def', domain_name: 'Domain 2', domain_url: 'https://d2.example.com', enabled: true, chain_enabled: true, updated_at: '2024-01-01' },
+  {
+    id: 'r1',
+    name: 'room-1',
+    label: 'Room One',
+    short_code: 'abc',
+    domain_name: 'Domain 1',
+    domain_url: 'https://d1.example.com',
+    enabled: true,
+    chain_enabled: true,
+    updated_at: '2024-01-01',
+  },
+  {
+    id: 'r2',
+    name: 'room-2',
+    label: 'Room Two',
+    short_code: 'def',
+    domain_name: 'Domain 2',
+    domain_url: 'https://d2.example.com',
+    enabled: true,
+    chain_enabled: true,
+    updated_at: '2024-01-01',
+  },
 ];
 
 const meetings: Meeting222[] = [
   {
-    id: 'm1', name: 'Team Standup', short_code: 'ts1', info: '',
-    profile_name: 'Alice', profile_email: 'alice@example.com',
-    domain_name: 'Domain 1', domain_url: 'https://d1.example.com',
-    room_name: 'room-1', session_list: [], session_at: '',
-    hidden: false, subscribable: true, enabled: true, chain_enabled: true,
-    updated_at: '2024-01-01', ownership: 'owner', membership_id: 'm1',
+    id: 'm1',
+    name: 'Team Standup',
+    short_code: 'ts1',
+    info: '',
+    profile_name: 'Alice',
+    profile_email: 'alice@example.com',
+    domain_name: 'Domain 1',
+    domain_url: 'https://d1.example.com',
+    room_name: 'room-1',
+    session_list: [],
+    session_at: '',
+    hidden: false,
+    subscribable: true,
+    enabled: true,
+    chain_enabled: true,
+    updated_at: '2024-01-01',
+    ownership: 'owner',
+    membership_id: 'm1',
     join_as: 'host',
   },
 ];

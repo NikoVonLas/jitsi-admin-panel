@@ -26,8 +26,8 @@ export default function Layout() {
   const showNav = shouldShowNav(location.pathname);
 
   const [messages, setMessages] = useState<IntercomMessage222[]>([]);
-  const [isDesktop, setIsDesktop] = useState(() =>
-    typeof globalThis !== 'undefined' && globalThis.matchMedia('(min-width: 992px)').matches
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof globalThis !== 'undefined' && globalThis.matchMedia('(min-width: 992px)').matches
   );
 
   useEffect(() => {

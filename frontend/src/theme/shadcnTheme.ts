@@ -5,8 +5,7 @@ const shared = {
   borderRadius: 6,
   borderRadiusLG: 8,
   borderRadiusSM: 4,
-  fontFamily:
-    "'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  fontFamily: "'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
   fontSize: 14,
   lineHeight: 1.5,
   controlHeight: 36,
@@ -129,8 +128,7 @@ export const shadcnTheme: ThemeConfig = {
     borderRadius: 6,
     borderRadiusLG: 8,
     borderRadiusSM: 4,
-    fontFamily:
-      "'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    fontFamily: "'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     fontSize: 14,
     lineHeight: 1.5,
     controlHeight: 36,

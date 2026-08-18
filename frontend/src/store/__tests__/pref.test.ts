@@ -85,7 +85,7 @@ describe('usePrefStore', () => {
     expect(result.current.lang).toBe('ru');
     expect(mockAction).toHaveBeenCalledWith(
       '/api/pri/pref/update',
-      expect.objectContaining({ lang: 'ru' }),
+      expect.objectContaining({ lang: 'ru' })
     );
   });
 
@@ -101,7 +101,7 @@ describe('usePrefStore', () => {
     expect(result.current.theme).toBe('dark');
     expect(mockAction).toHaveBeenCalledWith(
       '/api/pri/pref/update',
-      expect.objectContaining({ theme: 'dark' }),
+      expect.objectContaining({ theme: 'dark' })
     );
   });
 
@@ -117,7 +117,7 @@ describe('usePrefStore', () => {
     expect(result.current.weekStart).toBe(0);
     expect(mockAction).toHaveBeenCalledWith(
       '/api/pri/pref/update',
-      expect.objectContaining({ week_start: 0 }),
+      expect.objectContaining({ week_start: 0 })
     );
   });
 });

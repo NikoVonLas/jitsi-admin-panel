@@ -89,7 +89,7 @@ describe('SettingMailer', () => {
     await waitFor(() => {
       expect(vi.mocked(api.action)).toHaveBeenCalledWith(
         '/api/pri/setting/update',
-        expect.any(Object),
+        expect.any(Object)
       );
     });
   });

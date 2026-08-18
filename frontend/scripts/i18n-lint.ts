@@ -97,7 +97,9 @@ if (missingInEn.length > 0) {
 const missingInTranslations: string[] = [];
 for (const [key, files] of usedKeys) {
   if (!enKeys.has(key)) {
-    missingInTranslations.push(`   - '${key}' (used in: ${[...new Set(files)].slice(0, 3).join(', ')})`);
+    missingInTranslations.push(
+      `   - '${key}' (used in: ${[...new Set(files)].slice(0, 3).join(', ')})`
+    );
     hasErrors = true;
   }
 }
@@ -122,7 +124,9 @@ if (unusedKeys.length > 0) {
 
 // Summary
 if (!hasErrors) {
-  console.log(`\n✅ i18n lint passed. en: ${enKeys.size} keys, ru: ${ruKeys.size} keys, used: ${usedKeys.size} keys.`);
+  console.log(
+    `\n✅ i18n lint passed. en: ${enKeys.size} keys, ru: ${ruKeys.size} keys, used: ${usedKeys.size} keys.`
+  );
 } else {
   console.error(`\n✗ i18n lint failed. Fix the above issues.`);
   Deno.exit(1);

@@ -7,7 +7,7 @@ vi.mock('../../../../i18n', () => ({
 }));
 
 vi.mock('../../../../lib/api', () => ({
-  list: vi.fn().mockResolvedValue({ items: [] }),
+  list: vi.fn(() => new Promise(() => {})),
 }));
 
 vi.mock('../../../common/FormSelect', () => ({
@@ -36,7 +36,7 @@ describe('RoomFields', () => {
 
   it('renders slug field', () => {
     render(<RoomFields {...defaultProps} />);
-    expect(screen.getByText('form.slug')).toBeInTheDocument();
+    expect(screen.getByLabelText('form.slug')).toBeInTheDocument();
   });
 
   it('renders domain field when hideDomain is false', () => {

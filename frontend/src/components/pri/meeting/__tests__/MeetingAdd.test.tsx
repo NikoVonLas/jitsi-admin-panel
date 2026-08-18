@@ -16,11 +16,18 @@ vi.mock('../../../pri/meeting-schedule/ScheduleFields', () => ({
   default: vi.fn().mockReturnValue(<div data-testid="schedule-fields" />),
 }));
 
+import * as api from '../../../../lib/api';
+
 describe('MeetingAdd', () => {
   it('shows loading spinner initially', () => {
+    vi.mocked(api.get).mockReturnValueOnce(new Promise(() => {}));
+    vi.mocked(api.list).mockReturnValueOnce(new Promise(() => {}));
+    vi.mocked(api.list).mockReturnValueOnce(new Promise(() => {}));
     render(<MeetingAdd />);
     // The loading hourglass is shown
-    expect(document.querySelector('.bi-hourglass-split') ?? document.querySelector('.ant-spin')).toBeTruthy();
+    expect(
+      document.querySelector('.bi-hourglass-split') ?? document.querySelector('.ant-spin')
+    ).toBeTruthy();
   });
 
   it('renders meeting fields after loading', async () => {
@@ -74,7 +81,9 @@ describe('MeetingAdd', () => {
     const nextBtn = screen.getByText('btn.next').closest('button');
     if (nextBtn) fireEvent.click(nextBtn);
     await waitFor(() => {
-      expect(screen.queryByTestId('schedule-fields') ?? screen.queryByText('btn.add_schedule')).toBeTruthy();
+      expect(
+        screen.queryByTestId('schedule-fields') ?? screen.queryByText('btn.add_schedule')
+      ).toBeTruthy();
     });
   });
 

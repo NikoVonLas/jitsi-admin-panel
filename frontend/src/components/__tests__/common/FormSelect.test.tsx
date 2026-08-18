@@ -10,31 +10,23 @@ const OPTIONS: [string, string][] = [
 
 describe('FormSelect', () => {
   it('renders a select element', () => {
-    render(
-      <FormSelect name="auth" label="Auth Type" options={OPTIONS} />,
-    );
+    render(<FormSelect name="auth" label="Auth Type" options={OPTIONS} />);
     // antd Select renders a combobox
     expect(screen.getByRole('combobox')).toBeInTheDocument();
   });
 
   it('renders the label', () => {
-    render(
-      <FormSelect name="auth" label="Auth Type" options={OPTIONS} />,
-    );
+    render(<FormSelect name="auth" label="Auth Type" options={OPTIONS} />);
     expect(screen.getByText('Auth Type')).toBeInTheDocument();
   });
 
   it('renders without crashing when disabled', () => {
-    render(
-      <FormSelect name="auth" label="Disabled" options={OPTIONS} disabled />,
-    );
+    render(<FormSelect name="auth" label="Disabled" options={OPTIONS} disabled />);
     expect(screen.getByRole('combobox')).toBeInTheDocument();
   });
 
   it('renders required mark when required=true', () => {
-    render(
-      <FormSelect name="auth" label="Required" options={OPTIONS} required />,
-    );
+    render(<FormSelect name="auth" label="Required" options={OPTIONS} required />);
     expect(screen.getByText('Required')).toBeInTheDocument();
   });
 });

@@ -5,8 +5,7 @@ import { usePrefStore } from '../store/pref';
 
 export default function PrivateLayout() {
   const isAuthenticated =
-    !!sessionStorage.getItem('oidc_authenticated') ||
-    !!localStorage.getItem('auth_token');
+    !!sessionStorage.getItem('oidc_authenticated') || !!localStorage.getItem('auth_token');
   const navigate = useNavigate();
   const { load: loadRole } = useRoleStore();
   const { load: loadPref } = usePrefStore();

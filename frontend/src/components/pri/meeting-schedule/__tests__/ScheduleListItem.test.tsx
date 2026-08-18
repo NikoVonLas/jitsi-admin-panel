@@ -93,7 +93,7 @@ describe('ScheduleListItem', () => {
             rep_every: '1',
           },
         })}
-      />,
+      />
     );
     expect(screen.getByText(/sched.repeat_every/)).toBeInTheDocument();
   });
@@ -110,7 +110,7 @@ describe('ScheduleListItem', () => {
             rep_every: '1',
           },
         })}
-      />,
+      />
     );
     expect(screen.getByText('sched.last_session')).toBeInTheDocument();
   });

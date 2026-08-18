@@ -24,9 +24,21 @@ interface Props {
 }
 
 export default function RoomList({
-  rooms, total, page, loading, pageSize, search, enabledFilter,
-  domains, domainFilter, onRefresh, onAdd,
-  onPageChange, onSearchChange, onEnabledChange, onDomainChange,
+  rooms,
+  total,
+  page,
+  loading,
+  pageSize,
+  search,
+  enabledFilter,
+  domains,
+  domainFilter,
+  onRefresh,
+  onAdd,
+  onPageChange,
+  onSearchChange,
+  onEnabledChange,
+  onDomainChange,
 }: Props) {
   const t = useTr();
   const isFiltered = !!search || enabledFilter !== 'all' || !!domainFilter;

@@ -6,7 +6,11 @@ function handleUnauthorized() {
 }
 
 export async function httpGet(url: string) {
-  const res = await fetch(url, { credentials: 'include', headers: { Accept: 'application/json' }, mode: 'cors' });
+  const res = await fetch(url, {
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+    mode: 'cors',
+  });
   if (res.status === 401) handleUnauthorized();
   return res;
 }

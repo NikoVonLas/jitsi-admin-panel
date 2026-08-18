@@ -1,4 +1,6 @@
 import '@testing-library/jest-dom';
+import { act } from 'react';
+import { afterEach } from 'vitest';
 
 class MemoryStorage implements Storage {
   readonly #values = new Map<string, string>();
@@ -108,3 +110,13 @@ Object.defineProperty(globalThis, 'EventSource', {
 
 // Silence act() warnings in React 19 tests
 (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
+
+// Resolve state updates scheduled by fulfilled mock promises before each test
+// is cleaned up. Individual tests still await observable async behaviour where
+// that behaviour is part of the assertion.
+afterEach(async () => {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+});

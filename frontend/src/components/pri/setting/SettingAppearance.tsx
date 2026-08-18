@@ -14,12 +14,18 @@ export default function SettingAppearance({ settings: _settings }: Props) {
   const t = useTr();
   const { config, setConfig } = useAppConfig();
   const [logoPreviewUrl, setLogoPreviewUrl] = useState(`${LOGO_URL}?t=${Date.now()}`);
-  const [faviconPreviewUrl, setFaviconPreviewUrl] = useState(`/api/pub/favicon/favicon-32x32.png?t=${Date.now()}`);
+  const [faviconPreviewUrl, setFaviconPreviewUrl] = useState(
+    `/api/pub/favicon/favicon-32x32.png?t=${Date.now()}`
+  );
 
   async function uploadLogo(file: File) {
     const fd = new FormData();
     fd.append('file', file);
-    const res = await fetch('/api/pri/profile/logo/upload', { method: 'POST', credentials: 'include', body: fd });
+    const res = await fetch('/api/pri/profile/logo/upload', {
+      method: 'POST',
+      credentials: 'include',
+      body: fd,
+    });
     if (!res.ok) throw new Error('fail');
     const rows = await res.json();
     if (!rows[0]?.url) throw new Error('no url');
@@ -37,7 +43,11 @@ export default function SettingAppearance({ settings: _settings }: Props) {
   async function uploadFavicon(file: File) {
     const fd = new FormData();
     fd.append('file', file);
-    const res = await fetch('/api/pri/profile/favicon/upload', { method: 'POST', credentials: 'include', body: fd });
+    const res = await fetch('/api/pri/profile/favicon/upload', {
+      method: 'POST',
+      credentials: 'include',
+      body: fd,
+    });
     if (!res.ok) throw new Error('fail');
     const rows = await res.json();
     if (!rows[0]?.html) throw new Error('no html');
@@ -64,7 +74,6 @@ export default function SettingAppearance({ settings: _settings }: Props) {
         onUpload={uploadFavicon}
         onReset={resetFavicon}
       />
-
     </div>
   );
 }

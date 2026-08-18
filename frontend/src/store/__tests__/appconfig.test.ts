@@ -8,9 +8,15 @@ vi.stubGlobal('fetch', mockFetch);
 const store: Record<string, string> = {};
 vi.stubGlobal('localStorage', {
   getItem: (k: string) => store[k] ?? null,
-  setItem: (k: string, v: string) => { store[k] = v; },
-  removeItem: (k: string) => { delete store[k]; },
-  clear: () => { Object.keys(store).forEach((k) => delete store[k]); },
+  setItem: (k: string, v: string) => {
+    store[k] = v;
+  },
+  removeItem: (k: string) => {
+    delete store[k];
+  },
+  clear: () => {
+    Object.keys(store).forEach((k) => delete store[k]);
+  },
 });
 
 import { applyConfig, applyFavicon, useAppConfig } from '../../store/appconfig';
@@ -21,9 +27,7 @@ describe('applyFavicon', () => {
   });
 
   it('does not throw with valid html', () => {
-    expect(() =>
-      applyFavicon('<link rel="icon" href="/favicon.ico" />')
-    ).not.toThrow();
+    expect(() => applyFavicon('<link rel="icon" href="/favicon.ico" />')).not.toThrow();
   });
 
   it('does not re-apply the same html twice', () => {
@@ -90,10 +94,14 @@ describe('useAppConfig.load', () => {
     const cfg = {
       logo_url: 'https://logo.example.com/logo.png',
       favicon_html: '',
-      color_bg_light: '', color_bg_dark: '',
-      color_text_light: '', color_text_dark: '',
-      color_link_light: '', color_link_dark: '',
-      color_navbar_light: '', color_navbar_dark: '',
+      color_bg_light: '',
+      color_bg_dark: '',
+      color_text_light: '',
+      color_text_dark: '',
+      color_link_light: '',
+      color_link_dark: '',
+      color_navbar_light: '',
+      color_navbar_dark: '',
     };
     useAppConfig.getState().setConfig(cfg);
     expect(useAppConfig.getState().config.logo_url).toBe('https://logo.example.com/logo.png');
@@ -104,7 +112,7 @@ describe('getCachedConfig (via store init)', () => {
   it('loads from localStorage when valid JSON present', () => {
     localStorage.setItem(
       'galaxy-config',
-      JSON.stringify({ logo_url: 'https://cached.example.com/logo.png' }),
+      JSON.stringify({ logo_url: 'https://cached.example.com/logo.png' })
     );
     // Re-importing after setting cache is complex in vitest; verify applyConfig
     // round-trips correctly instead.

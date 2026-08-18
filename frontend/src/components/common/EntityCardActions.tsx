@@ -16,9 +16,17 @@ interface Props {
 }
 
 export function entityCardActions({
-  enabled, toggleLoading, delLoading,
-  toggleTitle, toggleDescription, delTitle, delDescription,
-  onToggle, onDel, t, extraActions = [],
+  enabled,
+  toggleLoading,
+  delLoading,
+  toggleTitle,
+  toggleDescription,
+  delTitle,
+  delDescription,
+  onToggle,
+  onDel,
+  t,
+  extraActions = [],
 }: Props): ReactNode[] {
   return [
     ...extraActions,

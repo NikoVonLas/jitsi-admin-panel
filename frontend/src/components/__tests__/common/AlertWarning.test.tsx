@@ -32,7 +32,7 @@ describe('AlertWarning', () => {
     render(
       <AlertWarning>
         <span data-testid="child">Node child</span>
-      </AlertWarning>,
+      </AlertWarning>
     );
     expect(screen.getByTestId('child')).toBeInTheDocument();
   });

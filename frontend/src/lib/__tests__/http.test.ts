@@ -29,12 +29,12 @@ describe('httpGet / httpPost', () => {
     expect(res.status).toBe(200);
     expect(mockFetch).toHaveBeenCalledWith(
       '/api/pri/identity/ping',
-      expect.objectContaining({ credentials: 'include' }),
+      expect.objectContaining({ credentials: 'include' })
     );
   });
 
   it('httpPost sends JSON body', async () => {
-    const fakeRes = { status: 200, json: async () => ([{ id: '1' }]) };
+    const fakeRes = { status: 200, json: async () => [{ id: '1' }] };
     mockFetch.mockResolvedValueOnce(fakeRes);
 
     const { httpPost } = await import('../http');

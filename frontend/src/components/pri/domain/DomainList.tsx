@@ -13,7 +13,10 @@ export default function DomainList({ domains, onRefresh }: Props) {
   return (
     <div>
       {domains.length === 0 ? (
-        <AlertWarning>{t('empty.domains')}{t('empty.domains_suffix')}</AlertWarning>
+        <AlertWarning>
+          {t('empty.domains')}
+          {t('empty.domains_suffix')}
+        </AlertWarning>
       ) : (
         <div className="card-grid" style={{ marginTop: 8 }}>
           {domains.map((d) => (

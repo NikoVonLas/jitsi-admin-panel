@@ -129,7 +129,6 @@ export default function NavBarPri() {
               gap: 4,
               flex: 1,
               paddingLeft: 24,
-              ['@media(max-width:991px)' as string]: { display: 'none' },
             }}
             className="desktop-nav"
           >
@@ -137,7 +136,12 @@ export default function NavBarPri() {
               @media (max-width: 991px) { .desktop-nav { display: none !important; } }
               @media (min-width: 992px) { .mobile-nav-toggle { display: none !important; } }
             `}</style>
-            <NavLinks links={navLinks} token={token} isActive={isActive} onLinkClick={() => setDrawerOpen(false)} />
+            <NavLinks
+              links={navLinks}
+              token={token}
+              isActive={isActive}
+              onLinkClick={() => setDrawerOpen(false)}
+            />
           </div>
 
           <Space>
@@ -164,7 +168,12 @@ export default function NavBarPri() {
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
         >
-          <NavLinks links={navLinks} token={token} isActive={isActive} onLinkClick={() => setDrawerOpen(false)} />
+          <NavLinks
+            links={navLinks}
+            token={token}
+            isActive={isActive}
+            onLinkClick={() => setDrawerOpen(false)}
+          />
         </div>
       </Drawer>
     </>

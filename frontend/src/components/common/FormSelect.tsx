@@ -10,7 +10,15 @@ interface Props {
   readonly disabled?: boolean;
 }
 
-export default function FormSelect({ name, label, required, value, onChange, options, disabled }: Props) {
+export default function FormSelect({
+  name,
+  label,
+  required,
+  value,
+  onChange,
+  options,
+  disabled,
+}: Props) {
   return (
     <Form.Item label={label} required={required} style={{ marginBottom: 16 }}>
       <Select

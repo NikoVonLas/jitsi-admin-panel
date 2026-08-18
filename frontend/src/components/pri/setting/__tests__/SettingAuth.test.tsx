@@ -52,7 +52,7 @@ describe('SettingAuth', () => {
     render(<SettingAuth />);
     await waitFor(() => {
       expect(
-        screen.getByText(/setting\.oidc_no_providers|No SSO providers configured/),
+        screen.getByText(/setting\.oidc_no_providers|No SSO providers configured/)
       ).toBeInTheDocument();
     });
   });

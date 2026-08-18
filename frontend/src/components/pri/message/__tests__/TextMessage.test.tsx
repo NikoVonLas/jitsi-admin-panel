@@ -65,6 +65,7 @@ describe('TextMessage', () => {
 
   it('renders audio element', () => {
     render(<TextMessage msg={msg} />);
-    expect(document.querySelector('audio')).toBeInTheDocument();
+    expect(document.querySelector('audio')).toHaveAttribute('src', '/notification.mp3');
+    expect(document.querySelector('track')).toBeNull();
   });
 });

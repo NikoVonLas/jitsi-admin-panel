@@ -60,7 +60,9 @@ export default function SettingOidc() {
     }
   }
 
-  useEffect(() => { loadProviders(); }, []);
+  useEffect(() => {
+    loadProviders();
+  }, []);
 
   function openAdd() {
     setEditingId(null);
@@ -107,7 +109,7 @@ export default function SettingOidc() {
   async function handleToggle(id: string, enabled: boolean) {
     try {
       await action('/api/pri/oidc-provider/toggle', { id, enabled });
-      setProviders((prev) => prev.map((p) => p.id === id ? { ...p, enabled } : p));
+      setProviders((prev) => prev.map((p) => (p.id === id ? { ...p, enabled } : p)));
     } catch {
       setError(true);
     }
@@ -139,84 +141,94 @@ export default function SettingOidc() {
       </div>
 
       {providers.length === 0 ? (
-        <div style={{ textAlign: 'center', color: 'var(--color-text-secondary)', padding: '24px 0' }}>
+        <div
+          style={{ textAlign: 'center', color: 'var(--color-text-secondary)', padding: '24px 0' }}
+        >
           {t('setting.oidc_no_providers')}
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
-        <Table
-          dataSource={providers}
-          rowKey="id"
-          pagination={false}
-          columns={[
-            {
-              title: t('setting.provider_name'),
-              dataIndex: 'name',
-              key: 'name',
-              render: (name: string, record: Provider) => (
-                <button
-                  type="button"
-                  tabIndex={0}
-                  style={{ cursor: 'pointer', color: 'var(--ant-color-primary, #1677ff)', background: 'none', border: 'none', padding: 0, font: 'inherit' }}
-                  onClick={() => openEdit(record)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { openEdit(record); } }}
-                >
-                  {name}
-                </button>
-              ),
-            },
-            {
-              title: t('form.oidc_issuer_url'),
-              dataIndex: 'issuer_url',
-              key: 'issuer_url',
-              ellipsis: true,
-            },
-            {
-              title: t('form.oidc_client_id'),
-              dataIndex: 'client_id',
-              key: 'client_id',
-              ellipsis: true,
-            },
-            {
-              title: t('form.oidc_scopes'),
-              dataIndex: 'scopes',
-              key: 'scopes',
-              ellipsis: true,
-            },
-            {
-              title: t('setting.provider_enabled'),
-              dataIndex: 'enabled',
-              key: 'enabled',
-              width: 80,
-              render: (enabled: boolean, record: Provider) => (
-                <Switch
-                  checked={enabled}
-                  onChange={(val) => handleToggle(record.id, val)}
-                />
-              ),
-            },
-            {
-              title: '',
-              key: 'actions',
-              width: 100,
-              render: (_: unknown, record: Provider) => (
-                <Space>
-                  <Tooltip title={t('btn.update')}>
-                    <Button onClick={() => openEdit(record)}>✎</Button>
-                  </Tooltip>
-                  <Popconfirm
-                    title={t('setting.confirm_delete_provider')}
-                    onConfirm={() => handleDelete(record.id)}
-                    okText={t('btn.delete')}
-                    cancelText={t('btn.cancel')}
+          <Table
+            dataSource={providers}
+            rowKey="id"
+            pagination={false}
+            columns={[
+              {
+                title: t('setting.provider_name'),
+                dataIndex: 'name',
+                key: 'name',
+                render: (name: string, record: Provider) => (
+                  <button
+                    type="button"
+                    tabIndex={0}
+                    style={{
+                      cursor: 'pointer',
+                      color: 'var(--ant-color-primary, #1677ff)',
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      font: 'inherit',
+                    }}
+                    onClick={() => openEdit(record)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        openEdit(record);
+                      }
+                    }}
                   >
-                    <Button danger>✕</Button>
-                  </Popconfirm>
-                </Space>
-              ),
-            },
-          ]}
-        />
+                    {name}
+                  </button>
+                ),
+              },
+              {
+                title: t('form.oidc_issuer_url'),
+                dataIndex: 'issuer_url',
+                key: 'issuer_url',
+                ellipsis: true,
+              },
+              {
+                title: t('form.oidc_client_id'),
+                dataIndex: 'client_id',
+                key: 'client_id',
+                ellipsis: true,
+              },
+              {
+                title: t('form.oidc_scopes'),
+                dataIndex: 'scopes',
+                key: 'scopes',
+                ellipsis: true,
+              },
+              {
+                title: t('setting.provider_enabled'),
+                dataIndex: 'enabled',
+                key: 'enabled',
+                width: 80,
+                render: (enabled: boolean, record: Provider) => (
+                  <Switch checked={enabled} onChange={(val) => handleToggle(record.id, val)} />
+                ),
+              },
+              {
+                title: '',
+                key: 'actions',
+                width: 100,
+                render: (_: unknown, record: Provider) => (
+                  <Space>
+                    <Tooltip title={t('btn.update')}>
+                      <Button onClick={() => openEdit(record)}>✎</Button>
+                    </Tooltip>
+                    <Popconfirm
+                      title={t('setting.confirm_delete_provider')}
+                      onConfirm={() => handleDelete(record.id)}
+                      okText={t('btn.delete')}
+                      cancelText={t('btn.cancel')}
+                    >
+                      <Button danger>✕</Button>
+                    </Popconfirm>
+                  </Space>
+                ),
+              },
+            ]}
+          />
         </div>
       )}
 
@@ -270,9 +282,7 @@ export default function SettingOidc() {
             />
           </Form.Item>
 
-          {saveError && (
-            <AlertWarning type="error">{saveError}</AlertWarning>
-          )}
+          {saveError && <AlertWarning type="error">{saveError}</AlertWarning>}
         </Form>
       </Modal>
     </div>

@@ -11,8 +11,16 @@ function avatarInitials(n: string): string {
 }
 
 const AVATAR_COLORS = [
-  '#1a73e8', '#e53935', '#43a047', '#fb8c00', '#8e24aa',
-  '#00897b', '#d81b60', '#3949ab', '#039be5', '#f4511e',
+  '#1a73e8',
+  '#e53935',
+  '#43a047',
+  '#fb8c00',
+  '#8e24aa',
+  '#00897b',
+  '#d81b60',
+  '#3949ab',
+  '#039be5',
+  '#f4511e',
 ];
 
 function avatarColor(n: string): string {
@@ -34,17 +42,30 @@ export default function ProfileListItem({ profile }: Props) {
       style={{ height: '100%' }}
       actions={[
         <Tooltip key="update" title={t('btn.update')}>
-          <Button type="text" icon={<i className="bi bi-pencil" />} onClick={() => navigate(`/profile/update/${profile.id}`)} />
+          <Button
+            type="text"
+            icon={<i className="bi bi-pencil" />}
+            onClick={() => navigate(`/profile/update/${profile.id}`)}
+          />
         </Tooltip>,
         ...(profile.is_default
           ? []
           : [
               <Tooltip key="default" title={t('btn.set_default_profile')}>
-                <Button type="text" icon={<i className="bi bi-star" />} onClick={() => navigate(`/profile/set/default/${profile.id}`)} />
+                <Button
+                  type="text"
+                  icon={<i className="bi bi-star" />}
+                  onClick={() => navigate(`/profile/set/default/${profile.id}`)}
+                />
               </Tooltip>,
             ]),
         <Tooltip key="delete" title={t('btn.delete')}>
-          <Button type="text" danger icon={<i className="bi bi-trash" />} onClick={() => navigate(`/profile/del/${profile.id}`)} />
+          <Button
+            type="text"
+            danger
+            icon={<i className="bi bi-trash" />}
+            onClick={() => navigate(`/profile/del/${profile.id}`)}
+          />
         </Tooltip>,
       ]}
     >
@@ -53,13 +74,21 @@ export default function ProfileListItem({ profile }: Props) {
           <img
             src={profile.avatar_url}
             alt="avatar"
-            style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: '50%',
+              objectFit: 'cover',
+              flexShrink: 0,
+            }}
           />
         ) : (
           <div
             className="avatar-initials"
             style={{
-              width: 48, height: 48, flexShrink: 0,
+              width: 48,
+              height: 48,
+              flexShrink: 0,
               background: avatarColor(profile.name),
               fontSize: '1.1rem',
             }}
@@ -68,11 +97,26 @@ export default function ProfileListItem({ profile }: Props) {
           </div>
         )}
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div
+            style={{
+              fontWeight: 600,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
             {profile.name}
           </div>
           {profile.email && (
-            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div
+              style={{
+                fontSize: 12,
+                color: 'var(--color-text-secondary)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
               {profile.email}
             </div>
           )}

@@ -19,7 +19,9 @@ vi.mock('../../components/common/Spinner', () => ({
 }));
 
 vi.mock('../../components/common/AlertWarning', () => ({
-  default: ({ children }: { children: React.ReactNode }) => <div data-testid="alert">{children}</div>,
+  default: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="alert">{children}</div>
+  ),
 }));
 
 import { action } from '../../lib/api';
@@ -52,7 +54,9 @@ describe('FetchAndRedirectPage', () => {
   it('redirects on successful action', async () => {
     vi.mocked(action).mockResolvedValue({ url: 'https://jitsi.example.com/room' });
     render(<FetchAndRedirectPage endpoint="/api/pub/test" />);
-    await waitFor(() => expect(locationReplaceMock).toHaveBeenCalledWith('https://jitsi.example.com/room'));
+    await waitFor(() =>
+      expect(locationReplaceMock).toHaveBeenCalledWith('https://jitsi.example.com/room')
+    );
   });
 
   it('shows error alert when action fails', async () => {
@@ -71,6 +75,8 @@ describe('FetchAndRedirectPage', () => {
   it('calls action with correct endpoint and code', async () => {
     vi.mocked(action).mockResolvedValue({ url: 'https://example.com' });
     render(<FetchAndRedirectPage endpoint="/api/pub/meeting/join" />);
-    await waitFor(() => expect(action).toHaveBeenCalledWith('/api/pub/meeting/join', { short_code: 'short-code-123' }));
+    await waitFor(() =>
+      expect(action).toHaveBeenCalledWith('/api/pub/meeting/join', { short_code: 'short-code-123' })
+    );
   });
 });

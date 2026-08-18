@@ -28,12 +28,38 @@ vi.mock('qrcode', () => ({
 }));
 
 const domains: Domain333[] = [
-  { id: 'd1', name: 'Domain 1', auth_type: 'none', url: 'https://d1.example.com', public: false, enabled: true, updated_at: '2024-01-01' },
-  { id: 'd2', name: 'Domain 2', auth_type: 'none', url: 'https://d2.example.com', public: false, enabled: true, updated_at: '2024-01-01' },
+  {
+    id: 'd1',
+    name: 'Domain 1',
+    auth_type: 'none',
+    url: 'https://d1.example.com',
+    public: false,
+    enabled: true,
+    updated_at: '2024-01-01',
+  },
+  {
+    id: 'd2',
+    name: 'Domain 2',
+    auth_type: 'none',
+    url: 'https://d2.example.com',
+    public: false,
+    enabled: true,
+    updated_at: '2024-01-01',
+  },
 ];
 
 const rooms: Room333[] = [
-  { id: 'r1', name: 'room-1', label: 'Room One', short_code: 'abc', domain_name: 'Domain 1', domain_url: 'https://d1.example.com', enabled: true, chain_enabled: true, updated_at: '2024-01-01' },
+  {
+    id: 'r1',
+    name: 'room-1',
+    label: 'Room One',
+    short_code: 'abc',
+    domain_name: 'Domain 1',
+    domain_url: 'https://d1.example.com',
+    enabled: true,
+    chain_enabled: true,
+    updated_at: '2024-01-01',
+  },
 ];
 
 const baseProps = {

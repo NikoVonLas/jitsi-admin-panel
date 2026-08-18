@@ -1,5 +1,12 @@
 import { useNavigate } from 'react-router-dom';
-import { getFirstDayOfMonth, getFirstDayOfWeek, getToday, toCalendarDayLabel, toLocaleDate, toLocaleTime } from '../../../lib/common';
+import {
+  getFirstDayOfMonth,
+  getFirstDayOfWeek,
+  getToday,
+  toCalendarDayLabel,
+  toLocaleDate,
+  toLocaleTime,
+} from '../../../lib/common';
 import { useI18n, useTr } from '../../../i18n';
 import type { MeetingSchedule222 } from '../../../types';
 
@@ -25,11 +32,24 @@ export default function CalendarGrid({ date, calendar }: Props) {
 
   return (
     <div style={{ marginTop: 8, overflowX: 'auto' }}>
-      <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', minHeight: 400 }}>
+      <table
+        style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', minHeight: 400 }}
+      >
         <thead>
           <tr>
             {headers.map((h, i) => (
-              <th key={DAY_KEYS[(weekStart + i) % 7]} style={{ padding: '4px 8px', border: '1px solid var(--color-border)', background: 'var(--color-bg-subtle)', color: 'var(--color-text-secondary)', fontSize: 12, fontWeight: 600, textAlign: 'center' }}>
+              <th
+                key={DAY_KEYS[(weekStart + i) % 7]}
+                style={{
+                  padding: '4px 8px',
+                  border: '1px solid var(--color-border)',
+                  background: 'var(--color-bg-subtle)',
+                  color: 'var(--color-text-secondary)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  textAlign: 'center',
+                }}
+              >
                 {h}
               </th>
             ))}
@@ -44,8 +64,10 @@ export default function CalendarGrid({ date, calendar }: Props) {
                   const fdDate = new Date(firstDay);
                   const d = new Date(fdDate.getTime() + (week * 7 + day) * 24 * 60 * 60 * 1000);
                   return (
-                    d.getFullYear() + '-' +
-                    ('0' + (d.getMonth() + 1)).slice(-2) + '-' +
+                    d.getFullYear() +
+                    '-' +
+                    ('0' + (d.getMonth() + 1)).slice(-2) +
+                    '-' +
                     ('0' + d.getDate()).slice(-2)
                   );
                 })();
@@ -53,7 +75,8 @@ export default function CalendarGrid({ date, calendar }: Props) {
                 const isCurrentMonth = actualDay.slice(0, 7) === calendarDay.slice(0, 7);
                 const isToday = actualDay === today;
                 const meetings = calendar.filter((m) => actualDay === toLocaleDate(m.started_at));
-                const dayLabel = dayNum === 1 ? toCalendarDayLabel(actualDay, lang) : String(dayNum);
+                const dayLabel =
+                  dayNum === 1 ? toCalendarDayLabel(actualDay, lang) : String(dayNum);
                 let dayColor: string;
                 if (!isCurrentMonth) {
                   dayColor = 'var(--color-text-tertiary)';
@@ -76,7 +99,15 @@ export default function CalendarGrid({ date, calendar }: Props) {
                       overflow: 'hidden',
                     }}
                   >
-                    <div style={{ textAlign: 'right', fontSize: 11, color: dayColor, padding: '2px 4px', fontWeight: isToday ? 700 : 400 }}>
+                    <div
+                      style={{
+                        textAlign: 'right',
+                        fontSize: 11,
+                        color: dayColor,
+                        padding: '2px 4px',
+                        fontWeight: isToday ? 700 : 400,
+                      }}
+                    >
                       {dayLabel}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>

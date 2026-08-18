@@ -14,11 +14,16 @@ export interface AppConfig {
 }
 
 const defaultConfig: AppConfig = {
-  logo_url: '', favicon_html: '',
-  color_bg_light: '', color_bg_dark: '',
-  color_text_light: '', color_text_dark: '',
-  color_link_light: '', color_link_dark: '',
-  color_navbar_light: '', color_navbar_dark: '',
+  logo_url: '',
+  favicon_html: '',
+  color_bg_light: '',
+  color_bg_dark: '',
+  color_text_light: '',
+  color_text_dark: '',
+  color_link_light: '',
+  color_link_dark: '',
+  color_navbar_light: '',
+  color_navbar_dark: '',
 };
 
 function getCachedConfig(): AppConfig {

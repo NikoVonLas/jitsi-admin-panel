@@ -39,7 +39,9 @@ export function useModJoinPage(config: ModJoinPageConfig) {
 
   useEffect(() => {
     if (participantUrl) {
-      toDataURL(participantUrl, { width: 512, margin: 2 }).then(setQrDataUrl).catch(() => {});
+      toDataURL(participantUrl, { width: 512, margin: 2 })
+        .then(setQrDataUrl)
+        .catch(() => {});
     }
   }, [participantUrl]);
 

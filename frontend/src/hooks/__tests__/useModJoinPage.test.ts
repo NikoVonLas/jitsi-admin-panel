@@ -130,10 +130,14 @@ describe('useModJoinPage', () => {
     mockSubmitJoin.mockRejectedValue(new JoinPageError('too_early'));
     const { result } = renderHook(() => useModJoinPage(defaultConfig));
     await waitFor(() => expect(result.current.ready).toBe(true));
-    await act(async () => { await result.current.onSubmit('abc123xyz'); });
+    await act(async () => {
+      await result.current.onSubmit('abc123xyz');
+    });
     expect(result.current.error).toBe('too_early');
     mockSubmitJoin.mockResolvedValue({ url: 'https://ok.example.com' });
-    await act(async () => { await result.current.onSubmit('abc123xyz'); });
+    await act(async () => {
+      await result.current.onSubmit('abc123xyz');
+    });
     expect(result.current.error).toBe('');
   });
 

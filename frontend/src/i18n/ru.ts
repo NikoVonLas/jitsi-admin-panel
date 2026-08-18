@@ -183,7 +183,8 @@ const ru: Record<string, string> = {
   'setting.mailer': 'Почта (SMTP)',
   'setting.appearance': 'Внешний вид',
   'setting.auth': 'Аутентификация',
-  'setting.oidc_hint': 'Добавьте один или несколько OIDC-провайдеров (Keycloak, Auth0 и т.д.). Как только хотя бы один включён — SSO-вход активируется.',
+  'setting.oidc_hint':
+    'Добавьте один или несколько OIDC-провайдеров (Keycloak, Auth0 и т.д.). Как только хотя бы один включён — SSO-вход активируется.',
   'setting.oidc_no_providers': 'OIDC-провайдеры не настроены — SSO-вход отключён',
   'setting.add_provider': 'Добавить провайдер',
   'setting.edit_provider': 'Редактировать провайдер',

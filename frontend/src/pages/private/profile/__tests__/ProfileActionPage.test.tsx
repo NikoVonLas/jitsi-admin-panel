@@ -20,7 +20,9 @@ vi.mock('../../../../components/common/Spinner', () => ({
 }));
 
 vi.mock('../../../../components/common/AlertWarning', () => ({
-  default: ({ children }: { children: React.ReactNode }) => <div data-testid="alert">{children}</div>,
+  default: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="alert">{children}</div>
+  ),
 }));
 
 vi.mock('../../../../components/common/SubheaderCenter', () => ({
@@ -46,20 +48,15 @@ describe('ProfileActionPage', () => {
 
   it('renders title in subheader', async () => {
     render(
-      <ProfileActionPage title="Test Action Title">
-        {() => <div>content</div>}
-      </ProfileActionPage>
+      <ProfileActionPage title="Test Action Title">{() => <div>content</div>}</ProfileActionPage>
     );
     expect(screen.getByText('Test Action Title')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByTestId('spinner')).toBeNull());
   });
 
   it('shows spinner while loading', () => {
     vi.mocked(getById).mockReturnValue(new Promise(() => {}));
-    render(
-      <ProfileActionPage title="Title">
-        {() => <div>content</div>}
-      </ProfileActionPage>
-    );
+    render(<ProfileActionPage title="Title">{() => <div>content</div>}</ProfileActionPage>);
     expect(screen.getByTestId('spinner')).toBeInTheDocument();
   });
 
@@ -74,11 +71,7 @@ describe('ProfileActionPage', () => {
 
   it('shows error alert when getById fails', async () => {
     vi.mocked(getById).mockRejectedValue(new Error('fail'));
-    render(
-      <ProfileActionPage title="Title">
-        {() => <div>content</div>}
-      </ProfileActionPage>
-    );
+    render(<ProfileActionPage title="Title">{() => <div>content</div>}</ProfileActionPage>);
     await waitFor(() => expect(screen.getByTestId('alert')).toBeInTheDocument());
   });
 });

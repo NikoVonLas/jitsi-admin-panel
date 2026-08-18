@@ -22,7 +22,7 @@ export default function FormText({
   onChange,
 }: Props) {
   return (
-    <Form.Item label={label} required={required} style={{ marginBottom: 16 }}>
+    <Form.Item label={label} htmlFor={name} required={required} style={{ marginBottom: 16 }}>
       <Input
         id={name}
         name={name}

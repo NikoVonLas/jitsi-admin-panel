@@ -16,14 +16,30 @@ interface Props {
 }
 
 export default function Subheader({
-  title, onAdd, addTitle, addHidden,
-  hrefCalendar, hrefCalendarTitle,
-  hrefMeeting, hrefMeetingTitle, extra,
+  title,
+  onAdd,
+  addTitle,
+  addHidden,
+  hrefCalendar,
+  hrefCalendarTitle,
+  hrefMeeting,
+  hrefMeetingTitle,
+  extra,
 }: Props) {
   const t = useTr();
   const isMobile = useIsMobile();
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: 16,
+        marginBottom: 8,
+        flexWrap: 'wrap',
+        gap: 8,
+      }}
+    >
       <Space align="center">
         {hrefCalendar && (
           <Tooltip title={hrefCalendarTitle || t('sub.calendar_view')}>

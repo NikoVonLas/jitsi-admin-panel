@@ -22,9 +22,20 @@ interface Props<T> {
 }
 
 export default function PaginatedList<T extends { id: string }>({
-  items, total, page, loading, pageSize,
-  search, isFiltered, hasActiveFilters, emptyKey,
-  filterPanel, onAdd, onPageChange, onSearchChange, renderItem,
+  items,
+  total,
+  page,
+  loading,
+  pageSize,
+  search,
+  isFiltered,
+  hasActiveFilters,
+  emptyKey,
+  filterPanel,
+  onAdd,
+  onPageChange,
+  onSearchChange,
+  renderItem,
 }: Props<T>) {
   const t = useTr();
   const isMobile = useIsMobile();
@@ -74,19 +85,26 @@ export default function PaginatedList<T extends { id: string }>({
       </div>
 
       {/* Grid */}
-      <div className="card-grid" style={{ opacity: loading ? 0.4 : 1, pointerEvents: loading ? 'none' : 'auto' }}>
+      <div
+        className="card-grid"
+        style={{ opacity: loading ? 0.4 : 1, pointerEvents: loading ? 'none' : 'auto' }}
+      >
         {items.map((item) => renderItem(item))}
       </div>
 
       {/* Empty state */}
-      {!loading && isEmpty && (
-        isFiltered
-          ? <AlertWarning>{t('empty.no_results')}</AlertWarning>
-          : <AlertWarning>
-              {t(emptyKey)}{' '}
-              <Button type="link" onClick={onAdd}>{t('btn.add')}</Button>
-            </AlertWarning>
-      )}
+      {!loading &&
+        isEmpty &&
+        (isFiltered ? (
+          <AlertWarning>{t('empty.no_results')}</AlertWarning>
+        ) : (
+          <AlertWarning>
+            {t(emptyKey)}{' '}
+            <Button type="link" onClick={onAdd}>
+              {t('btn.add')}
+            </Button>
+          </AlertWarning>
+        ))}
 
       {/* Pagination */}
       {total > pageSize && (

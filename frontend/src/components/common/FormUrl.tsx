@@ -13,7 +13,16 @@ interface Props {
   readonly disabled?: boolean;
 }
 
-export default function FormUrl({ name, label, control, required, placeholder, value, onChange, disabled }: Props) {
+export default function FormUrl({
+  name,
+  label,
+  control,
+  required,
+  placeholder,
+  value,
+  onChange,
+  disabled,
+}: Props) {
   if (control) {
     return (
       <Controller
@@ -34,8 +43,10 @@ export default function FormUrl({ name, label, control, required, placeholder, v
     );
   }
   return (
-    <Form.Item label={label} required={required} style={{ marginBottom: 16 }}>
+    <Form.Item label={label} htmlFor={name} required={required} style={{ marginBottom: 16 }}>
       <Input
+        id={name}
+        name={name}
         type="url"
         value={value}
         onChange={(e) => onChange?.(e.target.value)}

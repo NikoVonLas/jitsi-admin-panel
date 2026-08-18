@@ -62,7 +62,7 @@ describe('SettingOidc', () => {
           scopes: 'openid profile email',
           enabled: true,
         },
-      ]),
+      ])
     );
     render(<SettingOidc />);
     await waitFor(() => {

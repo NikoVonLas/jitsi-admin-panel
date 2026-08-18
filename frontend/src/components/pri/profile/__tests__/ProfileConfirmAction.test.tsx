@@ -36,7 +36,7 @@ describe('ProfileConfirmAction', () => {
         alertNode={<div>Alert message</div>}
         errorNode={<div>Error message</div>}
         submitLabel="Delete"
-      />,
+      />
     );
     expect(screen.getByText('Alice')).toBeInTheDocument();
   });
@@ -49,7 +49,7 @@ describe('ProfileConfirmAction', () => {
         alertNode={<div>Alert message</div>}
         errorNode={<div>Error message</div>}
         submitLabel="Delete"
-      />,
+      />
     );
     expect(screen.getByText('Alert message')).toBeInTheDocument();
   });
@@ -62,7 +62,7 @@ describe('ProfileConfirmAction', () => {
         alertNode={<div>Alert</div>}
         errorNode={<div>Error</div>}
         submitLabel="Confirm Delete"
-      />,
+      />
     );
     expect(screen.getByText('Confirm Delete')).toBeInTheDocument();
   });
@@ -75,7 +75,7 @@ describe('ProfileConfirmAction', () => {
         alertNode={<div>Alert</div>}
         errorNode={<div>Error</div>}
         submitLabel="Delete"
-      />,
+      />
     );
     expect(screen.getByText('btn.cancel')).toBeInTheDocument();
   });
@@ -88,7 +88,7 @@ describe('ProfileConfirmAction', () => {
         alertNode={<div>Alert</div>}
         errorNode={<div>Error</div>}
         submitLabel="Delete"
-      />,
+      />
     );
     fireEvent.click(screen.getByText('Delete'));
     await waitFor(() => {
@@ -104,7 +104,7 @@ describe('ProfileConfirmAction', () => {
         alertNode={<div>Alert</div>}
         errorNode={<div>Error</div>}
         submitLabel="Delete"
-      />,
+      />
     );
     fireEvent.click(screen.getByText('btn.cancel'));
     expect(mockNavigate).toHaveBeenCalledWith('/profile');

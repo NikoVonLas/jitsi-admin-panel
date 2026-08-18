@@ -31,10 +31,7 @@ export default function NavBarPub() {
         }}
       >
         <Brand />
-        <Button
-          type="primary"
-          href="/api/adm/oidc/redirect?prompt=consent"
-        >
+        <Button type="primary" href="/api/adm/oidc/redirect?prompt=consent">
           {t('btn.sign_in')}
         </Button>
       </div>

@@ -38,9 +38,7 @@ describe('ProfileListItem', () => {
   });
 
   it('renders avatar image when avatar_url is set', () => {
-    render(
-      <ProfileListItem profile={{ ...baseProfile, avatar_url: '/avatar.png' }} />,
-    );
+    render(<ProfileListItem profile={{ ...baseProfile, avatar_url: '/avatar.png' }} />);
     expect(document.querySelector('img[alt="avatar"]')).toBeInTheDocument();
   });
 

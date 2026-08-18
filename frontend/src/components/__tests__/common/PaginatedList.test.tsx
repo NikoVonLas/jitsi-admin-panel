@@ -11,7 +11,9 @@ vi.mock('../../../hooks/useIsMobile', () => ({
 }));
 
 vi.mock('../../common/AlertWarning', () => ({
-  default: ({ children }: { children: React.ReactNode }) => <div data-testid="alert">{children}</div>,
+  default: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="alert">{children}</div>
+  ),
 }));
 
 const defaultProps = {
@@ -25,7 +27,11 @@ const defaultProps = {
   hasActiveFilters: false,
   emptyKey: 'empty.meetings',
   filterPanel: <div data-testid="filter-panel">Filters</div>,
-  renderItem: (item: { id: string }) => <div key={item.id} data-testid="item">{item.id}</div>,
+  renderItem: (item: { id: string }) => (
+    <div key={item.id} data-testid="item">
+      {item.id}
+    </div>
+  ),
 };
 
 describe('PaginatedList', () => {

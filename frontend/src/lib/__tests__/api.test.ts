@@ -156,20 +156,16 @@ describe('listFiltered', () => {
   beforeEach(() => mockHttpPost.mockReset());
 
   it('sends basic payload', async () => {
-    mockHttpPost.mockResolvedValueOnce(
-      makeRes(200, { items: [], total: 0 }),
-    );
+    mockHttpPost.mockResolvedValueOnce(makeRes(200, { items: [], total: 0 }));
     await listFiltered('/api/test', { limit: 10, offset: 0 });
     expect(mockHttpPost).toHaveBeenCalledWith(
       '/api/test',
-      expect.objectContaining({ limit: 10, offset: 0, search: '', enabled: null }),
+      expect.objectContaining({ limit: 10, offset: 0, search: '', enabled: null })
     );
   });
 
   it('includes optional fields when defined', async () => {
-    mockHttpPost.mockResolvedValueOnce(
-      makeRes(200, { items: [], total: 0 }),
-    );
+    mockHttpPost.mockResolvedValueOnce(makeRes(200, { items: [], total: 0 }));
     await listFiltered('/api/test', {
       limit: 5,
       offset: 0,
@@ -188,9 +184,7 @@ describe('listFiltered', () => {
   });
 
   it('converts empty optional strings to null', async () => {
-    mockHttpPost.mockResolvedValueOnce(
-      makeRes(200, { items: [], total: 0 }),
-    );
+    mockHttpPost.mockResolvedValueOnce(makeRes(200, { items: [], total: 0 }));
     await listFiltered('/api/test', {
       limit: 10,
       offset: 0,
@@ -204,9 +198,9 @@ describe('listFiltered', () => {
 
   it('throws on non-200', async () => {
     mockHttpPost.mockResolvedValueOnce(makeRes(500));
-    await expect(
-      listFiltered('/api/test', { limit: 10, offset: 0 }),
-    ).rejects.toThrow('post failed');
+    await expect(listFiltered('/api/test', { limit: 10, offset: 0 })).rejects.toThrow(
+      'post failed'
+    );
   });
 });
 

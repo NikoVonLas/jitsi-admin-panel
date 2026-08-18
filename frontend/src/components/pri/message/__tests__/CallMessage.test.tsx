@@ -73,6 +73,7 @@ describe('CallMessage', () => {
 
   it('renders audio element for ringtone', () => {
     render(<CallMessage msg={msg} />);
-    expect(document.querySelector('audio')).toBeInTheDocument();
+    expect(document.querySelector('audio')).toHaveAttribute('src', '/ringing.mp3');
+    expect(document.querySelector('track')).toBeNull();
   });
 });

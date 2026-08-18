@@ -30,15 +30,32 @@ interface Props {
 }
 
 export default function MeetingList({
-  meetings, total, page, loading, pageSize,
-  search, enabledFilter, rooms, domains,
-  roomFilter, domainFilter, dateFilter,
-  onRefresh, onAdd, onPageChange,
-  onSearchChange, onEnabledChange, onRoomChange, onDomainChange, onDateChange,
+  meetings,
+  total,
+  page,
+  loading,
+  pageSize,
+  search,
+  enabledFilter,
+  rooms,
+  domains,
+  roomFilter,
+  domainFilter,
+  dateFilter,
+  onRefresh,
+  onAdd,
+  onPageChange,
+  onSearchChange,
+  onEnabledChange,
+  onRoomChange,
+  onDomainChange,
+  onDateChange,
 }: Props) {
   const t = useTr();
-  const isFiltered = !!search || enabledFilter !== 'all' || !!roomFilter || !!domainFilter || !!dateFilter;
-  const hasActiveFilters = enabledFilter !== 'all' || !!roomFilter || !!domainFilter || !!dateFilter;
+  const isFiltered =
+    !!search || enabledFilter !== 'all' || !!roomFilter || !!domainFilter || !!dateFilter;
+  const hasActiveFilters =
+    enabledFilter !== 'all' || !!roomFilter || !!domainFilter || !!dateFilter;
 
   const filterPanel = (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>

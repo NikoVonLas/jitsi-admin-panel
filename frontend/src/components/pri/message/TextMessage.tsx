@@ -42,15 +42,24 @@ export default function TextMessage({ msg }: Props) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <i className="bi bi-chat-left-dots" style={{ color: '#3949ab', fontSize: 18 }} />
         <span style={{ fontWeight: 600, flex: 1 }}>{msg.contact_name || t('call.unknown')}</span>
-        <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>{toLocaleTime(msg.created_at)}</span>
+        <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>
+          {toLocaleTime(msg.created_at)}
+        </span>
         <Button type="text" icon={<i className="bi bi-x" />} onClick={close} />
       </div>
-      <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', margin: 0, whiteSpace: 'pre-wrap', maxHeight: 200, overflow: 'auto' }}>
+      <p
+        style={{
+          fontSize: 13,
+          color: 'var(--color-text-secondary)',
+          margin: 0,
+          whiteSpace: 'pre-wrap',
+          maxHeight: 200,
+          overflow: 'auto',
+        }}
+      >
         {msg.intercom_attr.message || ''}
       </p>
-      <audio ref={soundRef} src="/notification.mp3">
-        <track kind="captions" default src="" label="Captions" />
-      </audio>
+      <audio ref={soundRef} src="/notification.mp3" />
     </div>
   );
 }

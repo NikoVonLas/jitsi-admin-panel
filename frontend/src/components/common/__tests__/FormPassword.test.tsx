@@ -4,13 +4,7 @@ import { useForm } from 'react-hook-form';
 import FormPassword from '../FormPassword';
 
 function UncontrolledWrapper() {
-  return (
-    <FormPassword
-      name="password"
-      label="Password"
-      placeholder="Enter password"
-    />
-  );
+  return <FormPassword name="password" label="Password" placeholder="Enter password" />;
 }
 
 function ControlledWrapper() {
@@ -28,6 +22,11 @@ function ControlledWrapper() {
 }
 
 describe('FormPassword (uncontrolled)', () => {
+  it('associates the label with the input', () => {
+    render(<UncontrolledWrapper />);
+    expect(screen.getByLabelText('Password')).toHaveAttribute('name', 'password');
+  });
+
   it('renders label', () => {
     render(<UncontrolledWrapper />);
     expect(screen.getByText('Password')).toBeInTheDocument();
@@ -42,35 +41,18 @@ describe('FormPassword (uncontrolled)', () => {
 
   it('calls onChange when value changes', () => {
     const onChange = vi.fn();
-    render(
-      <FormPassword
-        name="password"
-        label="Password"
-        value=""
-        onChange={onChange}
-      />,
-    );
+    render(<FormPassword name="password" label="Password" value="" onChange={onChange} />);
     const input = document.querySelector('input') as HTMLInputElement;
-    input.dispatchEvent(
-      new Event('change', { bubbles: true }),
-    );
+    input.dispatchEvent(new Event('change', { bubbles: true }));
   });
 
   it('renders hint when provided', () => {
-    render(
-      <FormPassword
-        name="password"
-        label="Password"
-        hint="Must be 8+ characters"
-      />,
-    );
+    render(<FormPassword name="password" label="Password" hint="Must be 8+ characters" />);
     expect(screen.getByText('Must be 8+ characters')).toBeInTheDocument();
   });
 
   it('renders disabled state', () => {
-    render(
-      <FormPassword name="password" label="Password" disabled />,
-    );
+    render(<FormPassword name="password" label="Password" disabled />);
     const input = document.querySelector('input') as HTMLInputElement;
     expect(input).toBeDisabled();
   });

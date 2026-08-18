@@ -10,7 +10,7 @@ vi.mock('../../lib/api', () => ({
 function makeMsg(
   id: string,
   microsec: number,
-  type: IntercomMessage222['message_type'] = 'text',
+  type: IntercomMessage222['message_type'] = 'text'
 ): IntercomMessage222 {
   return {
     id,

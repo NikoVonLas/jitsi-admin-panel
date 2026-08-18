@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { startIntercomStream, watchMessage, watchTextMessage, useIntercomMessages } from '../useIntercom';
+import {
+  startIntercomStream,
+  watchMessage,
+  watchTextMessage,
+  useIntercomMessages,
+} from '../useIntercom';
 
 vi.mock('../../lib/api', () => ({
   getById: vi.fn(),

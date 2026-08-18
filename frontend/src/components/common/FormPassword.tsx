@@ -14,7 +14,17 @@ interface Props {
   readonly hint?: string;
 }
 
-export default function FormPassword({ name, label, control, required, placeholder, value, onChange, disabled, hint }: Props) {
+export default function FormPassword({
+  name,
+  label,
+  control,
+  required,
+  placeholder,
+  value,
+  onChange,
+  disabled,
+  hint,
+}: Props) {
   if (control) {
     return (
       <Controller
@@ -35,8 +45,16 @@ export default function FormPassword({ name, label, control, required, placehold
     );
   }
   return (
-    <Form.Item label={label} required={required} help={hint} style={{ marginBottom: 16 }}>
+    <Form.Item
+      label={label}
+      htmlFor={name}
+      required={required}
+      help={hint}
+      style={{ marginBottom: 16 }}
+    >
       <Input.Password
+        id={name}
+        name={name}
         value={value}
         onChange={(e) => onChange?.(e.target.value)}
         placeholder={placeholder}
