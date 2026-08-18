@@ -94,7 +94,7 @@
         "npm:@testing-library/react@16",
         "npm:@testing-library/user-event@14",
         "npm:@types/bootstrap@^5.2.11",
-        "npm:@types/node@24",
+        "npm:@types/node@20",
         "npm:@types/qrcode@^1.5.6",
         "npm:@types/react-dom@19",
         "npm:@types/react@19",
