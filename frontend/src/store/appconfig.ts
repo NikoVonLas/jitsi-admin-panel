@@ -42,6 +42,17 @@ interface AppConfigStore {
 
 let dynamicStyleEl: HTMLStyleElement | null = null;
 let appliedFaviconHtml = '';
+const HEX_COLOR = /^#[0-9a-f]{3}(?:[0-9a-f]{1}|[0-9a-f]{3}|[0-9a-f]{5})?$/i;
+const ALLOWED_FAVICON_RELS = new Set(['icon', 'shortcut icon', 'apple-touch-icon']);
+const FAVICON_PATH_PREFIX = '/api/pub/favicon/';
+
+function themeRule(selector: string, values: Array<[string, string | undefined]>): string {
+  const declarations = values
+    .filter(([, value]) => value && HEX_COLOR.test(value))
+    .map(([name, value]) => `${name}:${value}`)
+    .join(';');
+  return declarations ? `${selector}{${declarations}}` : '';
+}
 
 export function applyFavicon(html: string) {
   if (typeof document === 'undefined' || html === appliedFaviconHtml) return;
@@ -50,9 +61,28 @@ export function applyFavicon(html: string) {
   if (!html) return;
   const tmp = document.createElement('div');
   tmp.innerHTML = html;
-  tmp.querySelectorAll('link, meta').forEach((node) => {
-    (node as HTMLElement).dataset.gxFav = '';
-    document.head.appendChild(node);
+  tmp.querySelectorAll('link').forEach((node) => {
+    const rel = node.rel.trim().toLowerCase().replace(/\s+/g, ' ');
+    if (!ALLOWED_FAVICON_RELS.has(rel)) return;
+
+    let href: URL;
+    try {
+      href = new URL(node.getAttribute('href') || '', document.baseURI);
+    } catch {
+      return;
+    }
+    if (href.origin !== window.location.origin || !href.pathname.startsWith(FAVICON_PATH_PREFIX)) {
+      return;
+    }
+
+    const safeLink = document.createElement('link');
+    safeLink.rel = rel;
+    safeLink.href = href.toString();
+    if (node.type) safeLink.type = node.type;
+    const sizes = node.getAttribute('sizes');
+    if (sizes) safeLink.setAttribute('sizes', sizes);
+    safeLink.dataset.gxFav = '';
+    document.head.appendChild(safeLink);
   });
 }
 
@@ -62,6 +92,20 @@ export function applyConfig(cfg: Partial<AppConfig>) {
     dynamicStyleEl.id = 'galaxy-dynamic-theme';
     document.head.appendChild(dynamicStyleEl);
   }
+  dynamicStyleEl.textContent = [
+    themeRule(":root,[data-theme='light']", [
+      ['--color-bg', cfg.color_bg_light],
+      ['--color-text', cfg.color_text_light],
+      ['--color-link', cfg.color_link_light],
+      ['--color-navbar', cfg.color_navbar_light],
+    ]),
+    themeRule("[data-theme='dark']", [
+      ['--color-bg', cfg.color_bg_dark],
+      ['--color-text', cfg.color_text_dark],
+      ['--color-link', cfg.color_link_dark],
+      ['--color-navbar', cfg.color_navbar_dark],
+    ]),
+  ].join('');
   try {
     localStorage.setItem('galaxy-config', JSON.stringify(cfg));
   } catch {}

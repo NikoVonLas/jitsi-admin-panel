@@ -40,11 +40,6 @@ const ru: Record<string, string> = {
   'btn.next': 'Далее',
   'btn.add_schedule': 'Добавить расписание',
   'btn.create_meeting': 'Создать собрание',
-  'btn.reject': 'Отклонить',
-  'btn.accept': 'Принять',
-  // Incoming call
-  'call.calling': 'вызов...',
-  'call.unknown': 'Неизвестно',
 
   'page.meetings': 'Собрания',
   'page.profiles': 'Мои профили',
@@ -158,7 +153,6 @@ const ru: Record<string, string> = {
   'profile.default': 'По умолчанию',
 
   // Status / spinner
-  'status.joining': 'подключение...',
 
   // Jitsi token auth
   'jitsi.checking': 'Проверяем сеанс…',

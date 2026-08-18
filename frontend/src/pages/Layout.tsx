@@ -1,12 +1,9 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useAppConfig } from '../store/appconfig';
 import NavBarPri from '../components/nav/NavBarPri';
 import NavBarPub from '../components/nav/NavBarPub';
-import MessageList from '../components/pri/message/MessageList';
-import { useIntercomMessages } from '../hooks/useIntercom';
 import { ping } from '../lib/nav';
-import type { IntercomMessage222 } from '../types';
 import { isAuthenticated } from '../lib/session';
 
 const NO_NAV_PREFIXES = ['/r/', '/rm/', '/jm/', '/oidc/'];
@@ -26,7 +23,6 @@ export default function Layout() {
   const authenticated = isAuthenticated();
   const showNav = shouldShowNav(location.pathname);
 
-  const [messages, setMessages] = useState<IntercomMessage222[]>([]);
   const [isDesktop, setIsDesktop] = useState(
     () => typeof globalThis !== 'undefined' && globalThis.matchMedia('(min-width: 992px)').matches
   );
@@ -37,12 +33,6 @@ export default function Layout() {
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
   }, []);
-
-  const handleMessagesChange = useCallback((msgs: IntercomMessage222[]) => {
-    setMessages(msgs);
-  }, []);
-
-  useIntercomMessages(authenticated, handleMessagesChange);
 
   useEffect(() => {
     load();
@@ -71,8 +61,6 @@ export default function Layout() {
       >
         <Outlet />
       </div>
-
-      {authenticated && <MessageList messages={messages} />}
     </div>
   );
 }

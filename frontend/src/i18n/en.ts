@@ -47,12 +47,6 @@ const en: Record<string, string> = {
   'btn.next': 'Next',
   'btn.add_schedule': 'Add schedule',
   'btn.create_meeting': 'Create meeting',
-  'btn.reject': 'Reject',
-  'btn.accept': 'Accept',
-
-  // Incoming call
-  'call.calling': 'calling...',
-  'call.unknown': 'Unknown',
 
   // Page titles
   'page.meetings': 'Meetings',
@@ -173,7 +167,6 @@ const en: Record<string, string> = {
   'profile.default': 'Default',
 
   // Status / spinner
-  'status.joining': 'joining...',
 
   // Jitsi token auth
   'jitsi.checking': 'Checking your session…',

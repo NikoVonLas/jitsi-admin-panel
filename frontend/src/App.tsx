@@ -81,10 +81,6 @@ const router = createBrowserRouter([
             path: 'calendar/month/:date',
             lazy: lazyPage(() => import('./pages/private/calendar/CalendarMonthPage')),
           },
-          {
-            path: 'call/join/:uuid',
-            lazy: lazyPage(() => import('./pages/private/call/CallJoinPage')),
-          },
         ],
       },
     ],

@@ -9,16 +9,6 @@
 export type Affiliation = 'host' | 'guest';
 export type DomainAuthType = 'none' | 'token';
 export type EnabledFilter = 'all' | 'enabled' | 'disabled';
-export type IntercomStatus = 'none' | 'seen' | 'accepted' | 'rejected';
-export type Message = 'call' | 'phone' | 'text';
-
-// -----------------------------------------------------------------------------
-export interface ContactStatus {
-  id: string;
-  seen_second_ago: number;
-}
-
-// -----------------------------------------------------------------------------
 export interface Domain {
   id: string;
   name: string;
@@ -51,33 +41,6 @@ export interface DomainMember {
   id: string;
   email: string;
   created_at: string;
-}
-
-// -----------------------------------------------------------------------------
-export interface IntercomCall {
-  id: string;
-  url: string;
-}
-
-// -----------------------------------------------------------------------------
-export interface IntercomMessage222 {
-  id: string;
-  contact_id: string | null;
-  contact_name: string | null;
-  status: IntercomStatus;
-  message_type: Message;
-  intercom_attr: {
-    [key: string]: string;
-  };
-  created_at: string;
-  microsec_created_at: number;
-  expired_at: string;
-}
-
-// -----------------------------------------------------------------------------
-export interface IntercomRing {
-  id: string;
-  status: IntercomStatus;
 }
 
 // -----------------------------------------------------------------------------

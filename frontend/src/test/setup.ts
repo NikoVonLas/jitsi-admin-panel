@@ -85,29 +85,6 @@ Object.defineProperty(globalThis, 'matchMedia', {
   }),
 });
 
-// Mock EventSource (used by intercom SSE stream)
-class MockEventSource {
-  onmessage: ((event: MessageEvent) => void) | null = null;
-  onerror: ((event: Event) => void) | null = null;
-  close() {}
-  static CONNECTING = 0;
-  static OPEN = 1;
-  static CLOSED = 2;
-  readyState = MockEventSource.OPEN;
-  url = '';
-  withCredentials = false;
-  addEventListener() {}
-  removeEventListener() {}
-  dispatchEvent() {
-    return false;
-  }
-}
-
-Object.defineProperty(globalThis, 'EventSource', {
-  writable: true,
-  value: MockEventSource,
-});
-
 // Silence act() warnings in React 19 tests
 (globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
 

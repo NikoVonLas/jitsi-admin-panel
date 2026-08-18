@@ -22,14 +22,6 @@ vi.mock('../../components/nav/NavBarPub', () => ({
   default: () => <nav data-testid="navbar-pub">NavBarPub</nav>,
 }));
 
-vi.mock('../../components/pri/message/MessageList', () => ({
-  default: () => <div data-testid="message-list">MessageList</div>,
-}));
-
-vi.mock('../../hooks/useIntercom', () => ({
-  useIntercomMessages: vi.fn(),
-}));
-
 vi.mock('../../lib/nav', () => ({
   ping: vi.fn(),
 }));
@@ -61,16 +53,5 @@ describe('Layout', () => {
     sessionStorage.setItem('session_authenticated', 'ok');
     render(<Layout />);
     expect(screen.getByTestId('navbar-pri')).toBeInTheDocument();
-  });
-
-  it('renders MessageList when authenticated', () => {
-    sessionStorage.setItem('session_authenticated', 'ok');
-    render(<Layout />);
-    expect(screen.getByTestId('message-list')).toBeInTheDocument();
-  });
-
-  it('does not render MessageList when not authenticated', () => {
-    render(<Layout />);
-    expect(screen.queryByTestId('message-list')).toBeNull();
   });
 });

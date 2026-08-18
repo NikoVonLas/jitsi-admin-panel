@@ -7,6 +7,7 @@ export default function NavBarPub() {
   const t = useTr();
   return (
     <nav
+      className="app-navbar"
       style={{
         position: 'fixed',
         top: 0,

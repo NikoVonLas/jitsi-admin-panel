@@ -16,6 +16,8 @@
   --color-text: #18181b;
   --color-text-secondary: #71717a;
   --color-text-tertiary: #a1a1aa;
+  --color-link: #1677ff;
+  --color-navbar: var(--color-bg-elevated);
 }
 
 [data-theme='dark'] {
@@ -59,6 +61,14 @@ body {
   box-sizing: border-box;
 }
 
+a {
+  color: var(--color-link);
+}
+
+.app-navbar {
+  background: var(--color-navbar) !important;
+}
+
 /* Scrollbar thin */
 ::-webkit-scrollbar {
   width: 6px;
@@ -82,22 +92,6 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
-}
-
-/* Toast container for intercom messages */
-.toast-container {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  pointer-events: none;
-}
-
-.toast-container > * {
-  pointer-events: auto;
 }
 
 /* Layout with fixed navbar */
@@ -131,20 +125,4 @@ body {
   color: #fff;
   user-select: none;
   flex-shrink: 0;
-}
-
-/* Intercom card ringing animation */
-@keyframes ring {
-  0%,
-  100% {
-    transform: rotate(-5deg);
-  }
-  50% {
-    transform: rotate(5deg);
-  }
-}
-
-.ringing-icon {
-  display: inline-block;
-  animation: ring 0.4s ease-in-out infinite;
 }

@@ -118,7 +118,7 @@ export default function NavBarPri() {
 
   return (
     <>
-      <nav style={isDesktop ? navDesktopStyle : navStyle}>
+      <nav className="app-navbar" style={isDesktop ? navDesktopStyle : navStyle}>
         <div style={innerStyle}>
           <Brand />
 
