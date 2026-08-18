@@ -448,12 +448,6 @@ async function migrateTo2026032103() {
 async function migrateTo2026032104() {
   const upgradeTo = "20260321.04";
   const sqls = [
-    `DROP TABLE IF EXISTS meeting_member_candidate`,
-    `DROP TABLE IF EXISTS meeting_member`,
-    `DROP TABLE IF EXISTS contact_invite`,
-    `DROP TABLE IF EXISTS contact`,
-    `DROP TABLE IF EXISTS identity_key`,
-    `DROP TABLE IF EXISTS phone`,
     `ALTER TABLE setting ALTER COLUMN mvalue TYPE text`,
   ];
 
@@ -822,6 +816,111 @@ async function migrateTo2026062201() {
 }
 
 // -----------------------------------------------------------------------------
+// Restore tables that remain part of the runtime data model. Version
+// 20260321.04 briefly dropped them even though meeting membership and intercom
+// continued to query them. IF NOT EXISTS keeps fresh and unaffected databases
+// unchanged while repairing installations that already crossed that version.
+async function migrateTo2026081801() {
+  const upgradeTo = "20260818.01";
+  const sqls = [
+    `CREATE TABLE IF NOT EXISTS contact (
+       "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+       "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+       "remote_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+       "name" varchar(250) NOT NULL,
+       "visible" boolean NOT NULL DEFAULT true,
+       "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+       "updated_at" timestamp with time zone NOT NULL DEFAULT now()
+     )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS contact_identity_id_remote_id_idx
+       ON contact("identity_id", "remote_id")`,
+    `CREATE INDEX IF NOT EXISTS contact_identity_id_name_idx
+       ON contact("identity_id", "name")`,
+    `CREATE TABLE IF NOT EXISTS contact_invite (
+       "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+       "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+       "name" varchar(250) NOT NULL,
+       "code" varchar(250) NOT NULL
+         DEFAULT md5(random()::text) || md5(gen_random_uuid()::text),
+       "disposable" boolean NOT NULL DEFAULT true,
+       "enabled" boolean NOT NULL DEFAULT true,
+       "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+       "updated_at" timestamp with time zone NOT NULL DEFAULT now(),
+       "expired_at" timestamp with time zone NOT NULL
+         DEFAULT now() + interval '3 days'
+     )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS contact_invite_code_idx
+       ON contact_invite("code")`,
+    `CREATE INDEX IF NOT EXISTS contact_invite_identity_id_expired_at_idx
+       ON contact_invite("identity_id", "expired_at")`,
+    `CREATE INDEX IF NOT EXISTS contact_invite_expired_at_idx
+       ON contact_invite("expired_at")`,
+    `CREATE TABLE IF NOT EXISTS identity_key (
+       "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+       "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+       "domain_id" uuid NOT NULL REFERENCES domain(id) ON DELETE CASCADE,
+       "name" varchar(250) NOT NULL,
+       "value" varchar(250) NOT NULL
+         DEFAULT md5(random()::text) || md5(gen_random_uuid()::text),
+       "enabled" boolean NOT NULL DEFAULT true,
+       "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+       "updated_at" timestamp with time zone NOT NULL DEFAULT now()
+     )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS identity_key_value_idx
+       ON identity_key("value")`,
+    `CREATE INDEX IF NOT EXISTS identity_key_identity_id_name_idx
+       ON identity_key("identity_id", "name")`,
+    `CREATE TABLE IF NOT EXISTS phone (
+       "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+       "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+       "profile_id" uuid NOT NULL REFERENCES profile(id) ON DELETE NO ACTION,
+       "domain_id" uuid NOT NULL REFERENCES domain(id) ON DELETE CASCADE,
+       "name" varchar(250) NOT NULL,
+       "code" varchar(250) NOT NULL
+         DEFAULT md5(random()::text) || md5(gen_random_uuid()::text),
+       "email_enabled" boolean NOT NULL DEFAULT true,
+       "enabled" boolean NOT NULL DEFAULT true,
+       "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+       "updated_at" timestamp with time zone NOT NULL DEFAULT now(),
+       "called_at" timestamp with time zone NOT NULL DEFAULT now(),
+       "calls" integer NOT NULL DEFAULT 0
+     )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS phone_code_idx ON phone("code")`,
+    `CREATE INDEX IF NOT EXISTS phone_identity_id_name_idx
+       ON phone("identity_id", "name")`,
+    `CREATE TABLE IF NOT EXISTS meeting_member (
+       "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+       "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+       "meeting_id" uuid NOT NULL REFERENCES meeting(id) ON DELETE CASCADE,
+       "profile_id" uuid NOT NULL REFERENCES profile(id) ON DELETE NO ACTION,
+       "join_as" meeting_affiliation_type NOT NULL DEFAULT 'guest',
+       "enabled" boolean NOT NULL DEFAULT true,
+       "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+       "updated_at" timestamp with time zone NOT NULL DEFAULT now()
+     )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS meeting_member_identity_id_meeting_id_join_as_idx
+       ON meeting_member("identity_id", "meeting_id", "join_as")`,
+    `CREATE TABLE IF NOT EXISTS meeting_member_candidate (
+       "id" uuid NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+       "identity_id" uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+       "meeting_id" uuid NOT NULL REFERENCES meeting(id) ON DELETE CASCADE,
+       "join_as" meeting_affiliation_type NOT NULL DEFAULT 'guest',
+       "status" candidate_status NOT NULL DEFAULT 'pending',
+       "created_at" timestamp with time zone NOT NULL DEFAULT now(),
+       "updated_at" timestamp with time zone NOT NULL DEFAULT now(),
+       "expired_at" timestamp with time zone NOT NULL
+         DEFAULT now() + interval '7 days'
+     )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS meeting_member_candidate_identity_id_meeting_id_join_as_idx
+       ON meeting_member_candidate("identity_id", "meeting_id", "join_as")`,
+    `CREATE INDEX IF NOT EXISTS meeting_member_candidate_expired_at_idx
+       ON meeting_member_candidate("expired_at")`,
+  ];
+
+  await migrateTo(upgradeTo, sqls);
+}
+
+// -----------------------------------------------------------------------------
 export default async function runMigration() {
   console.log("migration...");
 
@@ -862,4 +961,5 @@ export default async function runMigration() {
   await migrateTo2026061804();
   await migrateTo2026061805();
   await migrateTo2026062201();
+  await migrateTo2026081801();
 }
