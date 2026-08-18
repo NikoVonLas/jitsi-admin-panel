@@ -55,26 +55,26 @@ the first local account to sign up becomes the superadmin.
 
 All configuration is done via environment variables. Copy `.env.example` to `.env` and edit it before starting.
 
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `DB_PASSWD` | Yes | `changeme` | PostgreSQL password |
-| `API_SECRET` | Yes | — | Secret key for JWT signing — use a strong random string |
-| `APP_FQDN` | Yes | `localhost` | Public domain (`example.com`), `localhost` for local TLS, or `:80` for plain HTTP |
-| `AUTH_LOCAL` | No | `true` | Enable email/password login and local-user management |
-| `ALLOW_UNSECURE_CERT` | No | `false` | Skip TLS certificate verification (dev only) |
-| `API_TIMEOUT` | No | `86400` | Authentication session lifetime in seconds |
-| `OIDC_PROVIDER_NAME` | No | `Keycloak` | Display name used when bootstrapping the first OIDC provider |
-| `OIDC_ISSUER_URL` | Keycloak-only setup | — | Realm issuer URL, for example `https://keycloak.example.com/realms/jitsi` |
-| `OIDC_CLIENT_ID` | Keycloak-only setup | — | OIDC client ID |
-| `OIDC_CLIENT_SECRET` | No | — | OIDC client secret; leave empty for a public client |
-| `OIDC_SCOPES` | No | `openid profile email` | Scopes requested from Keycloak |
-| `SUPERADMIN_ROLE` | No | `jitsi-superadmin` | Keycloak realm role that grants panel superadmin access |
-| `MAILER_HOST` | No | — | SMTP host (required for email reminders) |
-| `MAILER_PORT` | No | `465` | SMTP port |
-| `MAILER_SECURE` | No | `true` | Use TLS for SMTP |
-| `MAILER_USER` | No | — | SMTP username |
-| `MAILER_PASS` | No | — | SMTP password |
-| `MAILER_FROM` | No | — | Sender address for outgoing emails |
+| Variable              | Required            | Default                | Description                                                                       |
+| --------------------- | ------------------- | ---------------------- | --------------------------------------------------------------------------------- |
+| `DB_PASSWD`           | Yes                 | `changeme`             | PostgreSQL password                                                               |
+| `API_SECRET`          | Yes                 | —                      | Secret key for JWT signing — use a strong random string                           |
+| `APP_FQDN`            | Yes                 | `localhost`            | Public domain (`example.com`), `localhost` for local TLS, or `:80` for plain HTTP |
+| `AUTH_LOCAL`          | No                  | `true`                 | Enable email/password login and local-user management                             |
+| `ALLOW_UNSECURE_CERT` | No                  | `false`                | Skip TLS certificate verification (dev only)                                      |
+| `API_TIMEOUT`         | No                  | `86400`                | Authentication session lifetime in seconds                                        |
+| `OIDC_PROVIDER_NAME`  | No                  | `Keycloak`             | Display name used when bootstrapping the first OIDC provider                      |
+| `OIDC_ISSUER_URL`     | Keycloak-only setup | —                      | Realm issuer URL, for example `https://keycloak.example.com/realms/jitsi`         |
+| `OIDC_CLIENT_ID`      | Keycloak-only setup | —                      | OIDC client ID                                                                    |
+| `OIDC_CLIENT_SECRET`  | No                  | —                      | OIDC client secret; leave empty for a public client                               |
+| `OIDC_SCOPES`         | No                  | `openid profile email` | Scopes requested from Keycloak                                                    |
+| `SUPERADMIN_ROLE`     | No                  | `jitsi-superadmin`     | Keycloak realm role that grants panel superadmin access                           |
+| `MAILER_HOST`         | No                  | —                      | SMTP host (required for email reminders)                                          |
+| `MAILER_PORT`         | No                  | `465`                  | SMTP port                                                                         |
+| `MAILER_SECURE`       | No                  | `true`                 | Use TLS for SMTP                                                                  |
+| `MAILER_USER`         | No                  | —                      | SMTP username                                                                     |
+| `MAILER_PASS`         | No                  | —                      | SMTP password                                                                     |
+| `MAILER_FROM`         | No                  | —                      | Sender address for outgoing emails                                                |
 
 ### Keycloak-only authentication
 
@@ -114,13 +114,13 @@ Browser ──443───► web (Caddy) ──/api/adm/──► api-adm:8000 
                 └─────────────────────────────────────────┘
 ```
 
-| Service | Description |
-|---|---|
-| `api-adm` | Auth gateway and control plane. Initializes/migrates the database, runs housekeeping and sends email reminders. |
-| `api-pri` | Main worker. All routes require a valid JWT. Covers rooms, meetings, schedules, intercom. |
-| `api-pub` | Fully public, no auth. Serves avatars, favicons, iCal files, and guest join pages. |
-| `web` | Caddy — serves the React 19 SPA as static files and reverse-proxies all `/api/*` routes. Sole public entry point. |
-| `db` | PostgreSQL 17. Schema initialised on first boot; further migrations run automatically. |
+| Service   | Description                                                                                                       |
+| --------- | ----------------------------------------------------------------------------------------------------------------- |
+| `api-adm` | Auth gateway and control plane. Initializes/migrates the database, runs housekeeping and sends email reminders.   |
+| `api-pri` | Main worker. All routes require a valid JWT. Covers rooms, meetings, schedules, intercom.                         |
+| `api-pub` | Fully public, no auth. Serves avatars, favicons, iCal files, and guest join pages.                                |
+| `web`     | Caddy — serves the React 19 SPA as static files and reverse-proxies all `/api/*` routes. Sole public entry point. |
+| `db`      | PostgreSQL 17. Schema initialised on first boot; further migrations run automatically.                            |
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full service map, data flow, and design decisions.
 
@@ -139,14 +139,34 @@ npm run dev          # dev server (Vite)
 npm run build        # production build
 npm run format       # Prettier
 npm run i18n:lint    # check i18n key coverage
+npm run test:e2e     # full Docker E2E: local auth, Keycloak and real Jitsi
 ```
 
 ## Compose files
 
-| File | Purpose |
-|---|---|
-| `docker-compose.yml` | **Development** — builds all images locally from the Dockerfiles in `docker/`. Use when working on the source code. |
-| `docker-compose.prod.yml` | **Production** — pulls pre-built images from GHCR (`ghcr.io/nikovonlas/jitsi-admin-panel/*`). No local build required. |
+| File                      | Purpose                                                                                                                            |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `docker-compose.yml`      | **Development** — builds all images locally from the Dockerfiles in `docker/`. Use when working on the source code.                |
+| `docker-compose.prod.yml` | **Production** — pulls pre-built images from GHCR (`ghcr.io/nikovonlas/jitsi-admin-panel/*`). No local build required.             |
+| `docker-compose.e2e.yml`  | **End-to-end tests** — starts an empty PostgreSQL volume, all panel services, Keycloak when requested, and a complete Jitsi stack. |
+
+### End-to-end tests
+
+The E2E suite does not mock authentication or conferencing. It creates users,
+domains, and rooms through the browser, then joins the generated room from two
+browser contexts. The assertion covers the Jitsi client state and JVB conference
+and participant counters.
+
+```sh
+cd frontend
+npm run test:e2e:local      # local login and user CRUD
+npm run test:e2e:keycloak   # Keycloak login/JIT provisioning/logout
+npm run test:e2e            # both modes
+```
+
+Each run starts from new database and upload volumes and removes the stack on
+completion. Docker Compose and enough memory for Keycloak plus the Jitsi stack
+are required.
 
 ### Auto-updates with Watchtower
 
@@ -169,10 +189,10 @@ Adjust `--interval` (seconds) to control how often it checks for updates.
 
 ## CI
 
-| Workflow | Trigger | What it does |
-|---|---|---|
-| **CI** | Every branch push / PR | Deno lint & format check, frontend build, i18n lint, API and frontend tests, SonarCloud analysis |
-| **Release** | Tag `v*.*.*` | Builds and pushes Docker images to GHCR (`ghcr.io/nikovonlas/jitsi-admin-panel/*`) |
+| Workflow    | Trigger                | What it does                                                                                                                     |
+| ----------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| **CI**      | Every branch push / PR | Deno lint & format check, frontend build, dependency-safe API/frontend tests, full local/Keycloak/Jitsi E2E, SonarCloud analysis |
+| **Release** | Tag `v*.*.*`           | Builds and pushes Docker images to GHCR (`ghcr.io/nikovonlas/jitsi-admin-panel/*`)                                               |
 
 ## License
 

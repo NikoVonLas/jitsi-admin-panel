@@ -20,11 +20,14 @@ Caddy — единственная точка входа. Все три API не
 ## Services
 
 ### api-adm (port 8000)
+
 Auth gateway и control plane. Единственный сервис с публичными (без токена)
-маршрутами: `/auth/config`, `/auth/local/login`, `/oidc/redirect`. Все
-остальные маршруты требуют `is_superadmin = true`.
+маршрутами: `/auth/config`, `/auth/local/*`, `/oidc/redirect`, а также строго
+определёнными POST callback/logout-маршрутами OIDC. Все остальные маршруты
+требуют `is_superadmin = true`.
 
 Также только api-adm:
+
 - инициализирует базовую схему на пустой БД и запускает миграции при старте
   (`migrateTo*()` + `metadata.database_version`)
 - при отсутствии OIDC-провайдеров может создать первый из `OIDC_*` env
@@ -34,6 +37,7 @@ api-pri и api-pub при старте проверяют версию БД и �
 если она не совпадает с константой `DB_VERSION` в `config.ts`.
 
 ### api-pri (port 8001)
+
 Основной рабочий сервис. Все маршруты требуют валидный JWT в httpOnly-cookie
 `token`. Покрывает: домены, комнаты, встречи, расписания, профили, контакты,
 настройки, intercom.
@@ -42,17 +46,20 @@ api-pri и api-pub при старте проверяют версию БД и �
 каждые 2.5 сек, push уведомлений клиенту.
 
 ### api-pub (port 8002)
+
 Полностью публичный сервис, без аутентификации. Отдаёт файлы (аватары,
 фавиконки, логотипы), iCal-файлы по токену, публичную информацию о встречах
 и комнатах для гостевых join-страниц.
 
 ### web (ports 80/443)
+
 Caddy с собранным React 19 + Vite SPA. Обслуживает статику и выступает
 обратным прокси для всех `/api/*` маршрутов — благодаря этому браузер видит
 один origin и cookie работает на все три API. TLS-сертификат выпускается
 автоматически через Let's Encrypt по значению `APP_FQDN`.
 
 ### db
+
 PostgreSQL 17. Схема инициализируется через
 `api/database/02-create-jitsi-tables.sql`: в development compose её может
 применить Docker init, а на чистом production volume её применяет api-adm.
@@ -67,6 +74,9 @@ HS256 JWT (`API_SECRET`) → `Set-Cookie: token=...; HttpOnly; Path=/api`.
 **OIDC:** SPA получает `auth_url` → редирект на провайдер → колбэк на
 `/oidc/validate` → api-adm обменивает code на токен, достаёт `sub`, создаёт
 или обновляет identity → тот же HS256 JWT в cookie.
+
+SPA помечает OIDC-сессию активной только после успешного обмена code. Это не
+даёт приватным фоновых запросам запустить logout до установки cookie.
 
 Для Keycloak-only установки первый OIDC-провайдер создаётся из `OIDC_*` env,
 если таблица провайдеров пуста. Дальше записи управляются через UI и имеют
@@ -97,6 +107,7 @@ api-pri верифицирует cookie на каждом запросе; api-pu
 
 Ссылки на встречи и комнаты генерируются server-side в `lib/common/helper.ts`
 через Web Crypto API:
+
 - Self-hosted: HS256/HS512, symmetric key из `domain_attr.app_secret`
 
 Хост получает `moderator: true`, гость — `moderator: false`.
@@ -108,12 +119,27 @@ Cronjob в api-adm раз в 30 секунд выбирает встречи, н
 страница позволяет открыть moderator URL из активной сессии либо войти по
 host key. SMTP берётся из настроек БД с fallback на `MAILER_*` env api-adm.
 
+## End-to-End Test Stack
+
+`docker-compose.e2e.yml` поднимает изолированный одноразовый контур: чистый
+PostgreSQL volume, все четыре сервиса панели и полный Jitsi Meet
+(`prosody`, `jicofo`, `jvb`, `jitsi-web`). В режиме `keycloak` к нему
+добавляется настоящий Keycloak с импортируемым realm; пользователи создаются
+только в Keycloak, без Admin REST API.
+
+Playwright проходит формы панели, создаёт token-auth домен и комнату, входит
+модератором по сгенерированному JWT и подключает анонимного участника во втором
+browser context. Успех подтверждается одновременно состоянием конференции в
+обоих клиентах и REST-статистикой JVB (`1` конференция, `2` участника). Таким
+образом тест покрывает цепочку panel UI → API → PostgreSQL → JWT → Prosody /
+Jicofo / JVB, а не только HTTP-доступность контейнеров.
+
 ## Key Decisions
 
-| Решение | Обоснование |
-|---------|-------------|
-| Три отдельных API-процесса | Изоляция уровней доступа: pub без auth, pri с auth, adm с superadmin |
-| Один origin через Caddy | cookie работает на все три API, CORS не нужен |
-| POST для всех read-операций | Единообразие; body для pagination/фильтров без query-string |
-| Без фреймворка (ручной роутинг) | Минимум зависимостей, Deno-first подход |
-| httpOnly cookie + SameSite=Lax | CSRF-митигация без отдельного токена |
+| Решение                         | Обоснование                                                          |
+| ------------------------------- | -------------------------------------------------------------------- |
+| Три отдельных API-процесса      | Изоляция уровней доступа: pub без auth, pri с auth, adm с superadmin |
+| Один origin через Caddy         | cookie работает на все три API, CORS не нужен                        |
+| POST для всех read-операций     | Единообразие; body для pagination/фильтров без query-string          |
+| Без фреймворка (ручной роутинг) | Минимум зависимостей, Deno-first подход                              |
+| httpOnly cookie + SameSite=Lax  | CSRF-митигация без отдельного токена                                 |
