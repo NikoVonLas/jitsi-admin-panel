@@ -3,20 +3,34 @@ import { afterAll, beforeAll, describe, it } from "@std/testing/bdd";
 import { cleanDb, makeRequest } from "../../helpers/db.ts";
 import { registerFirst } from "../../helpers/auth.ts";
 import routeProfile from "../../../lib/pri/profile.ts";
+import { createLocalIdentity } from "../../../lib/database/identity-local.ts";
+import { hashPassword } from "../../../lib/common/password.ts";
 
 const EMAIL = "admin@profile-test.example";
 const PASSWORD = "secure_profile_test_pass_123";
+
+function makeUploadRequest(path: string, file: File): Request {
+  const form = new FormData();
+  form.append("file", file);
+  return new Request(`http://test${path}`, { method: "POST", body: form });
+}
 
 describe(
   "pri/profile",
   { sanitizeResources: false, sanitizeOps: false },
   () => {
     let identityId = "";
+    let regularIdentityId = "";
 
     beforeAll(async () => {
       await cleanDb();
       const auth = await registerFirst(EMAIL, PASSWORD);
       identityId = auth.identityId;
+      const rows = await createLocalIdentity(
+        "regular@profile-test.example",
+        await hashPassword("regular_profile_test_pass_123"),
+      );
+      regularIdentityId = rows[0].id;
     });
 
     afterAll(async () => {
@@ -161,6 +175,57 @@ describe(
         identityId,
       );
       assertEquals(delRes.status, 200);
+    });
+
+    it("rejects global branding changes from a regular user", async () => {
+      for (
+        const path of [
+          "/api/pri/profile/logo/upload",
+          "/api/pri/profile/logo/reset",
+          "/api/pri/profile/favicon/upload",
+          "/api/pri/profile/favicon/reset",
+        ]
+      ) {
+        const res = await routeProfile(
+          makeRequest("POST", path, {}),
+          path,
+          regularIdentityId,
+        );
+        assertEquals(res.status, 403);
+      }
+    });
+
+    it("rejects SVG branding and spoofed raster content", async () => {
+      for (
+        const path of [
+          "/api/pri/profile/logo/upload",
+          "/api/pri/profile/favicon/upload",
+        ]
+      ) {
+        const svg = new File(
+          ["<svg><script>alert(1)</script></svg>"],
+          "x.svg",
+          {
+            type: "image/svg+xml",
+          },
+        );
+        const svgRes = await routeProfile(
+          makeUploadRequest(path, svg),
+          path,
+          identityId,
+        );
+        assertEquals(svgRes.status, 400);
+
+        const spoofedPng = new File(["not a png"], "x.png", {
+          type: "image/png",
+        });
+        const spoofedRes = await routeProfile(
+          makeUploadRequest(path, spoofedPng),
+          path,
+          identityId,
+        );
+        assertEquals(spoofedRes.status, 400);
+      }
     });
 
     it("returns 404 for unknown path", async () => {

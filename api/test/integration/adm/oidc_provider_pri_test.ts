@@ -11,6 +11,8 @@ import {
 import { cleanDb, makeRequest } from "../../helpers/db.ts";
 import { registerFirst } from "../../helpers/auth.ts";
 import routeOidcProvider from "../../../lib/pri/oidc-provider.ts";
+import { createLocalIdentity } from "../../../lib/database/identity-local.ts";
+import { hashPassword } from "../../../lib/common/password.ts";
 
 const EMAIL = "admin@pri-oidcprov-test.example";
 const PASSWORD = "secure_pri_oidc_pass_1234!";
@@ -20,11 +22,17 @@ describe(
   { sanitizeResources: false, sanitizeOps: false },
   () => {
     let identityId = "";
+    let regularIdentityId = "";
 
     beforeAll(async () => {
       await cleanDb();
       const auth = await registerFirst(EMAIL, PASSWORD);
       identityId = auth.identityId;
+      const rows = await createLocalIdentity(
+        "regular@pri-oidcprov-test.example",
+        await hashPassword("regular_pri_oidc_pass_1234!"),
+      );
+      regularIdentityId = rows[0].id;
     });
 
     afterAll(async () => {
@@ -71,7 +79,34 @@ describe(
       assertEquals(typeof body[0].id, "string");
     });
 
-    it("add returns 500 when required fields missing", async () => {
+    it("rejects every provider operation for a regular user", async () => {
+      for (
+        const [path, body] of [
+          ["list", {}],
+          ["add", {
+            issuer_url: "https://sso.example.com",
+            client_id: "client",
+          }],
+          ["update", {
+            id: crypto.randomUUID(),
+            issuer_url: "https://sso.example.com",
+            client_id: "client",
+          }],
+          ["toggle", { id: crypto.randomUUID(), enabled: false }],
+          ["del", { id: crypto.randomUUID() }],
+        ] as const
+      ) {
+        const url = `/api/pri/oidc-provider/${path}`;
+        const res = await routeOidcProvider(
+          makeRequest("POST", url, body),
+          url,
+          regularIdentityId,
+        );
+        assertEquals(res.status, 403);
+      }
+    });
+
+    it("add returns 400 when required fields missing", async () => {
       // issuer_url is required; missing it should throw
       const req = makeRequest("POST", "/api/pri/oidc-provider/add", {
         name: "Bad",
@@ -81,7 +116,7 @@ describe(
         "/api/pri/oidc-provider/add",
         identityId,
       );
-      assertEquals(res.status, 500);
+      assertEquals(res.status, 400);
     });
 
     it("updates a provider", async () => {
@@ -128,7 +163,7 @@ describe(
       assertEquals((await updateRes.json())[0].ok, true);
     });
 
-    it("update returns 500 when id missing", async () => {
+    it("update returns 400 when id missing", async () => {
       const req = makeRequest("POST", "/api/pri/oidc-provider/update", {
         name: "No Id",
         issuer_url: "https://example.com",
@@ -139,7 +174,7 @@ describe(
         "/api/pri/oidc-provider/update",
         identityId,
       );
-      assertEquals(res.status, 500);
+      assertEquals(res.status, 400);
     });
 
     it("toggles a provider enabled/disabled", async () => {
@@ -193,7 +228,7 @@ describe(
       assertEquals((await disableRes.json())[0].ok, true);
     });
 
-    it("toggle returns 500 when id missing", async () => {
+    it("toggle returns 400 when id missing", async () => {
       const req = makeRequest("POST", "/api/pri/oidc-provider/toggle", {
         enabled: true,
       });
@@ -202,7 +237,7 @@ describe(
         "/api/pri/oidc-provider/toggle",
         identityId,
       );
-      assertEquals(res.status, 500);
+      assertEquals(res.status, 400);
     });
 
     it("deletes a provider", async () => {
@@ -240,14 +275,14 @@ describe(
       assertEquals((await delRes.json())[0].ok, true);
     });
 
-    it("del returns 500 when id missing", async () => {
+    it("del returns 400 when id missing", async () => {
       const req = makeRequest("POST", "/api/pri/oidc-provider/del", {});
       const res = await routeOidcProvider(
         req,
         "/api/pri/oidc-provider/del",
         identityId,
       );
-      assertEquals(res.status, 500);
+      assertEquals(res.status, 400);
     });
 
     it("returns 404 for unknown path", async () => {

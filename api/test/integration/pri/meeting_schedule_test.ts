@@ -429,6 +429,6 @@ describe("pri/meeting/schedule", {
       "/api/pri/meeting/schedule/add",
       identityId,
     );
-    assertEquals(res.status, 500);
+    assertEquals(res.status, 400);
   });
 });

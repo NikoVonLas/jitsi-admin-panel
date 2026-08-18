@@ -9,17 +9,25 @@ import {
 import { cleanDb, makeRequest } from "../../helpers/db.ts";
 import { registerFirst } from "../../helpers/auth.ts";
 import routeDomain from "../../../lib/pri/domain.ts";
+import { createLocalIdentity } from "../../../lib/database/identity-local.ts";
+import { hashPassword } from "../../../lib/common/password.ts";
 
 const EMAIL = "admin@domain-test.example";
 const PASSWORD = "secure_domain_test_pass_123";
 
 describe("pri/domain", { sanitizeResources: false, sanitizeOps: false }, () => {
   let identityId = "";
+  let regularIdentityId = "";
 
   beforeAll(async () => {
     await cleanDb();
     const auth = await registerFirst(EMAIL, PASSWORD);
     identityId = auth.identityId;
+    const rows = await createLocalIdentity(
+      "regular@domain-test.example",
+      await hashPassword("regular_domain_test_pass_123"),
+    );
+    regularIdentityId = rows[0].id;
   });
 
   afterAll(async () => {
@@ -70,7 +78,7 @@ describe("pri/domain", { sanitizeResources: false, sanitizeOps: false }, () => {
       public: false,
     });
     const res = await routeDomain(req, "/api/pri/domain/add", identityId);
-    assertEquals(res.status, 500);
+    assertEquals(res.status, 400);
   });
 
   it("gets a domain by id", async () => {
@@ -100,6 +108,31 @@ describe("pri/domain", { sanitizeResources: false, sanitizeOps: false }, () => {
     assertEquals(getRes.status, 200);
     const getBody = await getRes.json();
     assertEquals(Array.isArray(getBody), true);
+  });
+
+  it("does not expose a domain secret to a regular user", async () => {
+    const addRes = await routeDomain(
+      makeRequest("POST", "/api/pri/domain/add", {
+        name: "Secret Domain",
+        auth_type: "token",
+        domain_attr: {
+          url: "https://secret.example.com",
+          app_id: "app",
+          app_secret: "must-not-leak",
+        },
+        public: true,
+      }),
+      "/api/pri/domain/add",
+      identityId,
+    );
+    const domainId = (await addRes.json())[0].id;
+
+    const getRes = await routeDomain(
+      makeRequest("POST", "/api/pri/domain/get", { id: domainId }),
+      "/api/pri/domain/get",
+      regularIdentityId,
+    );
+    assertEquals(getRes.status, 403);
   });
 
   it("enables and disables a domain", async () => {

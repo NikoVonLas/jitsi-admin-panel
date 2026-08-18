@@ -6,6 +6,7 @@
 //   /api/pri/user/set-admin → promote / demote superadmin flag
 
 import { forbidden, notFound } from "../http/response.ts";
+import { HttpError } from "../http/error.ts";
 import { pri as wrapper } from "../http/wrapper.ts";
 import {
   countSuperAdmins,
@@ -39,11 +40,11 @@ async function add(req: Request, _identityId: string): Promise<unknown> {
   const isSuperAdmin: boolean = body.is_superadmin === true;
 
   if (!email || !password || password.length < 14) {
-    throw new Error("bad request");
+    throw new HttpError(400, "Email and a 14-character password are required");
   }
 
   const existing = await getIdentityByEmail(email);
-  if (existing[0]) throw new Error("conflict");
+  if (existing[0]) throw new HttpError(409, "Email is already in use");
 
   const passwordHash = await hashPassword(password);
   const rows = await createLocalIdentity(email, passwordHash);
@@ -61,8 +62,10 @@ async function add(req: Request, _identityId: string): Promise<unknown> {
 async function del(req: Request, identityId: string): Promise<unknown> {
   const body = await req.json();
   const targetId: string = body.id ?? "";
-  if (!targetId) throw new Error("bad request");
-  if (targetId === identityId) throw new Error("cannot delete yourself");
+  if (!targetId) throw new HttpError(400, "User id is required");
+  if (targetId === identityId) {
+    throw new HttpError(409, "You cannot delete your own account");
+  }
 
   await deleteLocalIdentity(targetId);
   return [{ ok: true }];
@@ -73,12 +76,14 @@ async function setAdmin(req: Request, _identityId: string): Promise<unknown> {
   const body = await req.json();
   const targetId: string = body.id ?? "";
   const value: boolean = body.is_superadmin === true;
-  if (!targetId) throw new Error("bad request");
+  if (!targetId) throw new HttpError(400, "User id is required");
 
   // Prevent removing the last superadmin
   if (!value) {
     const adminCount = await countSuperAdmins();
-    if (adminCount <= 1) throw new Error("cannot remove the last superadmin");
+    if (adminCount <= 1) {
+      throw new HttpError(409, "The last superadmin cannot be demoted");
+    }
   }
 
   await setSuperAdmin(targetId, value);

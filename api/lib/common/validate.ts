@@ -5,3 +5,19 @@ export function isValidUrl(url: string): boolean {
 
   return false;
 }
+
+export function isValidOidcIssuerUrl(
+  value: string,
+  allowHttp = false,
+): boolean {
+  try {
+    const url = new URL(value);
+    const validProtocol = url.protocol === "https:" ||
+      (allowHttp && url.protocol === "http:");
+
+    return validProtocol && Boolean(url.hostname) && !url.username &&
+      !url.password && !url.search && !url.hash;
+  } catch {
+    return false;
+  }
+}

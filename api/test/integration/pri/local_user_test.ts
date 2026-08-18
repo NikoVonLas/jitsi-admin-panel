@@ -57,8 +57,7 @@ describe("pri/user (local user management)", {
       is_superadmin: false,
     });
     const res = await routeLocalUser(req, "/api/pri/user/add", identityId);
-    // conflict → 500 from wrapper (throws "conflict")
-    assertEquals(res.status, 500);
+    assertEquals(res.status, 409);
   });
 
   it("rejects add with short password", async () => {
@@ -69,7 +68,7 @@ describe("pri/user (local user management)", {
       is_superadmin: false,
     });
     const res = await routeLocalUser(req, "/api/pri/user/add", identityId);
-    assertEquals(res.status, 500);
+    assertEquals(res.status, 400);
   });
 
   it("promotes and demotes superadmin flag", async () => {
@@ -152,7 +151,28 @@ describe("pri/user (local user management)", {
   it("prevents deleting yourself", async () => {
     const req = makeRequest("POST", "/api/pri/user/del", { id: identityId });
     const res = await routeLocalUser(req, "/api/pri/user/del", identityId);
-    assertEquals(res.status, 500);
+    assertEquals(res.status, 409);
+  });
+
+  it("rejects user management from a regular user", async () => {
+    const addRes = await routeLocalUser(
+      makeRequest("POST", "/api/pri/user/add", {
+        email: "regular-authz@local-user-test.example",
+        password: "regular_authz_pass_1234",
+        name: "Regular",
+        is_superadmin: false,
+      }),
+      "/api/pri/user/add",
+      identityId,
+    );
+    const regularIdentityId = (await addRes.json())[0].id as string;
+
+    const res = await routeLocalUser(
+      makeRequest("POST", "/api/pri/user/list", {}),
+      "/api/pri/user/list",
+      regularIdentityId,
+    );
+    assertEquals(res.status, 403);
   });
 
   it("returns 404 for unknown path", async () => {

@@ -1,4 +1,5 @@
 import { notFound } from "../http/response.ts";
+import { HttpError } from "../http/error.ts";
 import { pri as wrapper } from "../http/wrapper.ts";
 import { getIdentityRole } from "../database/identity.ts";
 import { upsertSetting } from "../database/setting.ts";
@@ -9,7 +10,7 @@ const PRE = "/api/pri/setting";
 // -----------------------------------------------------------------------------
 async function assertSuperAdmin(identityId: string): Promise<void> {
   const rows = await getIdentityRole(identityId);
-  if (!rows[0]?.is_superadmin) throw new Error("forbidden");
+  if (!rows[0]?.is_superadmin) throw new HttpError(403, "Forbidden");
 }
 
 // -----------------------------------------------------------------------------

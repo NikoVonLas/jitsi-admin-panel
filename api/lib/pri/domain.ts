@@ -1,4 +1,5 @@
 import { notFound } from "../http/response.ts";
+import { HttpError } from "../http/error.ts";
 import { pri as wrapper } from "../http/wrapper.ts";
 import { isValidUrl } from "../common/validate.ts";
 import { getLimit, getOffset } from "../database/common.ts";
@@ -18,11 +19,12 @@ const PRE = "/api/pri/domain";
 // -----------------------------------------------------------------------------
 async function assertSuperAdmin(identityId: string): Promise<void> {
   const rows = await getIdentityRole(identityId);
-  if (!rows[0]?.is_superadmin) throw new Error("forbidden");
+  if (!rows[0]?.is_superadmin) throw new HttpError(403, "Forbidden");
 }
 
 // -----------------------------------------------------------------------------
-async function get(req: Request, _identityId: string): Promise<unknown> {
+async function get(req: Request, identityId: string): Promise<unknown> {
+  await assertSuperAdmin(identityId);
   const pl = await req.json();
   return getDomain(pl.id);
 }
@@ -49,7 +51,9 @@ async function add(req: Request, identityId: string): Promise<unknown> {
   const domainAttr = pl.domain_attr as Attr;
   const isPublic = pl.public === true;
 
-  if (!isValidUrl(domainAttr.url)) throw new Error("invalid input");
+  if (!isValidUrl(domainAttr.url)) {
+    throw new HttpError(400, "Invalid domain URL");
+  }
 
   return addDomain(name, authType, domainAttr, isPublic);
 }
@@ -72,7 +76,9 @@ async function update(req: Request, identityId: string): Promise<unknown> {
   const domainAttr = pl.domain_attr as Attr;
   const isPublic = pl.public === true;
 
-  if (!isValidUrl(domainAttr.url)) throw new Error("invalid input");
+  if (!isValidUrl(domainAttr.url)) {
+    throw new HttpError(400, "Invalid domain URL");
+  }
 
   return updateDomain(domainId, name, authType, domainAttr, isPublic);
 }

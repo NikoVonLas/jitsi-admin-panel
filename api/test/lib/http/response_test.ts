@@ -33,6 +33,11 @@ describe("ok", () => {
     const res = ok("hello");
     assertEquals(res.status, 200);
   });
+
+  it("sets the JSON content type by default", () => {
+    const res = ok(JSON.stringify({ ok: true }));
+    assertEquals(res.headers.get("content-type"), "application/json");
+  });
 });
 
 describe("notFound", () => {
@@ -81,6 +86,13 @@ describe("badRequest", () => {
   it("uses custom message", async () => {
     const body = await badRequest("Invalid email").json();
     assertEquals(body.error.message, "Invalid email");
+  });
+
+  it("sets the JSON content type", () => {
+    assertEquals(
+      badRequest().headers.get("content-type"),
+      "application/json",
+    );
   });
 });
 

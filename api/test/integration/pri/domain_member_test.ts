@@ -10,6 +10,8 @@ import { cleanDb, makeRequest } from "../../helpers/db.ts";
 import { registerFirst } from "../../helpers/auth.ts";
 import routeDomain from "../../../lib/pri/domain.ts";
 import routeDomainMember from "../../../lib/pri/domain-member.ts";
+import { createLocalIdentity } from "../../../lib/database/identity-local.ts";
+import { hashPassword } from "../../../lib/common/password.ts";
 
 const EMAIL = "admin@domain-member-test.example";
 const PASSWORD = "secure_member_test_pass_123";
@@ -32,12 +34,18 @@ describe(
   { sanitizeResources: false, sanitizeOps: false },
   () => {
     let identityId = "";
+    let regularIdentityId = "";
     let domainId = "";
 
     beforeAll(async () => {
       await cleanDb();
       const auth = await registerFirst(EMAIL, PASSWORD);
       identityId = auth.identityId;
+      const rows = await createLocalIdentity(
+        "regular@domain-member-test.example",
+        await hashPassword("regular_member_test_pass_123"),
+      );
+      regularIdentityId = rows[0].id;
       domainId = await addTestDomain(identityId);
     });
 
@@ -142,6 +150,24 @@ describe(
       );
       const listBody = await listRes.json();
       assertEquals(listBody.length, 0);
+    });
+
+    it("rejects every operation from a regular user", async () => {
+      for (
+        const [path, body] of [
+          ["list", { domain_id: domainId }],
+          ["add", { domain_id: domainId, email: MEMBER_EMAIL }],
+          ["del", { id: crypto.randomUUID() }],
+        ] as const
+      ) {
+        const url = `/api/pri/domain/member/${path}`;
+        const res = await routeDomainMember(
+          makeRequest("POST", url, body),
+          url,
+          regularIdentityId,
+        );
+        assertEquals(res.status, 403);
+      }
     });
 
     it("returns 404 for unknown path", async () => {

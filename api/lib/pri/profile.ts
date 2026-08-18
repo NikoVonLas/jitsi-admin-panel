@@ -1,4 +1,4 @@
-import { notFound } from "../http/response.ts";
+import { forbidden, notFound } from "../http/response.ts";
 import { pri as wrapper } from "../http/wrapper.ts";
 import { getLimit, getOffset } from "../database/common.ts";
 import {
@@ -18,6 +18,8 @@ import {
   LOGO_DIR,
 } from "../../config.ts";
 import { upsertSetting } from "../database/setting.ts";
+import { getIsSuperAdmin } from "../database/identity.ts";
+import { hasImageSignature } from "../common/image.ts";
 
 const PRE = "/api/pri/profile";
 const ALLOWED_IMAGE_TYPES = new Set([
@@ -29,7 +31,6 @@ const ALLOWED_IMAGE_TYPES = new Set([
 const ALLOWED_LOGO_TYPES = new Set([
   "image/jpeg",
   "image/png",
-  "image/svg+xml",
   "image/webp",
 ]);
 const MAX_AVATAR_SIZE = 2 * 1024 * 1024; // 2 MB
@@ -167,11 +168,17 @@ async function uploadAvatar(
       return new Response("file too large", { status: 400 });
     }
 
+    const data = new Uint8Array(await file.arrayBuffer());
+    if (!hasImageSignature(data, file.type)) {
+      return new Response("file content does not match its type", {
+        status: 400,
+      });
+    }
+
     const ext = file.type.split("/")[1].replace("jpeg", "jpg");
     const filename = `${identityId}-${Date.now()}.${ext}`;
 
     await Deno.mkdir(AVATAR_DIR, { recursive: true });
-    const data = new Uint8Array(await file.arrayBuffer());
     await Deno.writeFile(`${AVATAR_DIR}/${filename}`, data);
 
     const url = `/api/pub/avatar/${filename}`;
@@ -200,8 +207,14 @@ async function uploadLogo(req: Request): Promise<Response> {
       return new Response("file too large", { status: 400 });
     }
 
-    await Deno.mkdir(LOGO_DIR, { recursive: true });
     const data = new Uint8Array(await file.arrayBuffer());
+    if (!hasImageSignature(data, file.type)) {
+      return new Response("file content does not match its type", {
+        status: 400,
+      });
+    }
+
+    await Deno.mkdir(LOGO_DIR, { recursive: true });
     await Deno.writeFile(`${LOGO_DIR}/logo`, data);
     await Deno.writeTextFile(`${LOGO_DIR}/logo.mime`, file.type);
 
@@ -242,7 +255,6 @@ async function resetLogo(_req: Request): Promise<Response> {
 const ALLOWED_FAVICON_TYPES = new Set([
   "image/jpeg",
   "image/png",
-  "image/svg+xml",
   "image/webp",
 ]);
 const MAX_FAVICON_SIZE = 5 * 1024 * 1024;
@@ -260,30 +272,36 @@ async function uploadFavicon(req: Request): Promise<Response> {
       return new Response("file too large", { status: 400 });
     }
 
-    const ext = file.type === "image/svg+xml"
-      ? "svg"
-      : file.type.split("/")[1].replace("jpeg", "jpg");
+    const data = new Uint8Array(await file.arrayBuffer());
+    if (!hasImageSignature(data, file.type)) {
+      return new Response("file content does not match its type", {
+        status: 400,
+      });
+    }
+
+    const ext = file.type.split("/")[1].replace("jpeg", "jpg");
     const tmpPath = `/tmp/favicon-src-${Date.now()}.${ext}`;
 
-    const data = new Uint8Array(await file.arrayBuffer());
     await Deno.writeFile(tmpPath, data);
+    let result;
+    try {
+      const { favicons } = await import("favicons");
+      const basePath = `${APP_SCHEME}://${APP_FQDN}/api/pub/favicon/`;
 
-    const { favicons } = await import("favicons");
-    const basePath = `${APP_SCHEME}://${APP_FQDN}/api/pub/favicon/`;
-
-    const result = await favicons(tmpPath, {
-      path: basePath,
-      icons: {
-        android: false,
-        appleIcon: true,
-        appleStartup: false,
-        favicons: true,
-        windows: false,
-        yandex: false,
-      },
-    });
-
-    await Deno.remove(tmpPath).catch(() => {});
+      result = await favicons(tmpPath, {
+        path: basePath,
+        icons: {
+          android: false,
+          appleIcon: true,
+          appleStartup: false,
+          favicons: true,
+          windows: false,
+          yandex: false,
+        },
+      });
+    } finally {
+      await Deno.remove(tmpPath).catch(() => {});
+    }
 
     await Deno.mkdir(FAVICON_DIR, { recursive: true });
 
@@ -334,11 +352,19 @@ async function setDefault(req: Request, identityId: string): Promise<unknown> {
 }
 
 // -----------------------------------------------------------------------------
-export default function routeProfile(
+export default async function routeProfile(
   req: Request,
   path: string,
   identityId: string,
 ): Promise<Response> {
+  const isBrandingRoute = path === `${PRE}/logo/upload` ||
+    path === `${PRE}/logo/reset` ||
+    path === `${PRE}/favicon/upload` ||
+    path === `${PRE}/favicon/reset`;
+  if (isBrandingRoute && !await getIsSuperAdmin(identityId)) {
+    return forbidden();
+  }
+
   if (path === `${PRE}/get`) {
     return wrapper(get, req, identityId);
   } else if (path === `${PRE}/get/default`) {
