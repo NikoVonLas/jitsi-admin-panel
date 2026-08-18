@@ -22,6 +22,7 @@ import localLogin from "./lib/adm/local-login.ts";
 import localRegister from "./lib/adm/local-register.ts";
 import oidcProvider from "./lib/adm/oidc-provider.ts";
 import { bootstrapOidcProvider } from "./lib/adm/bootstrap-oidc.ts";
+import { isPublicAuthPostPath } from "./lib/adm/public-auth-route.ts";
 
 const PRE = "/api/adm";
 
@@ -95,6 +96,13 @@ async function handler(req: Request): Promise<Response> {
   }
   if (req.method === "POST" && path === `${PRE}/auth/local/register`) {
     return await localRegister(req);
+  }
+
+  // The OIDC authorization-code exchange happens before the panel has issued
+  // its own session cookie. These narrowly scoped endpoints must therefore be
+  // reachable without an existing identity.
+  if (req.method === "POST" && isPublicAuthPostPath(path)) {
+    return await route(req, path);
   }
 
   // OIDC providers CRUD (superadmin only, handled inside wrapper)

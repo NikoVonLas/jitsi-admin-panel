@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import OidcValidate from '../OidcValidate';
 
 vi.mock('../../../lib/api', () => ({
@@ -16,6 +16,7 @@ describe('OidcValidate', () => {
     vi.clearAllMocks();
     localStorage.clear();
     sessionStorage.clear();
+    vi.mocked(action).mockResolvedValue({ id: 'x' });
     locationReplaceMock = vi.fn();
     vi.stubGlobal('location', {
       replace: locationReplaceMock,
@@ -46,6 +47,23 @@ describe('OidcValidate', () => {
     render(<OidcValidate />);
     await new Promise((r) => setTimeout(r, 20));
     expect(sessionStorage.getItem('oidc_authenticated')).toBe('ok');
+  });
+
+  it('does not mark the session authenticated before code exchange succeeds', async () => {
+    let resolveExchange!: (value: { id: string }) => void;
+    vi.mocked(action).mockReturnValue(
+      new Promise((resolve) => {
+        resolveExchange = resolve;
+      })
+    );
+
+    render(<OidcValidate />);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(sessionStorage.getItem('oidc_authenticated')).toBeNull();
+
+    resolveExchange({ id: 'x' });
+    await waitFor(() => expect(sessionStorage.getItem('oidc_authenticated')).toBe('ok'));
   });
 
   it('sets auth_token in localStorage on success', async () => {

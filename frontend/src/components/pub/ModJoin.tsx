@@ -1,7 +1,15 @@
 import { useRef, useState } from 'react';
 import { Alert, Button, Card, Input, Typography } from 'antd';
 import type { InputRef } from 'antd';
-import { CopyOutlined, CheckOutlined, ShareAltOutlined, DownloadOutlined, LoginOutlined, LockOutlined, TeamOutlined } from '@ant-design/icons';
+import {
+  CopyOutlined,
+  CheckOutlined,
+  ShareAltOutlined,
+  DownloadOutlined,
+  LoginOutlined,
+  LockOutlined,
+  TeamOutlined,
+} from '@ant-design/icons';
 import { useTr } from '../../i18n';
 import { useAppConfig } from '../../store/appconfig';
 
@@ -21,22 +29,29 @@ interface Props {
 }
 
 export default function ModJoin({
-  name = '', error = '', joining = false, participantUrl = '', qrDataUrl = '',
-  canShare = false, copiedUrl = false, onSubmit, onCopyUrl, onShareUrl,
+  name = '',
+  error = '',
+  joining = false,
+  participantUrl = '',
+  qrDataUrl = '',
+  canShare = false,
+  copiedUrl = false,
+  onSubmit,
+  onCopyUrl,
+  onShareUrl,
 }: Props) {
   const tr = useTr();
   const config = useAppConfig((s) => s.config);
   const [parts, setParts] = useState(['', '', '']);
   const PART_KEYS = ['part-0', 'part-1', 'part-2'] as const;
-  const inputRefs = [
-    useRef<InputRef>(null),
-    useRef<InputRef>(null),
-    useRef<InputRef>(null),
-  ];
+  const inputRefs = [useRef<InputRef>(null), useRef<InputRef>(null), useRef<InputRef>(null)];
   const hostKey = parts.join('');
 
   function onPartInput(i: number, v: string) {
-    const clean = v.replace(/[^a-zA-Z0-9]/g, '').slice(0, 3).toLowerCase();
+    const clean = v
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .slice(0, 3)
+      .toLowerCase();
     const newParts = [...parts];
     newParts[i] = clean;
     setParts(newParts);
@@ -51,10 +66,15 @@ export default function ModJoin({
   function onPartPaste(e: React.ClipboardEvent<HTMLInputElement>) {
     e.preventDefault();
     const raw = e.clipboardData.getData('text') || '';
-    const clean = raw.replace(/[^a-zA-Z0-9]/g, '').slice(0, 9).toLowerCase();
+    const clean = raw
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .slice(0, 9)
+      .toLowerCase();
     setParts([clean.slice(0, 3), clean.slice(3, 6), clean.slice(6, 9)]);
-    if (clean.length >= 9) { inputRefs[2].current?.focus(); onSubmit?.(clean); }
-    else if (clean.length >= 6) inputRefs[2].current?.focus();
+    if (clean.length >= 9) {
+      inputRefs[2].current?.focus();
+      onSubmit?.(clean);
+    } else if (clean.length >= 6) inputRefs[2].current?.focus();
     else if (clean.length >= 3) inputRefs[1].current?.focus();
   }
 
@@ -72,9 +92,21 @@ export default function ModJoin({
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 16px', background: 'var(--color-bg)' }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 24,
+        boxSizing: 'border-box',
+        padding: '24px 16px',
+        background: 'var(--color-bg)',
+      }}
+    >
       <Card
-        bordered={false}
+        variant="borderless"
         style={{ width: '100%', maxWidth: 420, boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}
         styles={{ body: { padding: '40px 48px' } }}
       >
@@ -97,18 +129,38 @@ export default function ModJoin({
 
         {/* Errors */}
         {error === 'too_early' && (
-          <Alert type="warning" showIcon message={tr('err.too_early')} style={{ marginBottom: 16 }} />
+          <Alert
+            type="warning"
+            showIcon
+            message={tr('err.too_early')}
+            style={{ marginBottom: 16 }}
+          />
         )}
         {error === 'invalid' && (
-          <Alert type="error" showIcon message={tr('err.host_key_invalid')} style={{ marginBottom: 16 }} />
+          <Alert
+            type="error"
+            showIcon
+            message={tr('err.host_key_invalid')}
+            style={{ marginBottom: 16 }}
+          />
         )}
 
         {/* Key input */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 24 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            marginBottom: 24,
+          }}
+        >
           {parts.map((part, i) => (
             <span key={PART_KEYS[i]} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {i > 0 && (
-                <Text type="secondary" style={{ fontWeight: 700, fontSize: 20 }}>·</Text>
+                <Text type="secondary" style={{ fontWeight: 700, fontSize: 20 }}>
+                  ·
+                </Text>
               )}
               <Input
                 ref={inputRefs[i]}
@@ -154,18 +206,44 @@ export default function ModJoin({
 
       {/* Participant link card */}
       {participantUrl && (
-        <div style={{ position: 'absolute', bottom: 24, width: '100%', maxWidth: 420, padding: '0 16px' }}>
-          <Card
-            style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
-          >
-            <Text type="secondary" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-              <TeamOutlined />{tr('meeting.link')}
+        <div
+          data-testid="participant-link-card"
+          style={{
+            width: '100%',
+            maxWidth: 420,
+          }}
+        >
+          <Card style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+            <Text
+              type="secondary"
+              style={{
+                fontSize: 12,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                marginBottom: 12,
+              }}
+            >
+              <TeamOutlined />
+              {tr('meeting.link')}
             </Text>
 
             {qrDataUrl && (
               <div style={{ textAlign: 'center', marginBottom: 12 }}>
-                <div style={{ display: 'inline-block', padding: 8, background: '#fff', borderRadius: 8, border: '1px solid var(--color-border)' }}>
-                  <img src={qrDataUrl} alt="QR" style={{ width: 160, height: 160, display: 'block' }} />
+                <div
+                  style={{
+                    display: 'inline-block',
+                    padding: 8,
+                    background: '#fff',
+                    borderRadius: 8,
+                    border: '1px solid var(--color-border)',
+                  }}
+                >
+                  <img
+                    src={qrDataUrl}
+                    alt="QR"
+                    style={{ width: 160, height: 160, display: 'block' }}
+                  />
                 </div>
                 <div style={{ marginTop: 8 }}>
                   <Button icon={<DownloadOutlined />} onClick={downloadQr}>
@@ -175,12 +253,29 @@ export default function ModJoin({
               </div>
             )}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', borderRadius: 6, padding: '4px 8px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                background: 'var(--color-bg-subtle)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 6,
+                padding: '4px 8px',
+              }}
+            >
               <a
                 href={participantUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12, color: 'var(--color-text)' }}
+                style={{
+                  flex: 1,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  fontSize: 12,
+                  color: 'var(--color-text)',
+                }}
               >
                 {participantUrl}
               </a>

@@ -51,6 +51,7 @@ describe('ModJoin', () => {
   it('shows participant url section when participantUrl is provided', () => {
     render(<ModJoin participantUrl="https://example.com/j/abc123" />);
     expect(screen.getByText('https://example.com/j/abc123')).toBeInTheDocument();
+    expect(screen.getByTestId('participant-link-card')).not.toHaveStyle({ position: 'absolute' });
   });
 
   it('does not show participant section when participantUrl is empty', () => {
@@ -92,7 +93,9 @@ describe('ModJoin', () => {
   });
 
   it('shows qr image when qrDataUrl is provided', () => {
-    render(<ModJoin participantUrl="https://example.com/j/abc" qrDataUrl="data:image/png;base64,abc" />);
+    render(
+      <ModJoin participantUrl="https://example.com/j/abc" qrDataUrl="data:image/png;base64,abc" />
+    );
     const qrImg = document.querySelector('img[alt="QR"]');
     expect(qrImg).toBeInTheDocument();
   });

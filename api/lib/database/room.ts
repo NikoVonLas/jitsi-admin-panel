@@ -124,8 +124,7 @@ export async function getRoomLinksetByRoomHostKey(
         JOIN identity ir ON r.identity_id = ir.id AND ir.enabled
       WHERE r.id = $1
         AND r.host_key = $2
-        AND r.enabled
-        AND (d.public OR d.identity_id = r.identity_id)`,
+        AND r.enabled`,
     args: [roomId, hostKey],
   };
 
@@ -306,7 +305,6 @@ export async function getRoomLinksetByHostKey(
         AND ms.host_key = $2
         AND ms.enabled
         AND ses.ended_at > now()
-        AND (d.public OR d.identity_id = r.identity_id)
       ORDER BY ses.started_at
       LIMIT 1`,
     args: [
@@ -338,7 +336,6 @@ export async function getRoomLinksetByMeetingAndHostKey(
         AND ms.host_key = $2
         AND ms.enabled
         AND ses.ended_at > now()
-        AND (d.public OR d.identity_id = r.identity_id)
       ORDER BY ses.started_at
       LIMIT 1`,
     args: [

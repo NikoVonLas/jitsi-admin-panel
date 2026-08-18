@@ -11,8 +11,7 @@ function decodeState(qs: URLSearchParams): { next: string; pid?: string } {
     const decoded = decodeURIComponent(state);
     const json = JSON.parse(atob(decoded));
     if (json && typeof json === 'object') {
-      const next =
-        typeof json.next === 'string' && json.next.startsWith('/') ? json.next : '/';
+      const next = typeof json.next === 'string' && json.next.startsWith('/') ? json.next : '/';
       const pid = typeof json.pid === 'string' ? json.pid : undefined;
       return { next, pid };
     }
@@ -44,7 +43,6 @@ export default function OidcValidate() {
       for (const [k, v] of Object.entries(saved)) {
         if (v) localStorage.setItem(k, v);
       }
-      sessionStorage.setItem('oidc_authenticated', 'ok');
       try {
         await get('/api/adm/identity/clear');
         const qs = new URLSearchParams(globalThis.location.search);
@@ -58,7 +56,7 @@ export default function OidcValidate() {
           ...(pid ? { provider_id: pid } : {}),
         });
 
-        // Mark as authenticated in localStorage (analogous to local auth)
+        sessionStorage.setItem('oidc_authenticated', 'ok');
         localStorage.setItem('auth_token', 'oidc');
         globalThis.location.replace(next);
       } catch {
