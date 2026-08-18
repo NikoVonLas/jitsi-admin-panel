@@ -44,6 +44,20 @@ async function waitForHttp(request: APIRequestContext, url: string) {
     .toBe(true);
 }
 
+async function assertGatewayConfig(request: APIRequestContext) {
+  const response = await request.get('/');
+  expect(response.ok()).toBe(true);
+  expect(response.headers()['server']).toBeUndefined();
+  expect(response.headers()['x-content-type-options']).toBe('nosniff');
+  expect(response.headers()['referrer-policy']).toBe('no-referrer');
+  expect(response.headers()['x-frame-options']).toBe('DENY');
+  expect(response.headers()['permissions-policy']).toBe('camera=(), microphone=(), geolocation=()');
+
+  const publicConfig = await request.post('/api/pub/hello', { data: {} });
+  expect(publicConfig.ok()).toBe(true);
+  expect((await publicConfig.json()).lang).toBe('en');
+}
+
 async function createJitsiRoom(page: Page) {
   const suffix = `${mode}-${Date.now().toString(36)}`;
   const domainName = `E2E Jitsi ${suffix}`;
@@ -81,7 +95,8 @@ async function createJitsiRoom(page: Page) {
     (response) => response.url().endsWith('/api/pri/room/add') && response.status() === 200
   );
   await roomDialog.getByRole('button', { name: 'Add', exact: true }).click();
-  await roomAdded;
+  const roomAddedResponse = await roomAdded;
+  const [{ id: roomId }] = (await roomAddedResponse.json()) as [{ id: string }];
 
   const roomCard = page.locator('.ant-card').filter({ hasText: roomLabel });
   await expect(roomCard).toBeVisible();
@@ -104,8 +119,78 @@ async function createJitsiRoom(page: Page) {
     hostKey,
     moderatorUrl: moderatorUrl!,
     participantUrl: participantUrl!,
+    roomId,
     roomSlug,
   };
+}
+
+interface MailpitMessage {
+  ID?: string;
+  Subject?: string;
+  To?: Array<{ Address?: string }>;
+}
+
+async function exerciseEmailReminder(page: Page, request: APIRequestContext, roomId: string) {
+  const expectedEmail = mode === 'keycloak' ? 'keycloak-admin@example.test' : 'admin@example.test';
+  const api = page.context().request;
+
+  const profileResponse = await api.post('/api/pri/profile/get/default', { data: {} });
+  expect(profileResponse.ok()).toBe(true);
+  const [{ id: profileId }] = (await profileResponse.json()) as [{ id: string }];
+
+  const meetingName = `E2E reminder ${mode}-${Date.now().toString(36)}`;
+  const meetingResponse = await api.post('/api/pri/meeting/add', {
+    data: {
+      profile_id: profileId,
+      room_id: roomId,
+      name: meetingName,
+      info: 'Real SMTP reminder delivery',
+      hidden: false,
+      subscribable: false,
+    },
+  });
+  expect(meetingResponse.ok()).toBe(true);
+  const [{ id: meetingId }] = (await meetingResponse.json()) as [{ id: string }];
+
+  const scheduleResponse = await api.post('/api/pri/meeting/schedule/add', {
+    data: {
+      meeting_id: meetingId,
+      schedule_attr: {
+        type: 'o',
+        duration: '60',
+        started_at: new Date(Date.now() + 28 * 60 * 1000).toISOString(),
+      },
+    },
+  });
+  expect(scheduleResponse.ok()).toBe(true);
+
+  let reminderId = '';
+  await expect
+    .poll(
+      async () => {
+        try {
+          const response = await request.get('http://mailpit:8025/api/v1/messages');
+          if (!response.ok()) return false;
+          const payload = (await response.json()) as { messages?: MailpitMessage[] };
+          const reminder = payload.messages?.find(
+            (message) =>
+              message.Subject === `You have a meeting in 30 minutes, ${meetingName}` &&
+              message.To?.some((address) => address.Address === expectedEmail)
+          );
+          reminderId = reminder?.ID || '';
+          return reminderId !== '';
+        } catch {
+          return false;
+        }
+      },
+      { timeout: 90_000, intervals: [500, 1_000, 2_000] }
+    )
+    .toBe(true);
+
+  const messageResponse = await request.get(`http://mailpit:8025/api/v1/message/${reminderId}`);
+  expect(messageResponse.ok()).toBe(true);
+  const message = (await messageResponse.json()) as { Text?: string };
+  expect(message.Text).toContain(`http://web/jm/${meetingId}`);
 }
 
 async function conferenceStatus(page: Page) {
@@ -150,6 +235,7 @@ async function waitForConference(page: Page, remoteParticipants: number) {
 async function exerciseJitsi(page: Page, browser: Browser, request: APIRequestContext) {
   await waitForHttp(request, `${jitsiBaseUrl}/config.js`);
   const room = await createJitsiRoom(page);
+  await exerciseEmailReminder(page, request, room.roomId);
 
   const moderatorPage = await page.context().newPage();
   await moderatorPage.goto(room.moderatorUrl);
@@ -212,6 +298,7 @@ test.describe('local authentication @local', () => {
     browser,
     request,
   }) => {
+    await assertGatewayConfig(request);
     await waitForJson(request, '/api/adm/auth/config', (value) => {
       const config = value as { local?: boolean };
       return config.local === true;
@@ -301,6 +388,7 @@ test.describe('Keycloak authentication @keycloak', () => {
     browser,
     request,
   }) => {
+    await assertGatewayConfig(request);
     await waitForJson(
       request,
       'http://keycloak:8080/realms/jitsi/.well-known/openid-configuration',
@@ -358,7 +446,7 @@ test.describe('Keycloak authentication @keycloak', () => {
     const keycloakLogout = page.getByRole('button', { name: 'Logout', exact: true });
     await expect(keycloakLogout).toBeVisible({ timeout: 30_000 });
     await keycloakLogout.click();
-    await expect(page.locator('#username')).toBeVisible({ timeout: 30_000 });
+    await expect(page).toHaveURL(/http:\/\/web\/login$/, { timeout: 30_000 });
 
     await page.goto('/meeting');
     await expect(page).toHaveURL(/\/login$/);

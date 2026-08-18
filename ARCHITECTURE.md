@@ -16,6 +16,11 @@ Browser ──443───► web (Caddy) ──/api/adm/──► api-adm:8000 
 ```
 
 Caddy — единственная точка входа. Все три API недоступны снаружи Docker-сети.
+Он удаляет заголовок `Server` и добавляет базовые anti-sniffing, anti-framing,
+referrer и permissions-policy заголовки для панели.
+Адрес сайта Caddy вычисляется Compose из раздельных `APP_SCHEME` и `APP_FQDN`;
+при нестандартном внутреннем bind его можно переопределить через
+`CADDY_ADDRESS`, не ломая публичные ссылки и OIDC callback URL.
 
 ## Services
 
@@ -36,14 +41,18 @@ Auth gateway и control plane. Единственный сервис с публ
 api-pri и api-pub при старте проверяют версию БД и завершаются с ошибкой,
 если она не совпадает с константой `DB_VERSION` в `config.ts`.
 
+Каждый API перед подключением к БД валидирует обязательные runtime-параметры.
+Общий JWT-secret передаётся только api-adm/api-pri, SMTP-пароль — только
+api-adm, а api-pub получает лишь параметры БД и язык. Compose включает
+`no-new-privileges` для всех контейнеров приложения и не запускает Caddy до
+успешных healthcheck всех API.
+
 ### api-pri (port 8001)
 
 Основной рабочий сервис. Все маршруты требуют валидный JWT в httpOnly-cookie
-`token`. Покрывает: домены, комнаты, встречи, расписания, профили, контакты,
-настройки, intercom.
-
-Единственный GET-маршрут — SSE-поток `/api/pri/intercom/stream`: polling БД
-каждые 2.5 сек, push уведомлений клиенту.
+`token`. Покрывает домены, комнаты, встречи, расписания, профили и настройки.
+Недоступный из продукта legacy-контур contacts/invites/phones/intercom удалён;
+пользователи создаются локальной регистрацией или JIT-входом через OIDC.
 
 ### api-pub (port 8002)
 
@@ -128,11 +137,17 @@ Cronjob в api-adm раз в 30 секунд выбирает встречи, н
 через 30 минут, и отправляет владельцу ссылку `/jm/:meetingId`. Эта публичная
 страница позволяет открыть moderator URL из активной сессии либо войти по
 host key. SMTP берётся из настроек БД с fallback на `MAILER_*` env api-adm.
+Успешная доставка фиксируется в `meeting_session.reminder_sent_at`; неуспешная
+остаётся в очереди до конца окна и повторяется после рестарта процесса.
+
+Daily-расписания с `rep_end_type=forever` хранят скользящий горизонт сессий на
+365 дней. Housekeeping пополняет его идемпотентно перед удалением завершённых
+сессий; уникальность `(meeting_schedule_id, started_at)` исключает дубликаты.
 
 ## End-to-End Test Stack
 
 `docker-compose.e2e.yml` поднимает изолированный одноразовый контур: чистый
-PostgreSQL volume, все четыре сервиса панели и полный Jitsi Meet
+PostgreSQL volume, все четыре сервиса панели, SMTP-сервер Mailpit и полный Jitsi Meet
 (`prosody`, `jicofo`, `jvb`, `jitsi-web`). В режиме `keycloak` к нему
 добавляется настоящий Keycloak с импортируемым realm; пользователи создаются
 только в Keycloak, без Admin REST API.
@@ -140,9 +155,11 @@ PostgreSQL volume, все четыре сервиса панели и полны
 Playwright проходит формы панели, создаёт token-auth домен и комнату, входит
 модератором по сгенерированному JWT и подключает анонимного участника во втором
 browser context. Успех подтверждается одновременно состоянием конференции в
-обоих клиентах и REST-статистикой JVB (`1` конференция, `2` участника). Таким
-образом тест покрывает цепочку panel UI → API → PostgreSQL → JWT → Prosody /
-Jicofo / JVB, а не только HTTP-доступность контейнеров.
+обоих клиентах и REST-статистикой JVB (`1` конференция, `2` участника). Тот же
+сценарий создаёт встречу на окно напоминания, дожидается cronjob и проверяет
+реально принятое SMTP-письмо, включая адресата, тему и ссылку. Таким образом
+тест покрывает цепочки panel UI → API → PostgreSQL → JWT → Prosody / Jicofo /
+JVB и API → cronjob → SMTP, а не только HTTP-доступность контейнеров.
 
 ## Key Decisions
 
@@ -153,3 +170,4 @@ Jicofo / JVB, а не только HTTP-доступность контейне�
 | POST для всех read-операций     | Единообразие; body для pagination/фильтров без query-string          |
 | Без фреймворка (ручной роутинг) | Минимум зависимостей, Deno-first подход                              |
 | httpOnly cookie + SameSite=Lax  | CSRF-митигация без отдельного токена                                 |
+| Без legacy invite/intercom flow | Контур не имел create-flow; identities создаются local/OIDC          |

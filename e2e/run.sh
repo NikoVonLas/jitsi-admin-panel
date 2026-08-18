@@ -11,7 +11,7 @@ case "$MODE" in
     export E2E_OIDC_CLIENT_SECRET=
     export E2E_OIDC_ISSUER_URL=
     COMPOSE_PROFILE_ARGS=""
-    STACK_SERVICES="db api-adm api-pri api-pub web prosody jicofo jvb jitsi-web"
+    STACK_SERVICES="mailpit db api-adm api-pri api-pub web prosody jicofo jvb jitsi-web"
     ;;
   keycloak)
     export E2E_MODE=keycloak
@@ -20,7 +20,7 @@ case "$MODE" in
     export E2E_OIDC_CLIENT_SECRET=e2e-client-secret
     export E2E_OIDC_ISSUER_URL=http://keycloak:8080/realms/jitsi
     COMPOSE_PROFILE_ARGS="--profile keycloak"
-    STACK_SERVICES="db keycloak api-adm api-pri api-pub web prosody jicofo jvb jitsi-web"
+    STACK_SERVICES="mailpit db keycloak api-adm api-pri api-pub web prosody jicofo jvb jitsi-web"
     ;;
   *)
     echo "usage: $0 local|keycloak" >&2
@@ -31,12 +31,22 @@ esac
 PROJECT_NAME="jitsi-admin-e2e-$MODE"
 COMPOSE_FILE="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)/docker-compose.e2e.yml"
 
-cleanup() {
+compose_cleanup() {
   docker compose --project-name "$PROJECT_NAME" --file "$COMPOSE_FILE" $COMPOSE_PROFILE_ARGS down --volumes --remove-orphans
 }
 
-trap cleanup EXIT INT TERM
-cleanup
+on_exit() {
+  status=$?
+  trap - EXIT INT TERM
+  if [ "$status" -ne 0 ]; then
+    docker compose --project-name "$PROJECT_NAME" --file "$COMPOSE_FILE" $COMPOSE_PROFILE_ARGS logs --no-color --tail 200 api-adm mailpit keycloak || true
+  fi
+  compose_cleanup
+  exit "$status"
+}
+
+trap on_exit EXIT INT TERM
+compose_cleanup
 
 docker compose \
   --project-name "$PROJECT_NAME" \

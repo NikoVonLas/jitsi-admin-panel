@@ -1,15 +1,24 @@
+x-api-db-environment: &api-db-environment
+  DB_HOST: db
+  DB_NAME: ${DB_NAME:-jitsi}
+  DB_USER: ${DB_USER:-jitsi}
+  DB_PASSWD: ${DB_PASSWD:?Set DB_PASSWD in .env}
+  DB_PORT: ${DB_PORT:-5432}
+  DB_POOL_SIZE: ${DB_POOL_SIZE:-8}
+
 services:
   db:
     image: postgres:17
     restart: always
     environment:
-      - POSTGRES_DB=jitsi
-      - POSTGRES_USER=jitsi
-      - POSTGRES_PASSWORD=${DB_PASSWD}
+      POSTGRES_DB: ${DB_NAME:-jitsi}
+      POSTGRES_USER: ${DB_USER:-jitsi}
+      POSTGRES_PASSWORD: ${DB_PASSWD:?Set DB_PASSWD in .env}
     volumes:
       - data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U jitsi -d jitsi"]
+      test:
+        ["CMD-SHELL", "pg_isready -U ${DB_USER:-jitsi} -d ${DB_NAME:-jitsi}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -20,33 +29,40 @@ services:
     image: ghcr.io/nikovonlas/jitsi-admin-panel/api-adm:latest
     restart: always
     environment:
-      - ALLOW_UNSECURE_CERT
-      - API_SECRET
-      - API_TIMEOUT
-      - APP_SCHEME
-      - AUTH_LOCAL
-      - DB_HOST=db
-      - DB_PASSWD
-      - APP_FQDN
-      - LANG_UI
-      - OIDC_CLIENT_ID
-      - OIDC_CLIENT_SECRET
-      - OIDC_ISSUER_URL
-      - OIDC_PROVIDER_NAME
-      - OIDC_SCOPES
-      - SUPERADMIN_ROLE
-      - SESSION_COOKIE_SECURE
-      - MAILER_HOST
-      - MAILER_PORT
-      - MAILER_SECURE
-      - MAILER_USER
-      - MAILER_PASS
-      - MAILER_FROM
+      <<: *api-db-environment
+      ALLOW_UNSECURE_CERT: ${ALLOW_UNSECURE_CERT:-false}
+      API_SECRET: ${API_SECRET:?Set API_SECRET in .env}
+      API_TIMEOUT: ${API_TIMEOUT:-86400}
+      APP_SCHEME: ${APP_SCHEME:-https}
+      AUTH_LOCAL: ${AUTH_LOCAL:-true}
+      APP_FQDN: ${APP_FQDN:?Set APP_FQDN in .env}
+      LANG_UI: ${LANG_UI:-en}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:-}
+      OIDC_PROVIDER_NAME: ${OIDC_PROVIDER_NAME:-Keycloak}
+      OIDC_SCOPES: ${OIDC_SCOPES:-openid profile email}
+      SUPERADMIN_ROLE: ${SUPERADMIN_ROLE:-jitsi-superadmin}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
+      MAILER_HOST: ${MAILER_HOST:-}
+      MAILER_PORT: ${MAILER_PORT:-465}
+      MAILER_SECURE: ${MAILER_SECURE:-true}
+      MAILER_USER: ${MAILER_USER:-}
+      MAILER_PASS: ${MAILER_PASS:-}
+      MAILER_FROM: ${MAILER_FROM:-}
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "deno", "eval", "const conn=await Deno.connect({hostname:'127.0.0.1',port:8000});conn.close()"]
+      test:
+        [
+          "CMD",
+          "deno",
+          "eval",
+          "const conn=await Deno.connect({hostname:'127.0.0.1',port:8000});conn.close()",
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -57,19 +73,20 @@ services:
     image: ghcr.io/nikovonlas/jitsi-admin-panel/api-pri:latest
     restart: always
     environment:
-      - API_SECRET
-      - ALLOW_UNSECURE_CERT
-      - APP_SCHEME
-      - AUTH_LOCAL
-      - DB_HOST=db
-      - DB_PASSWD
-      - APP_FQDN
-      - MAILER_HOST
-      - MAILER_PORT
-      - MAILER_SECURE
-      - MAILER_USER
-      - MAILER_PASS
-      - MAILER_FROM
+      <<: *api-db-environment
+      API_SECRET: ${API_SECRET:?Set API_SECRET in .env}
+      ALLOW_UNSECURE_CERT: ${ALLOW_UNSECURE_CERT:-false}
+      APP_SCHEME: ${APP_SCHEME:-https}
+      AUTH_LOCAL: ${AUTH_LOCAL:-true}
+      APP_FQDN: ${APP_FQDN:?Set APP_FQDN in .env}
+      LANG_UI: ${LANG_UI:-en}
+      MAILER_HOST: ${MAILER_HOST:-}
+      MAILER_PORT: ${MAILER_PORT:-465}
+      MAILER_SECURE: ${MAILER_SECURE:-true}
+      MAILER_USER: ${MAILER_USER:-}
+      MAILER_FROM: ${MAILER_FROM:-}
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - uploads:/data
     depends_on:
@@ -77,6 +94,17 @@ services:
         condition: service_healthy
       api-adm:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "deno",
+          "eval",
+          "const conn=await Deno.connect({hostname:'127.0.0.1',port:8001});conn.close()",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - intranet
 
@@ -84,8 +112,10 @@ services:
     image: ghcr.io/nikovonlas/jitsi-admin-panel/api-pub:latest
     restart: always
     environment:
-      - DB_HOST=db
-      - DB_PASSWD
+      <<: *api-db-environment
+      LANG_UI: ${LANG_UI:-en}
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - uploads:/data
     depends_on:
@@ -93,6 +123,17 @@ services:
         condition: service_healthy
       api-adm:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "deno",
+          "eval",
+          "const conn=await Deno.connect({hostname:'127.0.0.1',port:8002});conn.close()",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - intranet
 
@@ -104,14 +145,19 @@ services:
       - "443:443"
       - "443:443/udp"
     environment:
-      - APP_FQDN
+      CADDY_ADDRESS: ${CADDY_ADDRESS:-${APP_SCHEME:-https}://${APP_FQDN:?Set APP_FQDN in .env}}
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      - api-adm
-      - api-pri
-      - api-pub
+      api-adm:
+        condition: service_healthy
+      api-pri:
+        condition: service_healthy
+      api-pub:
+        condition: service_healthy
     networks:
       - intranet
 

@@ -8,6 +8,33 @@ on:
     branches: [main]
 
 jobs:
+  validate-compose:
+    name: Validate Compose configuration
+    runs-on: ubuntu-latest
+    env:
+      API_SECRET: 0123456789abcdef0123456789abcdef
+      APP_FQDN: panel.example.com
+      DB_PASSWD: ci-database-password
+      MAILER_PASS: ci-smtp-password
+    steps:
+      - uses: actions/checkout@v4
+      - name: Render all Compose files
+        run: |
+          docker compose --file docker-compose.yml config --quiet
+          docker compose --file docker-compose.prod.yml config --quiet
+          docker compose --file docker-compose.e2e.yml config --quiet
+      - name: Verify production secret isolation
+        run: |
+          docker compose --file docker-compose.prod.yml config --format json > /tmp/compose.json
+          jq --exit-status '
+            .services["api-adm"].environment.MAILER_PASS == "ci-smtp-password" and
+            (.services["api-pri"].environment | has("MAILER_PASS") | not) and
+            (.services["api-pub"].environment | has("API_SECRET") | not) and
+            (.services["api-pub"].environment | has("MAILER_PASS") | not) and
+            .services["api-pub"].environment.LANG_UI == "en" and
+            .services.web.environment.CADDY_ADDRESS == "https://panel.example.com"
+          ' /tmp/compose.json
+
   lint-api:
     name: Deno lint & format
     runs-on: ubuntu-latest
@@ -127,7 +154,15 @@ jobs:
     name: E2E (${{ matrix.auth }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: [lint-api, build-frontend, lint-i18n, test-api, test-frontend]
+    needs:
+      [
+        validate-compose,
+        lint-api,
+        build-frontend,
+        lint-i18n,
+        test-api,
+        test-frontend,
+      ]
     strategy:
       fail-fast: false
       matrix:
