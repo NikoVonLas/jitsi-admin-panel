@@ -165,7 +165,7 @@ npm run test:e2e     # full Docker E2E: local auth, Keycloak and real Jitsi
 | File                      | Purpose                                                                                                                            |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `docker-compose.yml`      | **Development** — builds all images locally from the Dockerfiles in `docker/`. Use when working on the source code.                |
-| `docker-compose.prod.yml` | **Production** — pulls pre-built images from GHCR (`ghcr.io/nikovonlas/jitsi-admin-panel/*`). No local build required.             |
+| `docker-compose.prod.yml` | **Production** — pulls pre-built images from GHCR (`ghcr.io/nikovonlas/jitsi-admin-panel/*`). `IMAGE_TAG` selects the release. |
 | `docker-compose.e2e.yml`  | **End-to-end tests** — starts empty volumes, all panel services, Mailpit, Keycloak when requested, and a complete Jitsi stack.   |
 
 ### End-to-end tests
@@ -206,12 +206,43 @@ watchtower:
 
 Adjust `--interval` (seconds) to control how often it checks for updates.
 
+### Releases and rollback
+
+Create a stable semantic-version tag from `main` to start a release:
+
+```sh
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+The release workflow first publishes four candidate images with the immutable
+`v1.2.3` tag. It then runs the complete local-auth and Keycloak E2E suites
+against those pulled images. Only a candidate that passes both suites is
+promoted to `latest` and published as a GitHub Release. A failed build or E2E
+run never changes `latest`.
+
+Promotion snapshots the previous `latest` digest of every application image.
+If updating or verifying the four tags fails partway through, it retries and
+then restores the previous image set. There is no previous set to restore on
+the first-ever release, so its candidate E2E checks are the rollback boundary.
+
+Production uses the verified `latest` set by default. Pin an immutable version
+for a reproducible deployment or explicit rollback:
+
+```sh
+IMAGE_TAG=v1.2.3 docker compose --file docker-compose.prod.yml up --detach
+IMAGE_TAG=v1.2.2 docker compose --file docker-compose.prod.yml up --detach
+```
+
+Persist `IMAGE_TAG` in `.env` when the deployment must remain pinned. Watchtower
+should only be enabled for deployments intentionally following `latest`.
+
 ## CI
 
 | Workflow    | Trigger                | What it does                                                                                                                       |
 | ----------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| **CI**      | Every branch push / PR | Compose/env validation, Deno lint & format, frontend build, API/frontend tests, full local/Keycloak/Jitsi E2E, SonarCloud analysis |
-| **Release** | Tag `v*.*.*`           | Builds and pushes Docker images to GHCR (`ghcr.io/nikovonlas/jitsi-admin-panel/*`)                                                 |
+| **CI**      | Push to `main` / PR | Compose/env validation, release-script tests, Deno lint & format, frontend build, API/frontend tests, full local/Keycloak/Jitsi E2E, SonarCloud analysis |
+| **Release** | Tag `v*.*.*`        | Builds versioned candidates, tests the pulled images in both auth modes, promotes the verified set to `latest`, and creates a GitHub Release          |
 
 ## License
 
