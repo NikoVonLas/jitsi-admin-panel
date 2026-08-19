@@ -30,6 +30,19 @@ PROJECT_NAME="jitsi-admin-e2e-$MODE"
 PROJECT_ROOT="$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
 COMPOSE_FILE="$PROJECT_ROOT/docker-compose.e2e.yml"
 RESULTS_DIR="$PROJECT_ROOT/frontend/test-results"
+USE_RELEASE_IMAGES="${E2E_USE_RELEASE_IMAGES:-false}"
+
+case "$USE_RELEASE_IMAGES" in
+  true)
+    : "${APP_IMAGE_PREFIX:?Set APP_IMAGE_PREFIX for release-image E2E}"
+    : "${APP_IMAGE_TAG:?Set APP_IMAGE_TAG for release-image E2E}"
+    ;;
+  false) ;;
+  *)
+    echo "E2E_USE_RELEASE_IMAGES must be true or false" >&2
+    exit 2
+    ;;
+esac
 
 # Docker creates a missing bind-mount directory as root. Prepare it explicitly
 # so the non-root Playwright user can write reports on a clean CI checkout.
@@ -61,6 +74,13 @@ on_exit() {
 trap on_exit EXIT INT TERM
 compose_cleanup
 
-compose build
-compose up --detach --wait "$@"
-compose run --rm --no-deps e2e
+if [ "$USE_RELEASE_IMAGES" = true ]; then
+  compose build e2e
+  compose pull api-adm api-pri api-pub web
+  compose up --detach --wait --no-build "$@"
+  compose run --rm --no-deps e2e
+else
+  compose build
+  compose up --detach --wait "$@"
+  compose run --rm --no-deps e2e
+fi

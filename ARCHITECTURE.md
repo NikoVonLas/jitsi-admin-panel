@@ -161,6 +161,26 @@ browser context. Успех подтверждается одновременн�
 тест покрывает цепочки panel UI → API → PostgreSQL → JWT → Prosody / Jicofo /
 JVB и API → cronjob → SMTP, а не только HTTP-доступность контейнеров.
 
+## Release Promotion
+
+Release запускается стабильным semver-тегом `vX.Y.Z`, указывающим на commit из
+`main`. Четыре application-образа (`api-adm`, `api-pri`, `api-pub`, `web`)
+сначала публикуются в GHCR только с immutable-тегом версии. Две параллельные
+job поднимают эти скачанные образы в полном E2E-контуре с local auth и Keycloak;
+повторной локальной сборки application-образов на этом этапе нет.
+
+`latest` является promotion-указателем, а не результатом каждой отдельной
+сборки. Он обновляется для всех четырёх образов только после успешных E2E.
+Перед обновлением workflow сохраняет предыдущие manifest digest и при частичном
+сбое promotion восстанавливает прежний набор. Если кандидат не собрался или не
+прошёл E2E, promotion job не запускается и production остаётся на прошлой
+версии. После promotion создаётся GitHub Release.
+
+`docker-compose.prod.yml` принимает единый `IMAGE_TAG`: по умолчанию `latest`,
+а конкретный `vX.Y.Z` фиксирует воспроизводимый deploy или rollback. Сам deploy
+на сервер не входит в workflow, поскольку репозиторий не содержит deployment
+target или credentials; rollback здесь относится к стабильному набору в GHCR.
+
 ## Key Decisions
 
 | Решение                         | Обоснование                                                          |

@@ -16,12 +16,15 @@ jobs:
       DB_PASSWD: ci-database-password
       MAILER_PASS: ci-smtp-password
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Render all Compose files
         run: |
           docker compose --file docker-compose.yml config --quiet
           docker compose --file docker-compose.prod.yml config --quiet
           docker compose --file docker-compose.e2e.yml config --quiet
+          IMAGE_TAG=v9.8.7 docker compose --file docker-compose.prod.yml config --quiet
+          APP_IMAGE_PREFIX=ghcr.io/example/panel APP_IMAGE_TAG=v9.8.7 \
+            docker compose --file docker-compose.e2e.yml config --quiet
       - name: Verify production secret isolation
         run: |
           docker compose --file docker-compose.prod.yml config --format json > /tmp/compose.json
@@ -33,12 +36,35 @@ jobs:
             .services["api-pub"].environment.LANG_UI == "en" and
             .services.web.environment.CADDY_ADDRESS == "https://panel.example.com"
           ' /tmp/compose.json
+      - name: Verify image tag selection
+        run: |
+          IMAGE_TAG=v9.8.7 docker compose --file docker-compose.prod.yml config --format json > /tmp/compose-versioned.json
+          APP_IMAGE_PREFIX=ghcr.io/example/panel APP_IMAGE_TAG=v9.8.7 \
+            docker compose --file docker-compose.e2e.yml config --format json > /tmp/e2e-versioned.json
+          jq --exit-status '
+            [
+              .services["api-adm"].image,
+              .services["api-pri"].image,
+              .services["api-pub"].image,
+              .services.web.image
+            ] | all(endswith(":v9.8.7"))
+          ' /tmp/compose-versioned.json
+          jq --exit-status '
+            .services["api-adm"].image == "ghcr.io/example/panel/api-adm:v9.8.7" and
+            .services["api-pri"].image == "ghcr.io/example/panel/api-pri:v9.8.7" and
+            .services["api-pub"].image == "ghcr.io/example/panel/api-pub:v9.8.7" and
+            .services.web.image == "ghcr.io/example/panel/web:v9.8.7"
+          ' /tmp/e2e-versioned.json
+      - name: Test release scripts
+        run: |
+          ./.github/scripts/promote-images.test.sh
+          ./e2e/run.test.sh
 
   lint-api:
     name: Deno lint & format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
@@ -51,8 +77,8 @@ jobs:
     name: Frontend build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
           cache: npm
@@ -71,8 +97,8 @@ jobs:
     name: i18n lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
           cache: npm
@@ -105,7 +131,7 @@ jobs:
         ports:
           - 5432:5432
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
@@ -122,7 +148,7 @@ jobs:
       - name: Fix lcov paths (make relative to repo root)
         run: sed -i "s|SF:$(pwd)/|SF:|g" api/coverage/lcov.info
       - name: Upload API coverage
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: api-coverage
           path: api/coverage/lcov.info
@@ -131,8 +157,8 @@ jobs:
     name: Frontend tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
           cache: npm
@@ -144,7 +170,7 @@ jobs:
         run: npm run test:coverage
         working-directory: frontend
       - name: Upload frontend coverage
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-coverage
           path: frontend/coverage/lcov.info
@@ -167,12 +193,12 @@ jobs:
       matrix:
         auth: [local, keycloak]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Run full stack E2E
         run: ./e2e/run.sh ${{ matrix.auth }}
       - name: Upload Playwright report
         if: failure()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-${{ matrix.auth }}
           path: frontend/test-results
@@ -185,17 +211,17 @@ jobs:
     needs:
       [lint-api, build-frontend, lint-i18n, test-api, test-frontend, test-e2e]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Download API coverage
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: api-coverage
           path: api/coverage
         continue-on-error: true
       - name: Download frontend coverage
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: frontend-coverage
           path: frontend/coverage

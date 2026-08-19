@@ -50,6 +50,7 @@ services:
       - e2e
 
   api-adm:
+    image: ${APP_IMAGE_PREFIX:-jitsi-admin-e2e}/api-adm:${APP_IMAGE_TAG:-dev}
     build:
       context: .
       dockerfile: docker/adm.Dockerfile
@@ -98,6 +99,7 @@ services:
       - e2e
 
   api-pri:
+    image: ${APP_IMAGE_PREFIX:-jitsi-admin-e2e}/api-pri:${APP_IMAGE_TAG:-dev}
     build:
       context: .
       dockerfile: docker/pri.Dockerfile
@@ -132,6 +134,7 @@ services:
       - e2e
 
   api-pub:
+    image: ${APP_IMAGE_PREFIX:-jitsi-admin-e2e}/api-pub:${APP_IMAGE_TAG:-dev}
     build:
       context: .
       dockerfile: docker/pub.Dockerfile
@@ -161,6 +164,7 @@ services:
       - e2e
 
   web:
+    image: ${APP_IMAGE_PREFIX:-jitsi-admin-e2e}/web:${APP_IMAGE_TAG:-dev}
     build:
       context: .
       dockerfile: docker/web.Dockerfile
