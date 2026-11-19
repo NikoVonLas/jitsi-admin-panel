@@ -8,6 +8,7 @@ import {
   DB_USER,
   DB_VERSION,
 } from "../../../config.ts";
+import { schemaFingerprint } from "../../helpers/schema.ts";
 
 function databasePool(database: string): Pool {
   return new Pool(
@@ -43,14 +44,59 @@ async function dropDatabase(database: string): Promise<void> {
   }
 }
 
-async function initializeBaseSchema(database: string): Promise<Pool> {
+async function initializeSchema(database: string, file: string): Promise<Pool> {
   const setup = databasePool(database);
-  const schema = await Deno.readTextFile(
-    new URL("../../../database/02-create-jitsi-tables.sql", import.meta.url),
-  );
+  const schema = await Deno.readTextFile(new URL(file, import.meta.url));
   using client = await setup.connect();
   await client.queryArray(schema);
   return setup;
+}
+
+function initializeBaseSchema(database: string): Promise<Pool> {
+  return initializeSchema(
+    database,
+    "../../../database/02-create-jitsi-tables.sql",
+  );
+}
+
+function initializeGalaxySchema(database: string): Promise<Pool> {
+  return initializeSchema(
+    database,
+    "../../fixtures/galaxy-kc-20250802.01.sql",
+  );
+}
+
+async function freshInstallFingerprint(): Promise<string[]> {
+  const database = `jitsi_fresh_${crypto.randomUUID().replaceAll("-", "")}`;
+  await createDatabase(database);
+  try {
+    await (await initializeBaseSchema(database)).end();
+    await runMigrations(database);
+
+    const verify = databasePool(database);
+    try {
+      return await schemaFingerprint(verify);
+    } finally {
+      await verify.end();
+    }
+  } finally {
+    await dropDatabase(database);
+  }
+}
+
+interface RoomRow {
+  n: string;
+  name: string;
+  label: string;
+}
+
+async function roomsBySeedNumber(pool: Pool): Promise<RoomRow[]> {
+  using client = await pool.connect();
+  const result = await client.queryObject<RoomRow>(`
+    SELECT right(id::text, 1) AS n, name, label
+    FROM room ORDER BY id
+  `);
+  return result.rows;
 }
 
 async function runMigrations(database: string): Promise<void> {
@@ -218,6 +264,151 @@ describe(
             unique_session_index: true,
             phone_removed: true,
           });
+        } finally {
+          await verify.end();
+        }
+      } finally {
+        await dropDatabase(database);
+      }
+    });
+
+    it("brings a galaxy-kc 20250802.01 database to the fresh schema", async () => {
+      const fresh = await freshInstallFingerprint();
+      const database = `jitsi_galaxy_${
+        crypto.randomUUID().replaceAll("-", "")
+      }`;
+      await createDatabase(database);
+
+      try {
+        const setup = await initializeGalaxySchema(database);
+        try {
+          using client = await setup.connect();
+          await client.queryArray(`
+            INSERT INTO identity (id)
+              SELECT ('10000000-0000-0000-0000-00000000000' || n)::uuid
+              FROM generate_series(1, 3) n;
+            INSERT INTO profile (id, identity_id, name, email, is_default)
+              SELECT ('20000000-0000-0000-0000-00000000000' || n)::uuid,
+                     ('10000000-0000-0000-0000-00000000000' || n)::uuid,
+                     'Galaxy user ' || n, 'galaxy' || n || '@example.com', true
+              FROM generate_series(1, 3) n;
+
+            -- Three owners hold the same Jitsi conference: Jitsi lowercases
+            -- room names. Room 4 already has the first free numbered name.
+            INSERT INTO room (id, identity_id, domain_id, name, ephemeral,
+                              created_at)
+              SELECT ('30000000-0000-0000-0000-00000000000' || n)::uuid,
+                     ('10000000-0000-0000-0000-00000000000' || owner)::uuid,
+                     (SELECT id FROM domain WHERE name = 'meet.jit.si'),
+                     name, false,
+                     timestamptz '2025-01-01 00:00:00+00' + n * interval '1 day'
+              FROM (VALUES
+                (1, 1, 'KIT'), (2, 2, 'KIT'), (3, 3, 'kit'), (4, 1, 'KIT-2')
+              ) AS seed (n, owner, name);
+            -- A galaxy ephemeral room: random name, suffix on, default flag.
+            INSERT INTO room (id, identity_id, domain_id, name, has_suffix)
+              SELECT '30000000-0000-0000-0000-000000000005',
+                     '10000000-0000-0000-0000-000000000001', id,
+                     'room-0123456789abcdef', true
+              FROM domain WHERE name = 'meet.jit.si';
+
+            -- Enough meetings that random short codes are certain to collide.
+            INSERT INTO meeting (identity_id, profile_id, room_id, name,
+                                 schedule_type)
+              SELECT '10000000-0000-0000-0000-000000000001',
+                     '20000000-0000-0000-0000-000000000001',
+                     '30000000-0000-0000-0000-000000000001',
+                     'Galaxy meeting ' || g, 'scheduled'
+              FROM generate_series(1, 3000) g;
+            INSERT INTO meeting_invite (identity_id, meeting_id, name)
+              SELECT identity_id, id, 'invite' FROM meeting LIMIT 1;
+          `);
+        } finally {
+          await setup.end();
+        }
+
+        await runMigrations(database);
+
+        const verify = databasePool(database);
+        try {
+          assertEquals(await schemaFingerprint(verify), fresh);
+          assertEquals(await roomsBySeedNumber(verify), [
+            { n: "1", name: "KIT", label: "" },
+            { n: "2", name: "KIT-3", label: "KIT" },
+            { n: "3", name: "kit-4", label: "kit" },
+            { n: "4", name: "KIT-2", label: "" },
+            { n: "5", name: "room-0123456789abcdef", label: "" },
+          ]);
+
+          using client = await verify.connect();
+          const result = await client.queryObject<Record<string, string>>(`
+            SELECT
+              (SELECT mvalue FROM metadata WHERE mkey='database_version') AS version,
+              (SELECT count(*)::text FROM meeting) AS meetings,
+              (SELECT count(DISTINCT short_code)::text FROM meeting) AS short_codes
+          `);
+          assertEquals(result.rows[0], {
+            version: DB_VERSION,
+            meetings: "3000",
+            short_codes: "3000",
+          });
+        } finally {
+          await verify.end();
+        }
+      } finally {
+        await dropDatabase(database);
+      }
+    });
+
+    it("separates rooms that share a conference on a 20260818.02 database", async () => {
+      const fresh = await freshInstallFingerprint();
+      const database = `jitsi_rooms_${crypto.randomUUID().replaceAll("-", "")}`;
+      await createDatabase(database);
+
+      try {
+        await (await initializeBaseSchema(database)).end();
+        await runMigrations(database);
+
+        const setup = databasePool(database);
+        try {
+          using client = await setup.connect();
+          await client.queryArray(`
+            DROP INDEX room_conference_name_idx;
+            CREATE UNIQUE INDEX room_identity_id_domain_id_name_idx
+              ON room(identity_id, domain_id, name);
+            UPDATE metadata SET mvalue='20260818.02'
+              WHERE mkey='database_version';
+
+            INSERT INTO identity (id)
+              SELECT ('10000000-0000-0000-0000-00000000000' || n)::uuid
+              FROM generate_series(1, 2) n;
+            INSERT INTO room (id, identity_id, domain_id, name, label,
+                              created_at)
+              SELECT ('30000000-0000-0000-0000-00000000000' || n)::uuid,
+                     ('10000000-0000-0000-0000-00000000000' || owner)::uuid,
+                     (SELECT id FROM domain WHERE name = 'meet.' || host),
+                     name, label,
+                     timestamptz '2026-09-01 00:00:00+00' + n * interval '1 day'
+              FROM (VALUES
+                (1, 1, 'jit.si', 'Standup', 'Team standup'),
+                (2, 2, 'jit.si', 'standup', 'My standup'),
+                (3, 2, 'element.io', 'Standup', '')
+              ) AS seed (n, owner, host, name, label);
+          `);
+        } finally {
+          await setup.end();
+        }
+
+        await runMigrations(database);
+
+        const verify = databasePool(database);
+        try {
+          assertEquals(await schemaFingerprint(verify), fresh);
+          assertEquals(await roomsBySeedNumber(verify), [
+            { n: "1", name: "Standup", label: "Team standup" },
+            { n: "2", name: "standup-2", label: "My standup" },
+            { n: "3", name: "Standup", label: "" },
+          ]);
         } finally {
           await verify.end();
         }

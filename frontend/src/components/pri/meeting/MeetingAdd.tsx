@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Form } from 'antd';
 import { action, get, list } from '../../../lib/api';
+import { isRoomNameTaken } from '../../../lib/apiError';
 import { useTr } from '../../../i18n';
 import { toLocaleDate, toLocaleTime } from '../../../lib/common';
 import type { Domain333, Profile, Room333 } from '../../../types';
@@ -52,7 +53,7 @@ export default function MeetingAdd({ onCancel, onSuccess }: Props) {
   const t = useTr();
   const [step, setStep] = useState<Step>('meeting');
   const [schedSubStep, setSchedSubStep] = useState<SubStep>('form');
-  const [warning, setWarning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [disabled, setDisabled] = useState(false);
 
   // Meeting step
@@ -67,6 +68,9 @@ export default function MeetingAdd({ onCancel, onSuccess }: Props) {
   const [roomLabel, setRoomLabel] = useState('');
   const [roomSlug, setRoomSlug] = useState('');
   const [roomDomainId, setRoomDomainId] = useState('');
+  // A retry after a later step failed reuses the room the first try created;
+  // adding it again would hit its own slug.
+  const createdRoomRef = useRef<{ key: string; id: string } | null>(null);
 
   // Schedule step
   const [pendingSchedules, setPendingSchedules] = useState<Record<string, string>[]>([]);
@@ -117,25 +121,25 @@ export default function MeetingAdd({ onCancel, onSuccess }: Props) {
       if (schedSubStep === 'choice') {
         setSchedSubStep('form');
         setSchedKey((k) => k + 1);
-        setWarning(false);
+        setError(null);
         return;
       }
       setPendingSchedules([]);
       setSchedSubStep('form');
       setStep(roomId === NEW_ROOM ? 'room' : 'meeting');
-      setWarning(false);
+      setError(null);
       return;
     }
     if (step === 'room') {
       setStep('meeting');
-      setWarning(false);
+      setError(null);
       return;
     }
     onCancel?.();
   }
 
   async function handleNext() {
-    setWarning(false);
+    setError(null);
     if (step === 'meeting') {
       if (roomId === NEW_ROOM) {
         setStep('room');
@@ -156,23 +160,27 @@ export default function MeetingAdd({ onCancel, onSuccess }: Props) {
       setPendingSchedules((prev) => [...prev, sa]);
       setSchedSubStep('choice');
     } catch {
-      setWarning(true);
+      setError('err.add');
     }
   }
 
   async function finalize() {
     try {
       setDisabled(true);
-      setWarning(false);
+      setError(null);
       let finalRoomId = roomId;
       if (roomId === NEW_ROOM) {
-        const room = await action('/api/pri/room/add', {
-          label: roomLabel,
-          name: roomSlug,
-          domain_id: roomDomainId,
-          has_suffix: false,
-        });
-        finalRoomId = room.id;
+        const key = JSON.stringify([roomDomainId, roomSlug, roomLabel]);
+        if (createdRoomRef.current?.key !== key) {
+          const room = await action('/api/pri/room/add', {
+            label: roomLabel,
+            name: roomSlug,
+            domain_id: roomDomainId,
+            has_suffix: false,
+          });
+          createdRoomRef.current = { key, id: room.id };
+        }
+        finalRoomId = createdRoomRef.current.id;
       }
       const meeting = await action('/api/pri/meeting/add', {
         profile_id: profileId,
@@ -188,8 +196,13 @@ export default function MeetingAdd({ onCancel, onSuccess }: Props) {
         )
       );
       onSuccess?.();
-    } catch {
-      setWarning(true);
+    } catch (e) {
+      if (isRoomNameTaken(e)) {
+        setStep('room');
+        setError('err.room_name_taken');
+      } else {
+        setError('err.add');
+      }
       setDisabled(false);
     }
   }
@@ -265,7 +278,7 @@ export default function MeetingAdd({ onCancel, onSuccess }: Props) {
         </div>
       )}
 
-      {warning && <AlertWarning type="error">{t('err.add')}</AlertWarning>}
+      {error && <AlertWarning type="error">{t(error)}</AlertWarning>}
 
       {step === 'schedule' && schedSubStep === 'choice' ? (
         <FormActions>
@@ -273,7 +286,7 @@ export default function MeetingAdd({ onCancel, onSuccess }: Props) {
             onClick={() => {
               setSchedSubStep('form');
               setSchedKey((k) => k + 1);
-              setWarning(false);
+              setError(null);
             }}
             label={t('btn.add_schedule')}
             disabled={disabled}

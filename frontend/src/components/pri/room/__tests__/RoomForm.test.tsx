@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import RoomForm from '../RoomForm';
+import { action } from '../../../../lib/api';
+import { ApiError } from '../../../../lib/apiError';
 
 vi.mock('../../../../i18n', () => ({
   useTr: () => (k: string) => k,
@@ -61,5 +63,42 @@ describe('RoomForm (update mode)', () => {
   it('renders update button in update mode', () => {
     render(<RoomForm initialRoom={initialRoom} />);
     expect(screen.getByText('btn.update')).toBeInTheDocument();
+  });
+});
+
+describe('RoomForm (refused request)', () => {
+  const initialRoom = {
+    id: 'r1',
+    label: 'My Room',
+    slug: 'my-room',
+    domainId: 'd1',
+    hasSuffix: false,
+  };
+
+  function submit(label: string) {
+    const button = screen.getByText(label).closest('button');
+    if (button) fireEvent.click(button);
+  }
+
+  it('says the slug is taken when another room of the domain uses it', async () => {
+    vi.mocked(action).mockRejectedValueOnce(new ApiError(409, 'room_name_taken'));
+    render(<RoomForm />);
+    submit('btn.add');
+    expect(await screen.findByText('err.room_name_taken')).toBeInTheDocument();
+  });
+
+  it('says the slug is taken when a rename hits another room', async () => {
+    vi.mocked(action).mockRejectedValueOnce(new ApiError(409, 'room_name_taken'));
+    render(<RoomForm initialRoom={initialRoom} />);
+    submit('btn.update');
+    expect(await screen.findByText('err.room_name_taken')).toBeInTheDocument();
+  });
+
+  it('keeps the general message for any other failure', async () => {
+    vi.mocked(action).mockRejectedValueOnce(new ApiError(500));
+    render(<RoomForm />);
+    submit('btn.add');
+    expect(await screen.findByText('err.add')).toBeInTheDocument();
+    expect(screen.queryByText('err.room_name_taken')).not.toBeInTheDocument();
   });
 });
