@@ -2,7 +2,7 @@
 -- 02-CREATE-JITSI-TABLES.SQL
 -- -----------------------------------------------------------------------------
 -- This script creates the database tables.
--- Tested on Postgresql 15.
+-- Needs Postgresql 17 or newer (the "pg_c_utf8" collation).
 --
 -- Update "lib/adm/migration.ts" when schema changes.
 --
@@ -162,7 +162,6 @@ CREATE TABLE domain (
     "created_at" timestamp with time zone NOT NULL DEFAULT now(),
     "updated_at" timestamp with time zone NOT NULL DEFAULT now()
 );
-CREATE UNIQUE INDEX ON domain("identity_id", "name");
 CREATE INDEX ON domain("public");
 ALTER TABLE domain OWNER TO jitsi;
 
@@ -249,7 +248,18 @@ ALTER TABLE domain_partner_candidate OWNER TO jitsi;
 -- ROOM
 -- -----------------------------------------------------------------------------
 -- - Update suffix if accessed_at is older than 4 hours.
+-- - Jitsi lowercases and NFKC-normalizes the room name, so "KIT" and "kit" are
+--   the same conference. room_conference_name() is that name, and it is unique
+--   within a domain whoever owns the room.
 -- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION room_conference_name(
+    name text, has_suffix boolean, suffix text
+) RETURNS text AS $$
+  SELECT lower(normalize(
+    CASE WHEN has_suffix THEN name || '-' || suffix ELSE name END, NFKC
+  ) COLLATE "pg_c_utf8")
+$$ LANGUAGE sql IMMUTABLE;
+
 CREATE OR REPLACE FUNCTION room_short_code() RETURNS text AS $$
 DECLARE
   adj  text[] := ARRAY['swift','calm','bold','warm','clear','deep','fine','glad','kind','neat',
@@ -288,7 +298,9 @@ CREATE TABLE room (
     "accessed_at" timestamp with time zone NOT NULL DEFAULT now(),
     "attendance" integer NOT NULL DEFAULT 0
 );
-CREATE UNIQUE INDEX ON room("identity_id", "domain_id", "name");
+CREATE INDEX ON room("identity_id");
+CREATE UNIQUE INDEX room_conference_name_idx
+    ON room("domain_id", room_conference_name("name", "has_suffix", "suffix"));
 CREATE UNIQUE INDEX ON room("short_code");
 ALTER TABLE room OWNER TO jitsi;
 

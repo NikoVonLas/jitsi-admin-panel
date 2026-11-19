@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Form } from 'antd';
 import { action } from '../../../lib/api';
+import { isRoomNameTaken } from '../../../lib/apiError';
 import { useTr } from '../../../i18n';
 import AlertWarning from '../../common/AlertWarning';
 import ButtonCancel from '../../common/ButtonCancel';
@@ -25,7 +26,7 @@ interface Props {
 export default function RoomForm({ onCancel, onDone, initialRoom }: Props) {
   const t = useTr();
   const isUpdate = initialRoom !== undefined;
-  const [warning, setWarning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [disabled, setDisabled] = useState(false);
   const [label, setLabel] = useState(initialRoom?.label ?? '');
   const [slug, setSlug] = useState(initialRoom?.slug ?? '');
@@ -33,7 +34,7 @@ export default function RoomForm({ onCancel, onDone, initialRoom }: Props) {
 
   async function onFinish() {
     try {
-      setWarning(false);
+      setError(null);
       setDisabled(true);
       if (isUpdate) {
         await action('/api/pri/room/update', {
@@ -52,8 +53,9 @@ export default function RoomForm({ onCancel, onDone, initialRoom }: Props) {
         });
       }
       onDone?.();
-    } catch {
-      setWarning(true);
+    } catch (e) {
+      if (isRoomNameTaken(e)) setError('err.room_name_taken');
+      else setError(isUpdate ? 'err.update' : 'err.add');
       setDisabled(false);
     }
   }
@@ -72,9 +74,7 @@ export default function RoomForm({ onCancel, onDone, initialRoom }: Props) {
             disabled={disabled}
           />
 
-          {warning && (
-            <AlertWarning type="error">{t(isUpdate ? 'err.update' : 'err.add')}</AlertWarning>
-          )}
+          {error && <AlertWarning type="error">{t(error)}</AlertWarning>}
 
           <FormActions>
             <ButtonCancel onClick={onCancel} disabled={disabled} block />

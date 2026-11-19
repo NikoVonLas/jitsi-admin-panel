@@ -150,6 +150,8 @@ const en: Record<string, string> = {
   'err.generic': 'Something went wrong',
   'err.add': 'The add request is not accepted. Please check your inputs.',
   'err.update': 'The update request is not accepted. Please check your inputs.',
+  'err.room_name_taken':
+    'This room slug is already taken on this domain. Letter case does not count. Choose another slug.',
   'err.delete': 'The delete request is not accepted',
   'err.enable': 'The enable request is not accepted',
   'err.disable': 'The disable request is not accepted',

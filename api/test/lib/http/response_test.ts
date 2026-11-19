@@ -105,6 +105,11 @@ describe("conflict", () => {
     const body = await conflict().json();
     assertEquals(body.error.message, "Conflict");
   });
+
+  it("body names the conflict when a code is given", async () => {
+    const body = await conflict("room_name_taken").json();
+    assertEquals(body.error, { message: "Conflict", code: "room_name_taken" });
+  });
 });
 
 describe("methodNotAllowed", () => {

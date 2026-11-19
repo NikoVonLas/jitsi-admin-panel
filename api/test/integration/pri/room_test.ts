@@ -10,16 +10,24 @@ import { cleanDb, makeRequest } from "../../helpers/db.ts";
 import { registerFirst } from "../../helpers/auth.ts";
 import routeDomain from "../../../lib/pri/domain.ts";
 import routeRoom from "../../../lib/pri/room.ts";
+import { getRoomIdByName } from "../../../lib/database/room.ts";
 
 const EMAIL = "admin@room-test.example";
 const PASSWORD = "secure_room_test_pass_123";
 
-async function addTestDomain(identityId: string): Promise<string> {
+const OTHER_OWNER_ID = "10000000-0000-0000-0000-0000000000b0";
+
+async function addTestDomain(
+  identityId: string,
+  name = "Test Domain For Rooms",
+  url = "https://meet.room-test.example",
+  isPublic = false,
+): Promise<string> {
   const req = makeRequest("POST", "/api/pri/domain/add", {
-    name: "Test Domain For Rooms",
+    name,
     auth_type: "none",
-    domain_attr: { url: "https://meet.room-test.example" },
-    public: false,
+    domain_attr: { url },
+    public: isPublic,
   });
   const res = await routeDomain(req, "/api/pri/domain/add", identityId);
   const body = await res.json();
@@ -44,10 +52,37 @@ describe("pri/room", { sanitizeResources: false, sanitizeOps: false }, () => {
   beforeEach(async () => {
     const { query } = await import("../../../lib/database/common.ts");
     await query({
-      text: `DELETE FROM room WHERE identity_id = $1`,
-      args: [identityId],
+      text: `DELETE FROM room WHERE identity_id = ANY($1::uuid[])`,
+      args: [[identityId, OTHER_OWNER_ID]],
     });
   });
+
+  async function addRoomAs(
+    owner: string,
+    name: string,
+    domain = domainId,
+  ): Promise<Response> {
+    const req = makeRequest("POST", "/api/pri/room/add", {
+      domain_id: domain,
+      name,
+      label: name,
+    });
+    return await routeRoom(req, "/api/pri/room/add", owner);
+  }
+
+  async function renameRoomAs(
+    owner: string,
+    id: string,
+    name: string,
+  ): Promise<Response> {
+    const req = makeRequest("POST", "/api/pri/room/update", {
+      id,
+      domain_id: domainId,
+      name,
+      label: name,
+    });
+    return await routeRoom(req, "/api/pri/room/update", owner);
+  }
 
   it("lists rooms (empty initially)", async () => {
     const req = makeRequest("POST", "/api/pri/room/list", {
@@ -228,6 +263,25 @@ describe("pri/room", { sanitizeResources: false, sanitizeOps: false }, () => {
     assertEquals(body.length, 0);
   });
 
+  it("finds a room by the conference name Jitsi uses", async () => {
+    // The lookup answers only for public domains and the caller's own ones.
+    const publicDomainId = await addTestDomain(
+      identityId,
+      "Public Domain For Rooms",
+      "https://public.room-test.example",
+      true,
+    );
+    const added = await addRoomAs(identityId, "ＫＩＴ", publicDomainId);
+    const id = (await added.json())[0].id;
+
+    const rows = await getRoomIdByName(
+      identityId,
+      "https://public.room-test.example",
+      "kit",
+    );
+    assertEquals(rows.map((row) => row.id), [id]);
+  });
+
   it("gets room link by name returns empty for empty room_name", async () => {
     const linkRes = await routeRoom(
       makeRequest("POST", "/api/pri/room/get/link/byname", {
@@ -240,6 +294,61 @@ describe("pri/room", { sanitizeResources: false, sanitizeOps: false }, () => {
     assertEquals(linkRes.status, 200);
     const body = await linkRes.json();
     assertEquals(body, []);
+  });
+
+  describe("room name within a domain", () => {
+    beforeAll(async () => {
+      const { query } = await import("../../../lib/database/common.ts");
+      await query({
+        text: `INSERT INTO identity (id, is_superadmin) VALUES ($1, true)`,
+        args: [OTHER_OWNER_ID],
+      });
+    });
+
+    it("refuses a name another owner holds, whatever the letter case", async () => {
+      assertEquals((await addRoomAs(identityId, "KIT")).status, 200);
+
+      const res = await addRoomAs(OTHER_OWNER_ID, "kit");
+      assertEquals(res.status, 409);
+      assertEquals((await res.json()).error.code, "room_name_taken");
+    });
+
+    it("refuses a name that differs only by Unicode compatibility form", async () => {
+      assertEquals((await addRoomAs(identityId, "KIT")).status, 200);
+
+      const res = await addRoomAs(OTHER_OWNER_ID, "ＫＩＴ");
+      assertEquals(res.status, 409);
+      assertEquals((await res.json()).error.code, "room_name_taken");
+    });
+
+    it("refuses renaming a room into a taken name", async () => {
+      assertEquals((await addRoomAs(identityId, "Комитет")).status, 200);
+      const added = await addRoomAs(OTHER_OWNER_ID, "other-room");
+      const id = (await added.json())[0].id;
+
+      const res = await renameRoomAs(OTHER_OWNER_ID, id, "КОМИТЕТ");
+      assertEquals(res.status, 409);
+      assertEquals((await res.json()).error.code, "room_name_taken");
+    });
+
+    it("lets an owner change the letter case of their own room name", async () => {
+      const added = await addRoomAs(identityId, "kit");
+      const id = (await added.json())[0].id;
+
+      assertEquals((await renameRoomAs(identityId, id, "KIT")).status, 200);
+    });
+
+    it("allows the same name in another domain", async () => {
+      const otherDomainId = await addTestDomain(
+        identityId,
+        "Second Domain For Rooms",
+        "https://meet2.room-test.example",
+      );
+      assertEquals((await addRoomAs(identityId, "KIT")).status, 200);
+
+      const res = await addRoomAs(OTHER_OWNER_ID, "KIT", otherDomainId);
+      assertEquals(res.status, 200);
+    });
   });
 
   it("returns 404 for unknown path", async () => {

@@ -18,6 +18,8 @@ import {
   listByValue,
 } from '../api';
 
+import { isRoomNameTaken } from '../apiError';
+
 const mockHttpPost = vi.mocked(httpPost);
 
 function makeRes(status: number, data: unknown = [{ id: 'x' }]) {
@@ -46,6 +48,27 @@ describe('action', () => {
   it('throws when rows[0] is undefined', async () => {
     mockHttpPost.mockResolvedValueOnce(makeRes(200, []));
     await expect(action('/api/test', {})).rejects.toThrow('no result');
+  });
+
+  it('carries the error code of a refused request', async () => {
+    mockHttpPost.mockResolvedValueOnce(
+      makeRes(409, { error: { message: 'Conflict', code: 'room_name_taken' } })
+    );
+    const error = await action('/api/pri/room/add', {}).catch((e) => e);
+    expect(error).toMatchObject({ status: 409, code: 'room_name_taken' });
+    expect(isRoomNameTaken(error)).toBe(true);
+  });
+
+  it('reports a refused request without a JSON body by its status alone', async () => {
+    mockHttpPost.mockResolvedValueOnce({
+      status: 502,
+      json: async () => {
+        throw new SyntaxError('Unexpected token <');
+      },
+    } as unknown as Response);
+    const error = await action('/api/test', {}).catch((e) => e);
+    expect(error).toMatchObject({ status: 502, code: undefined });
+    expect(isRoomNameTaken(error)).toBe(false);
   });
 });
 

@@ -1,8 +1,9 @@
+import { apiErrorFrom } from './apiError';
 import { httpPost } from './http';
 
 export async function action(url: string, payload: unknown) {
   const res = await httpPost(url, payload);
-  if (res.status !== 200) throw new Error(String(res.status));
+  if (res.status !== 200) throw await apiErrorFrom(res);
   const rows = await res.json();
   if (!rows[0]) throw new Error('no result');
   return rows[0];

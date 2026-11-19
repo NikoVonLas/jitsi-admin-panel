@@ -67,10 +67,12 @@ export function forbidden(): Response {
 }
 
 // -----------------------------------------------------------------------------
-export function conflict(): Response {
+// code tells the UI which conflict it was, so it can show a specific message.
+export function conflict(code?: string): Response {
   const body = {
     error: {
       message: "Conflict",
+      ...(code ? { code } : {}),
     },
   };
 

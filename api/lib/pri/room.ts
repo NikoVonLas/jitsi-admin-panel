@@ -17,6 +17,7 @@ import {
   getRoomHostKey,
   getRoomIdByName,
   getRoomLinkset,
+  isRoomNameTaken,
   listRoom,
   resetRoomHostKey,
   updateRoom,
@@ -247,6 +248,7 @@ async function handleWrite(
   try {
     return ok(JSON.stringify(await fn(req, identityId)));
   } catch (e) {
+    if (isRoomNameTaken(e)) return conflict("room_name_taken");
     if ((e as { fields?: { code?: string } })?.fields?.code === "23505") {
       return conflict();
     }

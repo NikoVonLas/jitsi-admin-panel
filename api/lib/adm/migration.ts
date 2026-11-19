@@ -881,6 +881,121 @@ async function migrateTo2026081802() {
 }
 
 // -----------------------------------------------------------------------------
+// Bring every upgrade path to the schema of a fresh install, and make the Jitsi
+// conference name of a room unique within its domain.
+//
+// Jitsi lowercases and NFKC-normalizes room names, so "KIT" and "kit" are one
+// conference. Rooms that already share a conference keep their rows: the oldest
+// keeps the name, later ones get a numbered name and keep the old name as label.
+async function migrateTo2026111901() {
+  const upgradeTo = "20261119.01";
+  const sqls = [
+    // meeting.short_code existed only in 03-migration-meeting-short-code.sql,
+    // so databases upgraded from galaxy never got it.
+    `CREATE OR REPLACE FUNCTION meeting_short_code() RETURNS text AS $$
+     DECLARE
+       adj  text[] := ARRAY['swift','calm','bold','warm','clear','deep','fine','glad','kind','neat',
+                             'rare','soft','wise','cool','dark','fair','firm','free','full','keen',
+                             'lean','mild','new','odd','old','pure','rich','safe','true','wild',
+                             'bright','clean','crisp','eager','fresh','light','lush','open','proud','sharp',
+                             'sleek','slim','smart','still','strong','sure','tall','thin','tight','young'];
+       noun text[] := ARRAY['moon','star','wave','leaf','snow','rain','wind','fire','lake','peak',
+                             'reef','seed','tide','vine','dawn','dusk','mist','moss','oak','pine',
+                             'fog','dew','hill','pond','pool','rose','sage','sun','sky','stone',
+                             'fern','gust','haze','iris','isle','knoll','log','orb','path','rock',
+                             'rill','root','rush','sand','slope','stem','vale','brook','grove','creek'];
+       num  integer;
+     BEGIN
+       num := 10 + floor(random() * 90)::integer;
+       RETURN adj[1 + floor(random() * array_length(adj, 1))::int] || '-' ||
+              noun[1 + floor(random() * array_length(noun, 1))::int] || '-' ||
+              num::text;
+     END;
+     $$ LANGUAGE plpgsql`,
+    `ALTER TABLE meeting
+       ADD COLUMN IF NOT EXISTS short_code varchar(50) NOT NULL
+         DEFAULT meeting_short_code()`,
+    // The default draws from 225000 codes, so a few hundred existing meetings
+    // are likely to collide. Redraw until the unique index can be built.
+    `DO $$
+     BEGIN
+       LOOP
+         UPDATE meeting m
+           SET short_code = meeting_short_code()
+           WHERE EXISTS (
+             SELECT 1 FROM meeting o
+             WHERE o.short_code = m.short_code AND o.id < m.id
+           );
+         EXIT WHEN NOT FOUND;
+       END LOOP;
+     END $$`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS meeting_short_code_idx
+       ON meeting(short_code)`,
+    `CREATE INDEX IF NOT EXISTS meeting_identity_id_idx
+       ON meeting(identity_id)`,
+
+    // Leftovers of the galaxy schema. Rooms flagged ephemeral stay: the column
+    // defaulted to true, so it also marks rooms created after the upgrade.
+    `ALTER TABLE room DROP COLUMN IF EXISTS ephemeral`,
+    `DROP TABLE IF EXISTS meeting_invite`,
+    `DROP TYPE IF EXISTS meeting_invite_type`,
+    `ALTER TABLE IF EXISTS setting ALTER COLUMN mvalue SET DEFAULT ''`,
+    // Superseded by domain_name_unique; only fresh installs still had it.
+    `DROP INDEX IF EXISTS domain_identity_id_name_idx`,
+
+    `CREATE OR REPLACE FUNCTION room_conference_name(
+       name text, has_suffix boolean, suffix text
+     ) RETURNS text AS $$
+       SELECT lower(normalize(
+         CASE WHEN has_suffix THEN name || '-' || suffix ELSE name END, NFKC
+       ) COLLATE "pg_c_utf8")
+     $$ LANGUAGE sql IMMUTABLE`,
+    `DROP INDEX IF EXISTS room_identity_id_domain_id_name_idx`,
+    `DO $$
+     DECLARE
+       dup record;
+       candidate text;
+       n integer;
+     BEGIN
+       FOR dup IN
+         SELECT id, domain_id, name, has_suffix, suffix
+         FROM (
+           SELECT r.*, row_number() OVER (
+             PARTITION BY domain_id,
+                          room_conference_name(name, has_suffix, suffix)
+             ORDER BY created_at, id
+           ) AS position
+           FROM room r
+         ) ranked
+         WHERE position > 1
+         ORDER BY created_at, id
+       LOOP
+         n := 1;
+         LOOP
+           n := n + 1;
+           candidate := left(dup.name, 250 - length('-' || n)) || '-' || n;
+           EXIT WHEN NOT EXISTS (
+             SELECT 1 FROM room o
+             WHERE o.domain_id = dup.domain_id
+               AND room_conference_name(o.name, o.has_suffix, o.suffix) =
+                   room_conference_name(candidate, dup.has_suffix, dup.suffix)
+           );
+         END LOOP;
+         UPDATE room
+           SET name = candidate,
+               label = CASE WHEN label = '' THEN dup.name ELSE label END
+           WHERE id = dup.id;
+       END LOOP;
+     END $$`,
+    `CREATE INDEX IF NOT EXISTS room_identity_id_idx ON room(identity_id)`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS room_conference_name_idx
+       ON room(domain_id, room_conference_name(name, has_suffix, suffix))`,
+  ];
+
+  await migrateTo(upgradeTo, sqls);
+}
+
+// -----------------------------------------------------------------------------
 export default async function runMigration() {
   console.log("migration...");
 
@@ -923,4 +1038,5 @@ export default async function runMigration() {
   await migrateTo2026062201();
   await migrateTo2026081801();
   await migrateTo2026081802();
+  await migrateTo2026111901();
 }

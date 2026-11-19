@@ -30,6 +30,18 @@ export interface ListRoomOptions {
 }
 
 // -----------------------------------------------------------------------------
+// True when a room write was refused because another room in the domain, of
+// any owner, already maps to the same Jitsi conference.
+// -----------------------------------------------------------------------------
+export function isRoomNameTaken(error: unknown): boolean {
+  const fields = (error as { fields?: { code?: string; constraint?: string } })
+    ?.fields;
+
+  return fields?.code === "23505" &&
+    fields.constraint === "room_conference_name_idx";
+}
+
+// -----------------------------------------------------------------------------
 export async function getRoom(
   identityId: string,
   roomId: string,
@@ -179,12 +191,8 @@ export async function getRoomIdByName(
     text: `
       WITH room_owner AS (
         SELECT r.id,
-               lower(
-                 CASE
-                   WHEN r.has_suffix THEN r.name || '-' || r.suffix
-                   ELSE r.name
-                 END
-               ) as room_full_name,
+               room_conference_name(r.name, r.has_suffix, r.suffix)
+                 as room_full_name,
                lower(coalesce(d.domain_attr->>'url', '')) as domain_url
         FROM room r
           JOIN domain d ON r.domain_id = d.id
@@ -198,7 +206,7 @@ export async function getRoomIdByName(
       SELECT id, now() as at
       FROM room_owner
       WHERE ($2 = '' OR domain_url = lower($2))
-        AND room_full_name = lower($3)
+        AND room_full_name = room_conference_name($3, false, '')
       LIMIT 1`,
     args: [
       identityId,
