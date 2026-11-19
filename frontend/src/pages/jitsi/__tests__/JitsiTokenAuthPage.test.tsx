@@ -17,8 +17,8 @@ vi.mock('../../../i18n', () => ({
 import { action } from '../../../lib/api';
 import { httpPost } from '../../../lib/http';
 
-let locationReplaceMock: ReturnType<typeof vi.fn>;
-let locationHrefSetter: ReturnType<typeof vi.fn>;
+const locationReplaceMock = vi.fn<(url: string) => void>();
+const locationHrefSetter = vi.fn<(url: string) => void>();
 
 describe('JitsiTokenAuthPage', () => {
   beforeEach(() => {
@@ -28,8 +28,6 @@ describe('JitsiTokenAuthPage', () => {
       status: 200,
       json: async () => ({}),
     } as Response);
-    locationReplaceMock = vi.fn();
-    locationHrefSetter = vi.fn();
     let _href = 'http://localhost/';
     vi.stubGlobal('location', {
       replace: locationReplaceMock,
