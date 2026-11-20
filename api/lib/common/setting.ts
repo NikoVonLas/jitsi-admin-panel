@@ -1,4 +1,5 @@
 import { getSettings, upsertSettings } from "../database/setting.ts";
+import { HttpError } from "../http/error.ts";
 import { LANG } from "../../config.ts";
 import { MAILER_FROM, MAILER_TRANSPORT_OPTIONS } from "../../config.mailer.ts";
 
@@ -40,6 +41,12 @@ export async function updateSettings(input: Record<string, unknown>) {
   for (const key of ALLOWED_KEYS) {
     const value = input[key];
     if (value === undefined || (SECRET_KEYS.has(key) && value === "")) continue;
+    if (
+      value !== null && typeof value !== "string" &&
+      typeof value !== "number" && typeof value !== "boolean"
+    ) {
+      throw new HttpError(400, `Invalid value for setting ${key}`);
+    }
     values[key] = String(value);
   }
   await upsertSettings(values);

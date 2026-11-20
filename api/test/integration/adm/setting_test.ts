@@ -93,6 +93,25 @@ describe(
       assertEquals(await getSettingValue("unknown"), "");
     });
 
+    it("rejects structured setting values without saving other keys", async () => {
+      const { getSettingValue } = await import(
+        "../../../lib/database/setting.ts"
+      );
+      const path = "/api/adm/setting/update";
+      const originalHost = await getSettingValue("mailer_host");
+      for (const invalid of [{ nested: true }, ["a", "b"]]) {
+        const res = await handleSetting(
+          makeRequest("POST", path, {
+            mailer_host: "unexpected.example",
+            logo_url: invalid,
+          }),
+          path,
+        );
+        assertEquals(res.status, 400);
+        assertEquals(await getSettingValue("mailer_host"), originalHost);
+      }
+    });
+
     it("getSettingValue returns empty string for missing key", async () => {
       const { getSettingValue } = await import(
         "../../../lib/database/setting.ts"
