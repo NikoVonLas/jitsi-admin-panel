@@ -1,3 +1,4 @@
+import { generateMeetingParticipantUrl } from "../common/helper.ts";
 import { notFound } from "../http/response.ts";
 import { pub as wrapper } from "../http/wrapper.ts";
 import { getLimit, getOffset } from "../database/common.ts";
@@ -28,21 +29,7 @@ async function getLinkByShortCode(req: Request): Promise<unknown> {
     .catch(() => null);
   if (!linkset) return [];
 
-  // Build URL without a JWT so participants join as unauthenticated guests via
-  // guest.meet.jitsi domain. This prevents Jicofo from granting them OWNER.
-  let roomName = encodeURIComponent(linkset.room_name);
-  if (linkset.has_suffix) roomName = `${roomName}-${linkset.suffix}`;
-
-  let url = `${encodeURI(linkset.domain_attr.url)}/${roomName}`;
-
-  let subject: string;
-  if (linkset.schedule_name) {
-    subject = encodeURIComponent(`"${linkset.schedule_name}, ${linkset.name}"`);
-  } else {
-    subject = encodeURIComponent(`"${linkset.name}"`);
-  }
-  url = `${url}#config.localSubject=${subject}`;
-
+  const url = await generateMeetingParticipantUrl(linkset);
   return [{ url }];
 }
 

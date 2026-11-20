@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import DomainFields, { getDefaultDomainAttr } from '../DomainFields';
 
 vi.mock('../../../../i18n', () => ({
@@ -24,6 +24,25 @@ const defaultProps = {
 };
 
 describe('DomainFields', () => {
+  it('enables scheduled guest start by default on JWT domains and can turn it off', () => {
+    const { rerender } = render(<DomainFields {...defaultProps} authType="token" />);
+    const toggle = screen.getByRole('switch', { name: 'domain.scheduled_guest_start' });
+    expect(toggle).toBeChecked();
+    fireEvent.click(toggle);
+    expect(defaultProps.onDomainAttrChange).toHaveBeenCalledWith(
+      expect.objectContaining({ scheduled_guest_start: 'false' })
+    );
+    rerender(
+      <DomainFields
+        {...defaultProps}
+        authType="token"
+        domainAttr={{ ...defaultAttr, scheduled_guest_start: 'false' }}
+      />
+    );
+    expect(toggle).not.toBeChecked();
+    rerender(<DomainFields {...defaultProps} />);
+    expect(screen.queryByRole('switch', { name: 'domain.scheduled_guest_start' })).toBeNull();
+  });
   it('renders the name field', () => {
     render(<DomainFields {...defaultProps} />);
     expect(screen.getByText('form.name')).toBeInTheDocument();

@@ -1,6 +1,7 @@
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
 import {
+  generateMeetingParticipantUrl,
   generateMeetingUrl,
   generateRoomUrl,
 } from "../../lib/common/helper.ts";
@@ -312,5 +313,69 @@ describe("generateMeetingUrl — auth_type: token", () => {
       suffix: "xyz",
     });
     assertStringIncludes(url, "test-room-xyz");
+  });
+});
+
+describe("scheduled participant links", () => {
+  const start = Date.UTC(2030, 0, 1, 10);
+  const end = start + 3600000;
+  const meeting = makeMeetingLinkset({
+    auth_type: "token",
+    room_name: "КИТ",
+    has_suffix: true,
+    suffix: "123",
+    started_at: new Date(start).toISOString(),
+    ended_at: new Date(end).toISOString(),
+    profile_name: "Host",
+    profile_email: "host@example.test",
+    domain_attr: {
+      url: "https://meet.example.test",
+      app_alg: "HS256",
+      app_id: "test",
+      app_secret: "test-only-key",
+    },
+  });
+  it("grants a room-scoped member token from the first instant to the absolute end", async () => {
+    const u = new URL(await generateMeetingParticipantUrl(meeting, start));
+    const token = u.searchParams.get("jwt")!;
+    const claims = JSON.parse(
+      new TextDecoder().decode(
+        Uint8Array.from(
+          atob(token.split(".")[1].replaceAll("-", "+").replaceAll("_", "/")),
+          (c) => c.charCodeAt(0),
+        ),
+      ),
+    );
+    assertEquals(claims.room, "кит-123");
+    assertEquals(claims.exp, end / 1000);
+    assertEquals(claims.context.user, {
+      name: "",
+      email: "",
+      affiliation: "member",
+      moderator: false,
+    });
+    assertEquals(decodeURIComponent(u.pathname), "/КИТ-123");
+  });
+  it("returns ordinary guest links before and after, and on excluded domains or rooms", async () => {
+    for (
+      const [row, now] of [
+        [meeting, start - 1],
+        [meeting, end],
+        [meeting, end + 1],
+        [{ ...meeting, auth_type: "none" as const }, start],
+        [{
+          ...meeting,
+          domain_attr: {
+            ...meeting.domain_attr,
+            scheduled_guest_start: "false",
+          },
+        }, start],
+        [{ ...meeting, room_name: "*", has_suffix: false }, start],
+      ] as const
+    ) {
+      const url = new URL(await generateMeetingParticipantUrl(row, now));
+      assertEquals(url.searchParams.has("jwt"), false);
+      assertEquals(url.hash.includes("userInfo"), false);
+    }
   });
 });

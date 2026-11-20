@@ -11,6 +11,7 @@ export interface HsTokenOptions {
   username: string;
   email: string;
   exp: number;
+  expiresAt?: number;
   avatar?: string;
 }
 
@@ -55,7 +56,7 @@ async function buildTokenHS(
     sub: "*",
     room: roomName,
     iat: getNumericDate(0),
-    exp: getNumericDate(exp),
+    exp: opts.expiresAt ?? getNumericDate(exp),
     context: {
       user: {
         name: username,

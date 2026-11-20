@@ -123,6 +123,7 @@ export interface MeetingLinkset {
     app_id: string;
     app_secret: string;
     app_alg: string;
+    scheduled_guest_start?: string;
   };
   join_as: Affiliation;
   started_at: string;

@@ -11,7 +11,7 @@ import {
   listRoomModerators,
   removeRoomModerator,
 } from "../database/room-moderator.ts";
-import { generateRoomUrl } from "../common/helper.ts";
+import { EMPTY_PROFILE, generateRoomUrl } from "../common/helper.ts";
 import { parseEnabledFilter } from "../common/parse.ts";
 import { getLimit, getOffset } from "../database/common.ts";
 import { getIsSuperAdmin } from "../database/identity.ts";
@@ -65,7 +65,11 @@ async function getLink(req: Request, identityId: string): Promise<unknown> {
   if (!profile) return [];
 
   const url = await generateRoomUrl(room, profile, "host");
-  const guestUrl = await generateRoomUrl(room, profile, "guest");
+  const guestUrl = await generateRoomUrl(
+    { ...room, auth_type: "none" },
+    EMPTY_PROFILE,
+    "guest",
+  );
 
   const link = [{
     url: url,
