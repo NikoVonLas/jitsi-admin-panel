@@ -296,6 +296,138 @@ describe("pri/room", { sanitizeResources: false, sanitizeOps: false }, () => {
     assertEquals(body, []);
   });
 
+  it("lets the owner and superadmin manage room-scoped moderator access", async () => {
+    const { query } = await import("../../../lib/database/common.ts");
+    const { addProfile } = await import("../../../lib/database/profile.ts");
+    const owner = crypto.randomUUID();
+    const moderator = crypto.randomUUID();
+    const email = "moderator@room.example";
+    await query({
+      text: `INSERT INTO identity (id, identity_attr) VALUES
+        ($1, '{"email":"owner@room.example"}'), ($2, jsonb_build_object('email', $3::text))`,
+      args: [owner, moderator, email],
+    });
+    await addProfile(moderator, "Moderator", email, true);
+    await query({
+      text: `UPDATE domain SET auth_type = 'token',
+        domain_attr = domain_attr || jsonb_build_object('app_id','panel-test','app_alg','HS256','app_secret',$2::text)
+        WHERE id = $1`,
+      args: [domainId, crypto.randomUUID()],
+    });
+    const roomId = crypto.randomUUID();
+    await query({
+      text:
+        "INSERT INTO room (id, identity_id, domain_id, name) VALUES ($1,$2,$3,'shared-KIT')",
+      args: [roomId, owner, domainId],
+    });
+    async function call(
+      actor: string,
+      route: string,
+      payload: Record<string, unknown> = {},
+    ) {
+      const path = "/api/pri/room/" + route;
+      return await routeRoom(
+        makeRequest("POST", path, { id: roomId, ...payload }),
+        path,
+        actor,
+      );
+    }
+    await addProfile(owner, "Owner", "owner@room.example", true);
+    await query({
+      text:
+        "INSERT INTO domain_member(domain_id,email) VALUES ($1,'owner@room.example')",
+      args: [domainId],
+    });
+    assertEquals((await (await call(owner, "get/link")).json()).length, 1);
+    const byName = {
+      room_name: "shared-kit",
+      domain_url: "https://meet.room-test.example",
+    };
+    assertEquals(
+      await (await call(moderator, "get/link/byname", byName)).json(),
+      [],
+    );
+    assertEquals(
+      (await call(moderator, "moderators/add", { email })).status,
+      404,
+    );
+    assertEquals((await call(moderator, "moderators/list")).status, 404);
+    assertEquals(
+      (await call(owner, "moderators/add", { email: "" })).status,
+      400,
+    );
+    assertEquals(
+      (await call(owner, "moderators/remove", { identity_id: "invalid" }))
+        .status,
+      400,
+    );
+    assertEquals(
+      (await call(owner, "moderators/add", { email: "absent@room.example" }))
+        .status,
+      404,
+    );
+    for (const manager of [owner, identityId]) {
+      assertEquals(
+        (await call(manager, "moderators/add", { email })).status,
+        200,
+      );
+      assertEquals(
+        (await call(manager, "moderators/add", { email })).status,
+        200,
+      );
+      const members = await (await call(manager, "moderators/list")).json();
+      assertEquals(members.map((m: { id: string }) => m.id), [moderator]);
+      for (
+        const [route, payload] of [["get/link", {}], [
+          "get/link/byname",
+          byName,
+        ]] as const
+      ) {
+        const links = await (await call(moderator, route, payload)).json();
+        const url = new URL(links[0].url);
+        assertEquals(url.pathname, "/shared-KIT");
+        const encoded = url.searchParams.get("jwt")!.split(".")[1];
+        const claims = JSON.parse(
+          atob(encoded.replaceAll("-", "+").replaceAll("_", "/")),
+        );
+        assertEquals(claims.room, "shared-KIT");
+        assertEquals(claims.context.user.moderator, true);
+        assertEquals(claims.context.user.email, email);
+      }
+      const shared =
+        await (await call(moderator, "list", { include_shared: true })).json();
+      assertEquals(shared.total, 1);
+      assertEquals(shared.items[0].shared, true);
+      assertEquals((await (await call(moderator, "list")).json()).total, 0);
+      for (const route of ["del", "disable", "get/hostkey", "reset/hostkey"]) {
+        assertEquals(await (await call(moderator, route)).json(), []);
+      }
+      assertEquals(
+        (await call(moderator, "moderators/remove", { identity_id: moderator }))
+          .status,
+        404,
+      );
+      assertEquals(
+        (await call(manager, "moderators/remove", { identity_id: moderator }))
+          .status,
+        200,
+      );
+      assertEquals(await (await call(moderator, "get/link")).json(), []);
+      assertEquals(
+        await (await call(moderator, "get/link/byname", byName)).json(),
+        [],
+      );
+    }
+    // A partnership created by an older installation grants exactly the same access.
+    await query({
+      text: "INSERT INTO room_partner (identity_id,room_id) VALUES ($1,$2)",
+      args: [moderator, roomId],
+    });
+    assertEquals((await (await call(moderator, "get/link")).json()).length, 1);
+    await call(owner, "disable");
+    assertEquals(await (await call(moderator, "get/link")).json(), []);
+  });
+
   describe("room name within a domain", () => {
     beforeAll(async () => {
       const { query } = await import("../../../lib/database/common.ts");

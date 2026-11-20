@@ -19,6 +19,7 @@ import {
 } from "../../config.ts";
 import { upsertSetting } from "../database/setting.ts";
 import { getIsSuperAdmin } from "../database/identity.ts";
+import { installDefaultLogo } from "../common/default-logo.ts";
 import { hasImageSignature } from "../common/image.ts";
 
 const PRE = "/api/pri/profile";
@@ -51,24 +52,7 @@ const LOGO_DEFAULT_MIME = "image/svg+xml";
 // -----------------------------------------------------------------------------
 export async function initLogoDefaults() {
   try {
-    await Deno.mkdir(LOGO_DIR, { recursive: true });
-    const data = await Deno.readFile(LOGO_DEFAULT_SRC);
-
-    // always refresh the backup used by resetLogo
-    await Deno.writeFile(`${LOGO_DIR}/logo_default`, data);
-    await Deno.writeTextFile(
-      `${LOGO_DIR}/logo_default.mime`,
-      LOGO_DEFAULT_MIME,
-    );
-
-    // seed logo file only if it doesn't exist yet
-    try {
-      await Deno.stat(`${LOGO_DIR}/logo`);
-    } catch {
-      await Deno.writeFile(`${LOGO_DIR}/logo`, data);
-      await Deno.writeTextFile(`${LOGO_DIR}/logo.mime`, LOGO_DEFAULT_MIME);
-    }
-    // always ensure the DB entry exists (file may exist but DB entry may be missing)
+    await installDefaultLogo(LOGO_DIR, await Deno.readFile(LOGO_DEFAULT_SRC));
     await upsertSetting("logo_url", "/api/pub/logo/logo");
   } catch (e) {
     console.error("initLogoDefaults failed:", e);

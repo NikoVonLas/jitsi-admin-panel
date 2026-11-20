@@ -31,7 +31,11 @@ export default function MeetingPage() {
 
   useEffect(() => {
     Promise.all([
-      list('/api/pri/room/list', 500).catch(() => ({ items: [] })),
+      listFiltered<Room333>('/api/pri/room/list', {
+        limit: 500,
+        offset: 0,
+        include_shared: true,
+      }).catch(() => ({ items: [] })),
       list('/api/pri/domain/list', 500).catch(() => ({ items: [] })),
     ]).then(([r, d]) => {
       setRooms(Array.isArray(r) ? r : (r.items ?? []));

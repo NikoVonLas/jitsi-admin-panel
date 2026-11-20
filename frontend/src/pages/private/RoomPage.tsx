@@ -40,7 +40,7 @@ export default function RoomPage() {
         search,
         enabled: enabledFilter === 'all' ? null : enabledFilter === 'enabled',
         domain_id: domainFilter || undefined,
-        identity_id: undefined,
+        include_shared: true,
       });
       setRooms(result.items);
       setTotal(result.total);

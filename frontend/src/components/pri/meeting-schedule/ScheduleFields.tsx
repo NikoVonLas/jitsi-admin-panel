@@ -112,7 +112,6 @@ function defaultStartTime(): string {
 const ScheduleFields = forwardRef<ScheduleFieldsRef, Props>(({ initial }, ref) => {
   const t = useTr();
   const isEdit = !!initial;
-  const timezoneOffset = new Date().getTimezoneOffset();
   const dateAfter90Days = dateAfterXDays(90);
 
   const [schedType, setSchedType] = useState(initial?.type ?? 'o');
@@ -176,7 +175,6 @@ const ScheduleFields = forwardRef<ScheduleFieldsRef, Props>(({ initial }, ref) =
 
   useImperativeHandle(ref, () => ({
     normalizeInto(sa: Record<string, string>) {
-      sa.timezone_offset = `${timezoneOffset}`;
       sa.type = schedType;
       let t0 = time0,
         dur = duration;
@@ -185,6 +183,8 @@ const ScheduleFields = forwardRef<ScheduleFieldsRef, Props>(({ initial }, ref) =
         dur = 1440;
       }
       const started_at = new Date(`${date0}T${t0}`);
+      sa.timezone_offset = String(started_at.getTimezoneOffset());
+      sa.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const ended_at = new Date(`${date1}T23:59:59`);
 
       if (schedType === 'o') {

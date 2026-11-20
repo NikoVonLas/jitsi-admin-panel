@@ -464,6 +464,162 @@ describe("pri/meeting/schedule", {
     assertEquals(Number(row.horizon_days) <= 365, true);
   });
 
+  // Choose a future non-leap year starting on Tuesday (Jan 6 is Sunday).
+  let year = new Date().getUTCFullYear() + 1;
+  while (
+    new Date(Date.UTC(year, 0, 1)).getUTCDay() !== 2 ||
+    new Date(Date.UTC(year, 2, 0)).getUTCDate() !== 28
+  ) year++;
+  const patterns: [string, Record<string, string>, string[]][] = [
+    ["once across midnight", { type: "o", started_at: "01-01T23:30Z" }, [
+      "01-01T23:30",
+    ]],
+    ["daily every two days", {
+      type: "d",
+      rep_every: "2",
+      rep_end_type: "x",
+      rep_end_x: "3",
+    }, ["01-01T10:00", "01-03T10:00", "01-05T10:00"]],
+    ["alternate local Sundays near midnight", {
+      type: "w",
+      started_at: "01-05T19:30Z",
+      timezone_offset: "-300",
+      rep_end_type: "at",
+      rep_end_at: "01-31T18:59Z",
+      rep_every: "2",
+      rep_days: "1000000",
+    }, ["01-05T19:30", "01-19T19:30"]],
+    ["two weekdays every other week", {
+      type: "w",
+      rep_every: "2",
+      rep_end_type: "at",
+      rep_end_at: "01-18T23:59Z",
+      rep_days: "0101000",
+    }, ["01-02T10:00", "01-14T10:00", "01-16T10:00"]],
+    ["alternate months", {
+      type: "m",
+      rep_every: "2",
+      rep_end_type: "at",
+      rep_end_at: "03-31T23:59Z",
+      rep_month_mode: "d",
+      rep_month_day: "31",
+    }, ["01-31T10:00", "03-31T10:00"]],
+    ["Berlin daily across spring DST", {
+      type: "d",
+      started_at: "03-30T08:00Z",
+      timezone: "Europe/Berlin",
+      rep_end_type: "x",
+      rep_end_x: "3",
+    }, ["03-30T08:00", "03-31T07:00", "04-01T07:00"]],
+    ["Berlin all-day ends at the next midnight on spring DST", {
+      type: "o",
+      duration: "1440",
+      started_at: "03-30T23:00Z",
+      timezone: "Europe/Berlin",
+    }, ["03-30T23:00"]],
+    ["Berlin all-day ends at the next midnight on autumn DST", {
+      type: "o",
+      duration: "1440",
+      started_at: "10-26T22:00Z",
+      timezone: "Europe/Berlin",
+    }, ["10-26T22:00"]],
+    ["Berlin Mondays across autumn DST", {
+      type: "w",
+      started_at: "10-21T07:00Z",
+      timezone: "Europe/Berlin",
+      rep_end_type: "at",
+      rep_end_at: "10-30T23:00Z",
+      rep_days: "0100000",
+    }, ["10-21T07:00", "10-28T08:00"]],
+    ["month ends across DST", {
+      type: "m",
+      started_at: "01-01T08:00Z",
+      timezone: "Europe/Berlin",
+      rep_end_type: "at",
+      rep_end_at: "03-31T21:59Z",
+      rep_month_mode: "d",
+      rep_month_day: "31",
+    }, ["01-31T08:00", "02-28T08:00", "03-31T07:00"]],
+    ["fifth Fridays skip missing months", {
+      type: "m",
+      rep_end_type: "at",
+      rep_end_at: "03-31T23:59Z",
+      rep_month_mode: "w",
+      rep_month_pos: "5",
+      rep_month_dow: "5",
+    }, ["03-29T10:00"]],
+    ["penultimate Fridays", {
+      type: "m",
+      rep_end_type: "at",
+      rep_end_at: "03-31T23:59Z",
+      rep_month_mode: "w",
+      rep_month_pos: "-2",
+      rep_month_dow: "5",
+    }, ["01-18T10:00", "02-15T10:00", "03-22T10:00"]],
+    ["last Fridays", {
+      type: "m",
+      rep_end_type: "at",
+      rep_end_at: "03-31T23:59Z",
+      rep_month_mode: "w",
+      rep_month_pos: "-1",
+      rep_month_dow: "5",
+    }, ["01-25T10:00", "02-22T10:00", "03-29T10:00"]],
+  ];
+  for (const [index, day] of ["04", "11", "18", "25"].entries()) {
+    patterns.push([`Friday number ${index + 1} in January`, {
+      type: "m",
+      rep_end_type: "at",
+      rep_end_at: "01-31T23:59Z",
+      rep_month_mode: "w",
+      rep_month_pos: String(index + 1),
+      rep_month_dow: "5",
+    }, [`01-${day}T10:00`]]);
+  }
+  for (const [name, spec, expected] of patterns) {
+    it(name, async () => {
+      const attr = {
+        duration: "60",
+        timezone_offset: "0",
+        rep_every: "1",
+        ...spec,
+        started_at: year + "-" + (spec.started_at ?? "01-01T10:00Z"),
+      };
+      if (spec.rep_end_at) {
+        Object.assign(attr, { rep_end_at: year + "-" + spec.rep_end_at });
+      }
+      const path = "/api/pri/meeting/schedule/add";
+      const response = await routeMeetingSchedule(
+        makeRequest("POST", path, {
+          meeting_id: meetingId,
+          schedule_attr: attr,
+        }),
+        path,
+        identityId,
+      );
+      assertEquals(response.status, 200);
+      const [{ id }] = await response.json();
+      const result = await query({
+        text:
+          "SELECT started_at,ended_at FROM meeting_session WHERE meeting_schedule_id=$1 ORDER BY started_at",
+        args: [id],
+      });
+      const sessions = result.rows as { started_at: Date; ended_at: Date }[];
+      assertEquals(
+        sessions.map((s) => s.started_at.toISOString().slice(5, 16)),
+        expected,
+      );
+      assertEquals(
+        sessions.every((s) =>
+          s.ended_at.getTime() - s.started_at.getTime() ===
+            (spec.duration === "1440"
+                ? (spec.started_at.startsWith("03") ? 23 : 25)
+                : 1) * 3600000
+        ),
+        true,
+      );
+    });
+  }
+
   it("adds a weekly schedule", async () => {
     const req = makeRequest("POST", "/api/pri/meeting/schedule/add", {
       meeting_id: meetingId,

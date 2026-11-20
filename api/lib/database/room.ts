@@ -1,3 +1,8 @@
+import {
+  activeRoomModerator,
+  organizerHasRoom,
+  ownerCanUseDomain,
+} from "./room-access.ts";
 import { fetch } from "./common.ts";
 import { generateRoomUrl } from "../common/helper.ts";
 import { getDefaultProfile } from "./profile.ts";
@@ -26,6 +31,7 @@ export interface ListRoomOptions {
   search: string;
   enabled: boolean | null;
   domainId: string | null;
+  includeShared?: boolean;
   ownerIdentityId?: string | null;
 }
 
@@ -73,20 +79,18 @@ export async function getRoomLinkset(
   roomId: string,
   isSuperAdmin = false,
 ) {
-  await updateRoomSuffix(roomId);
-  await updateRoomAccessTime(roomId);
-
   const sql = {
     text: `
-      SELECT r.name, r.label, r.has_suffix, r.suffix, d.auth_type, d.domain_attr
-      FROM room r
-        JOIN domain d ON r.domain_id = d.id
-                         AND d.enabled
-        JOIN identity i ON d.identity_id = i.id
-                           AND i.enabled
-      WHERE r.id = $2
-        AND ($3 OR r.identity_id = $1)
-        AND (d.public OR d.identity_id = $1 OR $3)`,
+      UPDATE room r
+      SET accessed_at = now(), attendance = r.attendance + 1,
+          suffix = CASE WHEN r.has_suffix AND r.accessed_at + interval '4 hours' < now()
+                        THEN md5(gen_random_uuid()::text) ELSE r.suffix END
+      FROM domain d JOIN identity i ON i.id = d.identity_id AND i.enabled
+      WHERE r.id = $2 AND r.enabled AND r.domain_id = d.id AND d.enabled
+        AND EXISTS (SELECT 1 FROM identity owner WHERE owner.id = r.identity_id AND owner.enabled)
+        AND ($3 OR (r.identity_id = $1 AND ${ownerCanUseDomain})
+             OR ${activeRoomModerator("$1")})
+      RETURNING r.name, r.label, r.has_suffix, r.suffix, d.auth_type, d.domain_attr`,
     args: [
       identityId,
       roomId,
@@ -199,9 +203,9 @@ export async function getRoomIdByName(
                            AND d.enabled
           JOIN identity i ON d.identity_id = i.id
                              AND i.enabled
-        WHERE r.identity_id = $1
-            AND r.enabled
-          AND (d.public OR d.identity_id = $1)
+        WHERE r.enabled
+          AND ((r.identity_id = $1 AND ${ownerCanUseDomain})
+               OR ${activeRoomModerator("$1")})
       )
       SELECT id, now() as at
       FROM room_owner
@@ -289,6 +293,7 @@ export async function getRoomLinksetByHostKey(
         JOIN identity i2 ON r.identity_id = i2.id AND i2.enabled
         JOIN meeting_session ses ON ms.id = ses.meeting_schedule_id
       WHERE r.id = $1
+        AND ${organizerHasRoom}
         AND ms.host_key = $2
         AND ms.enabled
         AND ses.ended_at > now()
@@ -320,6 +325,7 @@ export async function getRoomLinksetByMeetingAndHostKey(
         JOIN identity i2 ON r.identity_id = i2.id AND i2.enabled
         JOIN meeting_session ses ON ms.id = ses.meeting_schedule_id
       WHERE m.id = $1
+        AND ${organizerHasRoom}
         AND ms.host_key = $2
         AND ms.enabled
         AND ses.ended_at > now()
@@ -347,6 +353,7 @@ export async function listRoom(
     enabled,
     domainId,
     ownerIdentityId = null,
+    includeShared = false,
   } = opts;
   const searchPattern = search ? `%${search}%` : null;
 
@@ -399,19 +406,28 @@ export async function listRoom(
     text: `
       SELECT r.id, r.name, r.label, r.short_code, d.name as domain_name,
         d.domain_attr->>'url' as domain_url,
-        r.enabled,
-        (d.enabled AND i.enabled AND (d.identity_id = $1 OR d.public)) as chain_enabled,
+        r.enabled, r.identity_id <> $1 AS shared,
+        (d.enabled AND i.enabled AND owner.enabled AND (r.identity_id <> $1 OR ${ownerCanUseDomain})) as chain_enabled,
         r.updated_at
       FROM room r
         JOIN domain d ON r.domain_id = d.id
         JOIN identity i ON d.identity_id = i.id
-      WHERE r.identity_id = $1
+        JOIN identity owner ON owner.id = r.identity_id
+      WHERE (r.identity_id = $1 OR ($7 AND ${activeRoomModerator("$1")}))
         AND ($4::text IS NULL OR (r.name ILIKE $4 OR r.label ILIKE $4 OR r.short_code ILIKE $4 OR d.name ILIKE $4))
         AND ($5::boolean IS NULL OR r.enabled = $5)
         AND ($6::uuid IS NULL OR r.domain_id = $6::uuid)
       ORDER BY name
       LIMIT $2 OFFSET $3`,
-    args: [identityId, limit, offset, searchPattern, enabled, domainId],
+    args: [
+      identityId,
+      limit,
+      offset,
+      searchPattern,
+      enabled,
+      domainId,
+      includeShared,
+    ],
   };
 
   const countSql = {
@@ -420,11 +436,11 @@ export async function listRoom(
       FROM room r
         JOIN domain d ON r.domain_id = d.id
         JOIN identity i ON d.identity_id = i.id
-      WHERE r.identity_id = $1
+      WHERE (r.identity_id = $1 OR ($5 AND ${activeRoomModerator("$1")}))
         AND ($2::text IS NULL OR (r.name ILIKE $2 OR r.label ILIKE $2 OR r.short_code ILIKE $2 OR d.name ILIKE $2))
         AND ($3::boolean IS NULL OR r.enabled = $3)
         AND ($4::uuid IS NULL OR r.domain_id = $4::uuid)`,
-    args: [identityId, searchPattern, enabled, domainId],
+    args: [identityId, searchPattern, enabled, domainId, includeShared],
   };
 
   const [items, countRows] = await Promise.all([

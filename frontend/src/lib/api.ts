@@ -46,6 +46,7 @@ export interface ListFilteredOpts {
   offset: number;
   search?: string;
   enabled?: boolean | null;
+  include_shared?: boolean;
   has_session?: boolean | null;
   room_id?: string;
   domain_id?: string;
@@ -63,6 +64,7 @@ export async function listFiltered<T = unknown>(
     search: opts.search ?? '',
     enabled: opts.enabled ?? null,
   };
+  if (opts.include_shared !== undefined) payload.include_shared = opts.include_shared;
   if (opts.has_session !== undefined) payload.has_session = opts.has_session ?? null;
   if (opts.room_id !== undefined) payload.room_id = opts.room_id || null;
   if (opts.domain_id !== undefined) payload.domain_id = opts.domain_id || null;

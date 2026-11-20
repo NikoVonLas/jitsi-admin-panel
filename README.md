@@ -11,6 +11,7 @@ Self-hosted admin panel for [Jitsi Meet](https://jitsi.org/) — manage domains,
 
 - **Multi-domain support** — manage multiple Jitsi Meet instances from one panel
 - **Room management** — create and configure rooms with custom settings per domain
+- **Room moderators** — room owners and superadmins can add or revoke an existing panel account by email under **Meeting Rooms → Moderators**. Assigned users can open that room from their own room list, sign in through Jitsi to host it, and select it when creating and scheduling their own meetings. Removing the assignment also stops the panel from issuing links for meetings they organized in that room.
 - **Meeting scheduling** — schedule meetings with iCal export and email reminders
 - **Guest join pages** — public, auth-free pages for guests to join meetings
 - **Keycloak OIDC + local auth** — sign in through Keycloak or with email/password

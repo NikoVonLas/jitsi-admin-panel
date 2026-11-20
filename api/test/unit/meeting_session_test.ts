@@ -1,6 +1,9 @@
 import { assertThrows } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
-import { checkScheduleAttr } from "../../lib/database/meeting-session.ts";
+import {
+  checkScheduleAttr,
+  validateSchedule,
+} from "../../lib/database/meeting-session.ts";
 
 // Helpers
 function futureIso(minutes = 60): string {
@@ -479,7 +482,41 @@ describe("checkScheduleAttr — unknown type", () => {
     assertThrows(
       () => checkScheduleAttr({ type: "z" }),
       Error,
-      "Unknow schedule type",
+      "Unknown schedule type",
     );
   });
+});
+
+describe("schedule request validation", () => {
+  const samples: Record<string, string>[] = [
+    { type: "o" },
+    { type: "d", duration: "30", rep_end_type: "x", rep_every: "1" },
+    {
+      type: "w",
+      duration: "30",
+      rep_days: "0000000",
+      rep_every: "1",
+      rep_end_type: "at",
+      rep_end_at: futureEndIso(),
+    },
+    {
+      type: "m",
+      duration: "30",
+      rep_every: "1",
+      rep_end_type: "at",
+      rep_end_at: futureEndIso(),
+      rep_month_mode: "d",
+    },
+    { type: "o", duration: "1.5" },
+    { type: "o", duration: "60", timezone: "Unknown/Zone" },
+  ];
+  for (const sample of samples) {
+    it(`rejects incomplete or invalid schedule ${JSON.stringify(sample)}`, () => {
+      assertThrows(
+        () => validateSchedule({ started_at: futureIso(), ...sample }),
+        Error,
+        "Invalid meeting schedule",
+      );
+    });
+  }
 });

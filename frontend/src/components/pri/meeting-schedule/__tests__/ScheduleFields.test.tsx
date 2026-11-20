@@ -1,3 +1,5 @@
+import { createRef } from 'react';
+import type { ScheduleFieldsRef } from '../ScheduleFields';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
@@ -24,6 +26,35 @@ vi.mock('../../../../lib/common', () => ({
 import ScheduleFields from '../ScheduleFields';
 
 describe('ScheduleFields', () => {
+  it('sends the organizer time zone with the schedule', () => {
+    const ref = createRef<ScheduleFieldsRef>();
+    render(<ScheduleFields ref={ref} />);
+    const attr: Record<string, string> = {};
+    ref.current!.normalizeInto(attr);
+    expect(attr.timezone).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  });
+
+  it.each([
+    ['sched.once', [], { type: 'o' }],
+    ['sched.daily', [], { type: 'd', rep_end_type: 'x', rep_end_x: '10', rep_every: '1' }],
+    ['sched.daily', ['sched.rep_forever'], { type: 'd', rep_end_type: 'forever' }],
+    ['sched.weekly', [], { type: 'w', rep_end_type: 'at', rep_days: '0111110' }],
+    ['sched.custom', [], { type: 'm', rep_month_mode: 'd', rep_month_day: '21' }],
+    [
+      'sched.custom',
+      ['form.month_mode_w'],
+      { type: 'm', rep_month_mode: 'w', rep_month_pos: '1', rep_month_dow: '0' },
+    ],
+  ] as const)('submits the selected recurrence %s %j', (kind, options, expected) => {
+    const ref = createRef<ScheduleFieldsRef>();
+    render(<ScheduleFields ref={ref} />);
+    fireEvent.click(screen.getByText(kind));
+    for (const option of options) fireEvent.click(screen.getByText(option));
+    const attr: Record<string, string> = {};
+    ref.current!.normalizeInto(attr);
+    expect(attr).toMatchObject(expected);
+  });
+
   it('renders without crashing', () => {
     render(<ScheduleFields />);
   });

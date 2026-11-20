@@ -1039,4 +1039,18 @@ export default async function runMigration() {
   await migrateTo2026081801();
   await migrateTo2026081802();
   await migrateTo2026111901();
+  // Some installations ran the optional script that removed partnership tables.
+  await migrateTo("20261120.01", [
+    `CREATE TABLE IF NOT EXISTS room_partner (
+       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+       identity_id uuid NOT NULL REFERENCES identity(id) ON DELETE CASCADE,
+       room_id uuid NOT NULL REFERENCES room(id) ON DELETE CASCADE,
+       enabled boolean NOT NULL DEFAULT true,
+       created_at timestamptz NOT NULL DEFAULT now(),
+       updated_at timestamptz NOT NULL DEFAULT now()
+     )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS room_partner_identity_id_room_id_idx
+       ON room_partner(identity_id, room_id)`,
+    `CREATE INDEX IF NOT EXISTS room_partner_room_id_idx ON room_partner(room_id)`,
+  ]);
 }

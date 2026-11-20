@@ -1,3 +1,4 @@
+import { organizerCanHost } from "./room-access.ts";
 import { fetch } from "./common.ts";
 import {
   dateAfterXDays,
@@ -38,8 +39,7 @@ export async function listSessionForIcal(
           JOIN meeting_session ses ON s.id = ses.meeting_schedule_id
         WHERE m.identity_id = $1
           AND m.enabled
-          AND r.identity_id = $1
-          AND (d.public OR d.identity_id = r.identity_id)
+          AND ${organizerCanHost}
           AND ses.started_at > now() - interval '30 days'
           AND ses.started_at < now() + interval '365 days'
 
@@ -100,8 +100,7 @@ export async function listSessionByMonth(
           JOIN meeting_session ses ON s.id = ses.meeting_schedule_id
         WHERE m.identity_id = $1
           AND m.enabled
-          AND r.identity_id = $1
-          AND (d.public OR d.identity_id = r.identity_id)
+          AND ${organizerCanHost}
           AND ses.started_at > $2
           AND ses.started_at < $3
 

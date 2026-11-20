@@ -7,6 +7,7 @@ import { copyText } from '../../../lib/common';
 import type { Room, Room333 } from '../../../types';
 import { HostKeyPanel, JoinLinks } from '../../common/ConferenceAccess';
 import { entityCardActions } from '../../common/EntityCardActions';
+import RoomModerators from './RoomModerators';
 import RoomUpdate from './RoomUpdate';
 
 interface Props {
@@ -17,6 +18,7 @@ interface Props {
 export default function RoomListItem({ room: p, onRefresh }: Props) {
   const t = useTr();
   const [enabled, setEnabled] = useState(p.enabled);
+  const [showModerators, setShowModerators] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [roomData, setRoomData] = useState<Room | null>(null);
   const [delLoading, setDelLoading] = useState(false);
@@ -137,23 +139,39 @@ export default function RoomListItem({ room: p, onRefresh }: Props) {
     <>
       <Card
         style={{ height: '100%', borderColor: enabled && p.chain_enabled ? undefined : '#dc2626' }}
-        actions={entityCardActions({
-          enabled,
-          toggleLoading,
-          delLoading,
-          toggleTitle: enabled ? t('page.disable_room') : t('page.enable_room'),
-          toggleDescription: enabled ? t('warn.disable_room') : undefined,
-          delTitle: t('page.del_room'),
-          delDescription: t('warn.delete_room'),
-          onToggle: confirmToggle,
-          onDel: confirmDel,
-          t,
-          extraActions: [
-            <Tooltip key="edit" title={t('btn.update')}>
-              <Button type="text" icon={<i className="bi bi-pencil" />} onClick={openEditModal} />
-            </Tooltip>,
-          ],
-        })}
+        actions={
+          p.shared
+            ? undefined
+            : entityCardActions({
+                enabled,
+                toggleLoading,
+                delLoading,
+                toggleTitle: enabled ? t('page.disable_room') : t('page.enable_room'),
+                toggleDescription: enabled ? t('warn.disable_room') : undefined,
+                delTitle: t('page.del_room'),
+                delDescription: t('warn.delete_room'),
+                onToggle: confirmToggle,
+                onDel: confirmDel,
+                t,
+                extraActions: [
+                  <Tooltip key="moderators" title={t('room.moderators')}>
+                    <Button
+                      type="text"
+                      aria-label={t('room.moderators')}
+                      icon={<i className="bi bi-people" />}
+                      onClick={() => setShowModerators(true)}
+                    />
+                  </Tooltip>,
+                  <Tooltip key="edit" title={t('btn.update')}>
+                    <Button
+                      type="text"
+                      icon={<i className="bi bi-pencil" />}
+                      onClick={openEditModal}
+                    />
+                  </Tooltip>,
+                ],
+              })
+        }
       >
         <div style={{ marginBottom: 4 }}>
           <div style={{ fontWeight: 600, wordBreak: 'break-word', marginBottom: 2 }}>
@@ -166,7 +184,8 @@ export default function RoomListItem({ room: p, onRefresh }: Props) {
           </div>
         </div>
 
-        {guestUrl && (
+        {p.shared && enabled && modUrl && <Button href={modUrl}>{t('meeting.join_as_mod')}</Button>}
+        {!p.shared && guestUrl && (
           <JoinLinks
             guestUrl={guestUrl}
             moderatorUrl={modUrl}
@@ -189,6 +208,9 @@ export default function RoomListItem({ room: p, onRefresh }: Props) {
         )}
       </Card>
 
+      {showModerators && !p.shared && (
+        <RoomModerators roomId={p.id} title={roomTitle} onClose={() => setShowModerators(false)} />
+      )}
       {/* Edit modal */}
       <Modal
         open={showEdit}

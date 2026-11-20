@@ -1,4 +1,8 @@
 const en: Record<string, string> = {
+  'room.moderators': 'Moderators',
+  'room.moderator_email': 'Panel account email',
+  'room.revoke_moderator': 'Revoke access',
+  'room.moderator_add_error': 'Could not add this moderator. Check the email of the active account.',
   // Navigation
   'nav.calendar': 'Calendar',
   'nav.meetings': 'Meetings',

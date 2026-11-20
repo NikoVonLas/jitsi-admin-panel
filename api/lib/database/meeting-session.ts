@@ -1,5 +1,7 @@
+import { organizerHasRoom } from "./room-access.ts";
+import { HttpError } from "../http/error.ts";
 import { Transaction } from "@db/postgres";
-import { fetch } from "./common.ts";
+import { checkAttr, fetch } from "./common.ts";
 import type { Attr, MeetingSessionForReminder } from "./types.ts";
 
 // -----------------------------------------------------------------------------
@@ -12,37 +14,33 @@ function isOver(date: string, minutes: number) {
 }
 
 // -----------------------------------------------------------------------------
+function integerInRange(raw: string, min: number, max = 2147483647) {
+  const n = Number(raw);
+  return /^-?\d+$/.test(raw) && Number.isInteger(n) && n >= min && n <= max;
+}
+
 function checkScheduleAttrOnce(scheduleAttr: Attr) {
-  if (Number(scheduleAttr.duration) < 1) {
-    throw new Error("duration is out of range");
-  }
-  if (Number(scheduleAttr.duration) > 1440) {
-    throw new Error("duration is out of range");
-  }
-  if (isOver(scheduleAttr.started_at, Number(scheduleAttr.duration))) {
+  if (
+    !scheduleAttr.timezone &&
+    isOver(scheduleAttr.started_at, Number(scheduleAttr.duration))
+  ) {
     throw new Error("it is already over");
   }
 }
 
 // -----------------------------------------------------------------------------
 function checkScheduleAttrDaily(scheduleAttr: Attr) {
-  if (Number(scheduleAttr.duration) < 1) {
-    throw new Error("duration is out of range");
-  }
-  if (Number(scheduleAttr.duration) > 1440) {
-    throw new Error("duration is out of range");
-  }
   if (
     scheduleAttr.rep_end_type !== "x" && scheduleAttr.rep_end_type !== "forever"
   ) {
     throw new Error("wrong rep_end_type");
   }
   if (scheduleAttr.rep_end_type === "x") {
-    if (Number(scheduleAttr.rep_end_x) < 1) {
+    if (!integerInRange(scheduleAttr.rep_end_x, 1)) {
       throw new Error("times is out of range");
     }
     if (
-      isOver(
+      !scheduleAttr.timezone && isOver(
         scheduleAttr.started_at,
         (Number(scheduleAttr.rep_end_x) - 1) * Number(scheduleAttr.rep_every) *
             24 * 60 + Number(scheduleAttr.duration),
@@ -51,29 +49,28 @@ function checkScheduleAttrDaily(scheduleAttr: Attr) {
       throw new Error("it is already over");
     }
   }
-  if (Number(scheduleAttr.rep_every) < 1) {
+  if (!integerInRange(scheduleAttr.rep_every, 1)) {
     throw new Error("rep_every is out of range");
   }
 }
 
 // -----------------------------------------------------------------------------
 function checkScheduleAttrWeekly(scheduleAttr: Attr) {
-  if (Number(scheduleAttr.duration) < 1) {
-    throw new Error("duration is out of range");
-  }
-  if (Number(scheduleAttr.duration) > 1440) {
-    throw new Error("duration is out of range");
-  }
   if (scheduleAttr.rep_end_type !== "at") {
     throw new Error("wrong rep_end_type");
   }
-  if (!/^[01]{7}$/.exec(scheduleAttr.rep_days)) {
+  if (
+    !/^[01]{7}$/.test(scheduleAttr.rep_days) ||
+    !scheduleAttr.rep_days.includes("1")
+  ) {
     throw new Error("wrong rep_days");
   }
-  if (Number(scheduleAttr.rep_every) < 1) {
+  if (!integerInRange(scheduleAttr.rep_every, 1)) {
     throw new Error("rep_every is out of range");
   }
-  if (scheduleAttr.started_at > scheduleAttr.rep_end_at) {
+  if (
+    Date.parse(scheduleAttr.started_at) > Date.parse(scheduleAttr.rep_end_at)
+  ) {
     throw new Error("invalid period");
   }
   if (isOver(scheduleAttr.rep_end_at, 0)) {
@@ -82,74 +79,27 @@ function checkScheduleAttrWeekly(scheduleAttr: Attr) {
 }
 
 // -----------------------------------------------------------------------------
-// For the client perspective (timezone), the session start date in the first
-// day of the week (Sunday) to which the given date is belong. The value of
-// timezoneOffset is a negative number for UTC- zones.
-//
-// The date argument is a date in UTC zone. So, check the timezone offset to
-// correct it.
-// -----------------------------------------------------------------------------
-function getFirstDateOfInterval(date: Date, timezoneOffset: number) {
-  const diffBefore = date.getHours() * 60 + date.getMinutes();
-  const diffAfter = (24 * 60) - diffBefore;
-
-  if ((diffAfter + timezoneOffset) <= 0) {
-    return new Date(date.getTime() - (date.getDay() + 1) * 24 * 60 * 60 * 1000);
-  } else if ((diffBefore - timezoneOffset) < 0) {
-    return new Date(date.getTime() - (date.getDay() - 1) * 24 * 60 * 60 * 1000);
-  } else {
-    return new Date(date.getTime() - date.getDay() * 24 * 60 * 60 * 1000);
-  }
-}
-
-// -----------------------------------------------------------------------------
-function getNthWeekdayOfMonth(
-  year: number,
-  month: number,
-  dow: number,
-  pos: number,
-): number | null {
-  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-
-  if (pos > 0) {
-    const firstDow = new Date(Date.UTC(year, month, 1)).getUTCDay();
-    const dayNum = 1 + (dow - firstDow + 7) % 7 + (pos - 1) * 7;
-    if (dayNum > daysInMonth) return null;
-    return dayNum;
-  } else {
-    // pos = -1 (last) or -2 (penultimate)
-    const lastDow = new Date(Date.UTC(year, month, daysInMonth)).getUTCDay();
-    const dayNum = daysInMonth - (lastDow - dow + 7) % 7 + (pos + 1) * 7;
-    if (dayNum < 1) return null;
-    return dayNum;
-  }
-}
-
-// -----------------------------------------------------------------------------
 function checkScheduleAttrMonthly(scheduleAttr: Attr) {
-  if (
-    Number(scheduleAttr.duration) < 1 || Number(scheduleAttr.duration) > 1440
-  ) {
-    throw new Error("duration is out of range");
-  }
   if (scheduleAttr.rep_end_type !== "at") throw new Error("wrong rep_end_type");
-  if (Number(scheduleAttr.rep_every) < 1) {
+  if (!integerInRange(scheduleAttr.rep_every, 1)) {
     throw new Error("rep_every is out of range");
   }
-  if (scheduleAttr.started_at > scheduleAttr.rep_end_at) {
+  if (
+    Date.parse(scheduleAttr.started_at) > Date.parse(scheduleAttr.rep_end_at)
+  ) {
     throw new Error("invalid period");
   }
   if (isOver(scheduleAttr.rep_end_at, 0)) throw new Error("it is already over");
   if (scheduleAttr.rep_month_mode === "d") {
-    const day = Number(scheduleAttr.rep_month_day);
-    if (day < 1 || day > 31) throw new Error("rep_month_day is out of range");
+    if (!integerInRange(scheduleAttr.rep_month_day, 1, 31)) {
+      throw new Error("rep_month_day is out of range");
+    }
   } else if (scheduleAttr.rep_month_mode === "w") {
     const pos = Number(scheduleAttr.rep_month_pos);
     if (![-2, -1, 1, 2, 3, 4, 5].includes(pos)) {
       throw new Error("rep_month_pos is invalid");
     }
-    const dow = Number(scheduleAttr.rep_month_dow);
-    if (dow < 0 || dow > 6) {
+    if (!integerInRange(scheduleAttr.rep_month_dow, 0, 6)) {
       throw new Error("rep_month_dow is out of range");
     }
   } else {
@@ -158,292 +108,123 @@ function checkScheduleAttrMonthly(scheduleAttr: Attr) {
 }
 
 // -----------------------------------------------------------------------------
+export function validateSchedule(attr: Attr) {
+  try {
+    checkAttr(attr);
+    checkScheduleAttr(attr);
+    if (!Number.isFinite(Date.parse(attr.started_at))) {
+      throw new Error("Invalid date");
+    }
+    if (
+      attr.rep_end_type === "at" &&
+      !Number.isFinite(Date.parse(attr.rep_end_at))
+    ) throw new Error("Invalid end date");
+    if (
+      attr.timezone_offset && !integerInRange(attr.timezone_offset, -900, 900)
+    ) throw new Error("Invalid offset");
+    if (attr.timezone) {
+      // The formatter rejects unknown IANA zone names before the rule reaches SQL.
+      Intl.DateTimeFormat("en", { timeZone: attr.timezone }).format(0);
+    }
+  } catch {
+    throw new HttpError(400, "Invalid meeting schedule");
+  }
+}
+
+const scheduleValidators = new Map([
+  ["o", checkScheduleAttrOnce],
+  ["d", checkScheduleAttrDaily],
+  ["w", checkScheduleAttrWeekly],
+  ["m", checkScheduleAttrMonthly],
+]);
+
 export function checkScheduleAttr(scheduleAttr: Attr) {
-  if (scheduleAttr.type === "o") {
-    checkScheduleAttrOnce(scheduleAttr);
-  } else if (scheduleAttr.type === "d") {
-    checkScheduleAttrDaily(scheduleAttr);
-  } else if (scheduleAttr.type === "w") {
-    checkScheduleAttrWeekly(scheduleAttr);
-  } else if (scheduleAttr.type === "m") {
-    checkScheduleAttrMonthly(scheduleAttr);
-  } else {
-    throw new Error("Unknow schedule type");
+  const validate = scheduleValidators.get(scheduleAttr.type);
+  if (!validate) throw new Error("Unknown schedule type");
+  if (!integerInRange(scheduleAttr.duration, 1, 1440)) {
+    throw new Error("duration is out of range");
   }
+  validate(scheduleAttr);
 }
 
 // -----------------------------------------------------------------------------
-// The structure of scheduleAttr must be checked before calling this function.
-// -----------------------------------------------------------------------------
-async function addMeetingSessionOnce(
-  trans: Transaction,
-  meetingScheduleId: string,
-  scheduleAttr: Attr,
-) {
-  const sql = {
-    text: `
-      INSERT INTO meeting_session (meeting_schedule_id, started_at, duration,
-        ended_at)
-      VALUES ($1, $2, $3,
-        $2::timestamptz + $3::integer * interval '1 min')
-      RETURNING id, created_at as at`,
-    args: [
-      meetingScheduleId,
-      scheduleAttr.started_at,
-      scheduleAttr.duration,
-    ],
-  };
+// Generate candidate dates in the organizer's civil calendar, then convert each
+// occurrence to an instant. Legacy rules contain a JS offset (minutes west of
+// UTC), which is also the sign convention for PostgreSQL's POSIX zone names.
+const occurrenceSql = `
+  , rules AS (
+    SELECT id, refill, schedule_attr AS a,
+      (schedule_attr->>'started_at')::timestamptz AS origin,
+      (schedule_attr->>'duration')::int AS minutes,
+      coalesce((schedule_attr->>'rep_every')::int, 1) AS stride,
+      coalesce(nullif(schedule_attr->>'timezone', ''), format('UTC%s%s:%s',
+        CASE WHEN utc_offset < 0 THEN '-' ELSE '+' END,
+        abs(utc_offset) / 60, lpad((abs(utc_offset) % 60)::text, 2, '0'))) AS zone
+    FROM selected
+    CROSS JOIN LATERAL (SELECT coalesce((schedule_attr->>'timezone_offset')::int,0) AS utc_offset) legacy
+  ), local_rules AS (
+    SELECT *, origin AT TIME ZONE zone AS local_start,
+      CASE a->>'rep_end_type'
+        WHEN 'at' THEN (a->>'rep_end_at')::timestamptz
+        WHEN 'forever' THEN (CASE WHEN refill THEN now() ELSE greatest(origin,now()) END) + interval '365 days'
+      END AS until
+    FROM rules
+  ), bounds AS (
+    SELECT *, CASE WHEN until IS NOT NULL THEN (until AT TIME ZONE zone)::date
+      WHEN a->>'type' = 'd' THEN local_start::date + ((a->>'rep_end_x')::int - 1) * stride
+      ELSE local_start::date END AS last_day
+    FROM local_rules
+  ), calendar_days AS (
+    SELECT b.*, day::date AS day,
+      (date_trunc('month',day) + interval '1 month - 1 day')::date AS month_end
+    FROM bounds b
+    CROSS JOIN LATERAL generate_series(
+      greatest(local_start::date, (now() AT TIME ZONE zone)::date - 2)::timestamp,
+      last_day::timestamp, interval '1 day') day
+  ), occurrences AS (
+    SELECT *, CASE WHEN day = local_start::date THEN origin
+      ELSE (day + local_start::time) AT TIME ZONE zone END AS instant
+    FROM calendar_days
+    WHERE CASE a->>'type'
+      WHEN 'o' THEN day = local_start::date
+      WHEN 'd' THEN (day - local_start::date) % stride = 0
+      WHEN 'w' THEN ((day - local_start::date + extract(dow FROM local_start)::int) / 7) % stride = 0
+        AND substring(a->>'rep_days',extract(dow FROM day)::int + 1,1) = '1'
+      WHEN 'm' THEN ((extract(year FROM day)::int - extract(year FROM local_start)::int) * 12
+        + extract(month FROM day)::int - extract(month FROM local_start)::int) % stride = 0
+        AND CASE a->>'rep_month_mode'
+          WHEN 'd' THEN extract(day FROM day) = least((a->>'rep_month_day')::int,extract(day FROM month_end))
+          WHEN 'w' THEN extract(dow FROM day) = (a->>'rep_month_dow')::int
+            AND (a->>'rep_month_pos')::int IN ((extract(day FROM day)::int - 1) / 7 + 1, -1 - (month_end - day) / 7)
+        END
+    END
+  ), sessions AS (
+    SELECT *, CASE WHEN minutes = 1440 AND local_start::time = time '00:00'
+      THEN (day + 1)::timestamp AT TIME ZONE zone
+      ELSE instant + make_interval(mins => minutes) END AS finish
+    FROM occurrences
+  )
+  INSERT INTO meeting_session (meeting_schedule_id, started_at, duration, ended_at)
+  SELECT id, instant, (extract(epoch FROM finish - instant) / 60)::int, finish
+  FROM sessions
+  WHERE (until IS NULL OR instant <= until) AND finish > now()
+  ON CONFLICT (meeting_schedule_id, started_at) DO NOTHING
+  RETURNING id, created_at AS at`;
 
-  await trans.queryObject(sql);
-}
-
-// -----------------------------------------------------------------------------
-// The structure of scheduleAttr must be checked before calling this function.
-// -----------------------------------------------------------------------------
-async function addMeetingSessionDaily(
-  trans: Transaction,
-  meetingScheduleId: string,
-  scheduleAttr: Attr,
-) {
-  const now = new Date();
-  const started_at = new Date(scheduleAttr.started_at);
-  let counter = 0;
-
-  const totalTimes = scheduleAttr.rep_end_type === "forever"
-    ? Math.ceil(
-      365 * 24 * 60 * 60 * 1000 /
-        (Number(scheduleAttr.rep_every) * 24 * 60 * 60 * 1000),
-    ) + 1
-    : Number(scheduleAttr.rep_end_x);
-
-  for (let i = 0; i < totalTimes; i++) {
-    const session_start = started_at.getTime() +
-      i * Number(scheduleAttr.rep_every) * 24 * 60 * 60 * 1000;
-    const session_end = session_start +
-      Number(scheduleAttr.duration) * 60 * 1000;
-
-    // if this session is already over, skip it
-    if (now.getTime() > session_end) continue;
-
-    const at = new Date(session_start);
-    const sql = {
-      text: `
-        INSERT INTO meeting_session (meeting_schedule_id, started_at, duration,
-          ended_at)
-        VALUES ($1, $2, $3,
-          $2::timestamptz + $3::integer * interval '1 min')
-        RETURNING id, created_at as at`,
-      args: [
-        meetingScheduleId,
-        at.toISOString(),
-        scheduleAttr.duration,
-      ],
-    };
-
-    await trans.queryObject(sql);
-    counter = counter + 1;
-  }
-
-  if (counter === 0) throw new Error("no inserted session");
-}
-
-// -----------------------------------------------------------------------------
-// The structure of scheduleAttr must be checked before calling this function.
-// -----------------------------------------------------------------------------
-async function addMeetingSessionWeekly(
-  trans: Transaction,
-  meetingScheduleId: string,
-  scheduleAttr: Attr,
-) {
-  const now = new Date();
-  const started_at = new Date(scheduleAttr.started_at);
-  const ended_at = new Date(scheduleAttr.rep_end_at);
-  const timezoneOffset = Number(scheduleAttr.timezone_offset);
-  const firstDateOfInterval = getFirstDateOfInterval(
-    started_at,
-    timezoneOffset,
-  );
-  let counter = 0;
-
-  // loop in days of week (from Sunday (0) to Saturday (6))
-  for (let i = 0; i < 7; i++) {
-    // if this is not a selected day, skip it
-    if (scheduleAttr.rep_days[i] !== "1") continue;
-
-    let session_start = firstDateOfInterval.getTime() + i * 24 * 60 * 60 * 1000;
-    while (session_start < ended_at.getTime()) {
-      const at = new Date(session_start);
-      const sql = {
-        text: `
-          INSERT INTO meeting_session (meeting_schedule_id, started_at,
-            duration, ended_at)
-          VALUES ($1, $2, $3,
-            $2::timestamptz + $3::integer * interval '1 min')
-          RETURNING id, created_at as at`,
-        args: [
-          meetingScheduleId,
-          at.toISOString(),
-          scheduleAttr.duration,
-        ],
-      };
-
-      const session_end = session_start +
-        Number(scheduleAttr.duration) * 60 * 1000;
-      if (
-        started_at.getTime() <= session_start &&
-        now.getTime() < session_end
-      ) {
-        await trans.queryObject(sql);
-        counter = counter + 1;
-      }
-
-      // jump to the next week depending on the repeat interval (every)
-      session_start = session_start +
-        Number(scheduleAttr.rep_every) * 7 * 24 * 60 * 60 * 1000;
-    }
-  }
-
-  if (counter === 0) throw new Error("no inserted session");
-}
-
-// -----------------------------------------------------------------------------
-function resolveMonthlyDayNum(
-  scheduleAttr: Attr,
-  year: number,
-  month: number,
-): number | null {
-  if (scheduleAttr.rep_month_mode === "d") {
-    const targetDay = Number(scheduleAttr.rep_month_day);
-    const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-    return Math.min(targetDay, daysInMonth);
-  }
-  return getNthWeekdayOfMonth(
-    year,
-    month,
-    Number(scheduleAttr.rep_month_dow),
-    Number(scheduleAttr.rep_month_pos),
-  );
-}
-
-// -----------------------------------------------------------------------------
-async function insertMonthlySession(
-  trans: Transaction,
-  meetingScheduleId: string,
-  scheduleAttr: Attr,
-  sessionUTC: Date,
-  started_at: Date,
-  ended_at: Date,
-  now: Date,
-): Promise<boolean> {
-  if (sessionUTC >= ended_at) return false;
-
-  const sessionEnd = sessionUTC.getTime() +
-    Number(scheduleAttr.duration) * 60 * 1000;
-
-  if (sessionUTC >= started_at && now.getTime() < sessionEnd) {
-    const sql = {
-      text: `
-        INSERT INTO meeting_session (meeting_schedule_id, started_at,
-          duration, ended_at)
-        VALUES ($1, $2, $3,
-          $2::timestamptz + $3::integer * interval '1 min')
-        RETURNING id, created_at as at`,
-      args: [
-        meetingScheduleId,
-        sessionUTC.toISOString(),
-        scheduleAttr.duration,
-      ],
-    };
-    await trans.queryObject(sql);
-    return true;
-  }
-  return false;
-}
-
-// -----------------------------------------------------------------------------
-// The structure of scheduleAttr must be checked before calling this function.
-// -----------------------------------------------------------------------------
-async function addMeetingSessionMonthly(
-  trans: Transaction,
-  meetingScheduleId: string,
-  scheduleAttr: Attr,
-) {
-  const now = new Date();
-  const started_at = new Date(scheduleAttr.started_at);
-  const ended_at = new Date(scheduleAttr.rep_end_at);
-  const timezoneOffset = Number(scheduleAttr.timezone_offset);
-  const repEvery = Number(scheduleAttr.rep_every);
-
-  // Derive local time-of-day from the UTC started_at
-  const localStart = new Date(
-    started_at.getTime() - timezoneOffset * 60 * 1000,
-  );
-  const localHours = localStart.getUTCHours();
-  const localMinutes = localStart.getUTCMinutes();
-  let year = localStart.getUTCFullYear();
-  let month = localStart.getUTCMonth(); // 0-indexed
-
-  let counter = 0;
-
-  for (let iteration = 0; iteration < 500; iteration++) {
-    const dayNum = resolveMonthlyDayNum(scheduleAttr, year, month);
-
-    if (dayNum !== null) {
-      const sessionLocalMs = Date.UTC(
-        year,
-        month,
-        dayNum,
-        localHours,
-        localMinutes,
-      );
-      const sessionUTC = new Date(sessionLocalMs + timezoneOffset * 60 * 1000);
-
-      if (sessionUTC >= ended_at) break;
-
-      const inserted = await insertMonthlySession(
-        trans,
-        meetingScheduleId,
-        scheduleAttr,
-        sessionUTC,
-        started_at,
-        ended_at,
-        now,
-      );
-      if (inserted) counter++;
-    }
-
-    month += repEvery;
-    while (month >= 12) {
-      month -= 12;
-      year++;
-    }
-  }
-
-  if (counter === 0) throw new Error("no inserted session");
-}
-
-// -----------------------------------------------------------------------------
-// The structure of scheduleAttr must be checked before calling this function.
-// -----------------------------------------------------------------------------
 export async function addMeetingSession(
   trans: Transaction,
   meetingScheduleId: string,
-  scheduleAttr: Attr,
 ) {
-  if (scheduleAttr.type === "o") {
-    await addMeetingSessionOnce(trans, meetingScheduleId, scheduleAttr);
-  } else if (scheduleAttr.type === "d") {
-    await addMeetingSessionDaily(trans, meetingScheduleId, scheduleAttr);
-  } else if (scheduleAttr.type === "w") {
-    await addMeetingSessionWeekly(trans, meetingScheduleId, scheduleAttr);
-  } else if (scheduleAttr.type === "m") {
-    await addMeetingSessionMonthly(trans, meetingScheduleId, scheduleAttr);
-  } else {
-    throw new Error("Unknow schedule type");
+  const result = await trans.queryObject({
+    text:
+      `WITH selected AS (SELECT id,schedule_attr,false AS refill FROM meeting_schedule WHERE id=$1) ${occurrenceSql}`,
+    args: [meetingScheduleId],
+  });
+  if (!result.rows.length) {
+    throw new HttpError(400, "Schedule has no upcoming sessions");
   }
 }
 
-// -----------------------------------------------------------------------------
 export async function delMeetingSessionBySchedule(
   trans: Transaction,
   meetingScheduleId: string,
@@ -483,7 +264,8 @@ export async function listMeetingSessionForReminder() {
         JOIN meeting_schedule s ON m.id = s.meeting_id
                                    AND s.enabled
         JOIN meeting_session ses ON s.id = ses.meeting_schedule_id
-      WHERE ses.reminder_sent_at IS NULL
+      WHERE ${organizerHasRoom}
+        AND ses.reminder_sent_at IS NULL
         AND ses.started_at > now() + interval '25 minutes'
         AND ses.started_at < now() + interval '31 minutes'
         AND m.enabled
@@ -516,52 +298,16 @@ export async function markMeetingSessionReminderSent(sessionId: string) {
 export async function ensureForeverMeetingSessions() {
   const sql = {
     text: `
-      WITH forever_schedule AS (
-        SELECT id,
-          (schedule_attr->>'started_at')::timestamptz AS original_start,
-          (schedule_attr->>'duration')::integer AS duration,
-          (schedule_attr->>'rep_every')::integer AS repeat_days
-        FROM meeting_schedule
-        WHERE enabled
-          AND schedule_attr->>'type' = 'd'
-          AND schedule_attr->>'rep_end_type' = 'forever'
+      WITH selected AS (
+        SELECT id, schedule_attr,true AS refill FROM meeting_schedule
+        WHERE enabled AND schedule_attr->>'type'='d'
+          AND schedule_attr->>'rep_end_type'='forever'
           AND schedule_attr->>'started_at' IS NOT NULL
           AND schedule_attr->>'duration' ~ '^[0-9]+$'
           AND schedule_attr->>'rep_every' ~ '^[0-9]+$'
           AND (schedule_attr->>'duration')::integer BETWEEN 1 AND 1440
           AND (schedule_attr->>'rep_every')::integer >= 1
-      ), bounds AS (
-        SELECT *,
-          greatest(
-            0,
-            floor(
-              extract(epoch FROM (
-                now() - original_start - duration * interval '1 minute'
-              )) / (repeat_days * 86400)
-            )::integer + 1
-          ) AS first_occurrence,
-          floor(
-            extract(epoch FROM (
-              now() + interval '365 days' - original_start
-            )) / (repeat_days * 86400)
-          )::integer AS last_occurrence
-        FROM forever_schedule
-      )
-      INSERT INTO meeting_session (
-        meeting_schedule_id, started_at, duration, ended_at
-      )
-      SELECT id,
-        original_start + occurrence * repeat_days * interval '1 day',
-        duration,
-        original_start + occurrence * repeat_days * interval '1 day'
-          + duration * interval '1 minute'
-      FROM bounds
-      CROSS JOIN LATERAL generate_series(
-        first_occurrence,
-        last_occurrence
-      ) AS occurrence
-      ON CONFLICT (meeting_schedule_id, started_at) DO NOTHING
-      RETURNING id, created_at as at`,
+      ) ${occurrenceSql}`,
     args: [],
   };
 

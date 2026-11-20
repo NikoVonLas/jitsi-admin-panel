@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Form } from 'antd';
-import { action, get, list } from '../../../lib/api';
+import { action, get, list, listFiltered } from '../../../lib/api';
 import { isRoomNameTaken } from '../../../lib/apiError';
 import { useTr } from '../../../i18n';
 import { toLocaleDate, toLocaleTime } from '../../../lib/common';
@@ -70,6 +70,7 @@ export default function MeetingAdd({ onCancel, onSuccess }: Props) {
   const [roomDomainId, setRoomDomainId] = useState('');
   // A retry after a later step failed reuses the room the first try created;
   // adding it again would hit its own slug.
+  const [requestId] = useState(() => crypto.randomUUID());
   const createdRoomRef = useRef<{ key: string; id: string } | null>(null);
 
   // Schedule step
@@ -84,7 +85,11 @@ export default function MeetingAdd({ onCancel, onSuccess }: Props) {
       try {
         const [p, rooms, domains] = await Promise.all([
           get('/api/pri/profile/get/default').catch(() => null),
-          list('/api/pri/room/list', 500).catch(() => ({ items: [] })),
+          listFiltered<Room333>('/api/pri/room/list', {
+            limit: 500,
+            offset: 0,
+            include_shared: true,
+          }).catch(() => ({ items: [] })),
           list('/api/pri/domain/list', 100).catch(() => []),
         ]);
         if (p) setProfileId((p as Profile).id);
@@ -182,7 +187,9 @@ export default function MeetingAdd({ onCancel, onSuccess }: Props) {
         }
         finalRoomId = createdRoomRef.current.id;
       }
-      const meeting = await action('/api/pri/meeting/add', {
+      await action('/api/pri/meeting/add', {
+        request_id: requestId,
+        schedules: pendingSchedules,
         profile_id: profileId,
         room_id: finalRoomId,
         name: meetingName,
@@ -190,11 +197,6 @@ export default function MeetingAdd({ onCancel, onSuccess }: Props) {
         hidden: true,
         subscribable: true,
       });
-      await Promise.all(
-        pendingSchedules.map((sa) =>
-          action('/api/pri/meeting/schedule/add', { meeting_id: meeting.id, schedule_attr: sa })
-        )
-      );
       onSuccess?.();
     } catch (e) {
       if (isRoomNameTaken(e)) {
