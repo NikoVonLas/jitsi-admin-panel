@@ -14,13 +14,12 @@ function isOver(date: string, minutes: number) {
 }
 
 // -----------------------------------------------------------------------------
+function integerInRange(raw: string, min: number, max = 2147483647) {
+  const n = Number(raw);
+  return /^-?\d+$/.test(raw) && Number.isInteger(n) && n >= min && n <= max;
+}
+
 function checkScheduleAttrOnce(scheduleAttr: Attr) {
-  if (Number(scheduleAttr.duration) < 1) {
-    throw new Error("duration is out of range");
-  }
-  if (Number(scheduleAttr.duration) > 1440) {
-    throw new Error("duration is out of range");
-  }
   if (
     !scheduleAttr.timezone &&
     isOver(scheduleAttr.started_at, Number(scheduleAttr.duration))
@@ -31,19 +30,13 @@ function checkScheduleAttrOnce(scheduleAttr: Attr) {
 
 // -----------------------------------------------------------------------------
 function checkScheduleAttrDaily(scheduleAttr: Attr) {
-  if (Number(scheduleAttr.duration) < 1) {
-    throw new Error("duration is out of range");
-  }
-  if (Number(scheduleAttr.duration) > 1440) {
-    throw new Error("duration is out of range");
-  }
   if (
     scheduleAttr.rep_end_type !== "x" && scheduleAttr.rep_end_type !== "forever"
   ) {
     throw new Error("wrong rep_end_type");
   }
   if (scheduleAttr.rep_end_type === "x") {
-    if (Number(scheduleAttr.rep_end_x) < 1) {
+    if (!integerInRange(scheduleAttr.rep_end_x, 1)) {
       throw new Error("times is out of range");
     }
     if (
@@ -56,26 +49,23 @@ function checkScheduleAttrDaily(scheduleAttr: Attr) {
       throw new Error("it is already over");
     }
   }
-  if (Number(scheduleAttr.rep_every) < 1) {
+  if (!integerInRange(scheduleAttr.rep_every, 1)) {
     throw new Error("rep_every is out of range");
   }
 }
 
 // -----------------------------------------------------------------------------
 function checkScheduleAttrWeekly(scheduleAttr: Attr) {
-  if (Number(scheduleAttr.duration) < 1) {
-    throw new Error("duration is out of range");
-  }
-  if (Number(scheduleAttr.duration) > 1440) {
-    throw new Error("duration is out of range");
-  }
   if (scheduleAttr.rep_end_type !== "at") {
     throw new Error("wrong rep_end_type");
   }
-  if (!/^[01]{7}$/.exec(scheduleAttr.rep_days)) {
+  if (
+    !/^[01]{7}$/.test(scheduleAttr.rep_days) ||
+    !scheduleAttr.rep_days.includes("1")
+  ) {
     throw new Error("wrong rep_days");
   }
-  if (Number(scheduleAttr.rep_every) < 1) {
+  if (!integerInRange(scheduleAttr.rep_every, 1)) {
     throw new Error("rep_every is out of range");
   }
   if (
@@ -90,13 +80,8 @@ function checkScheduleAttrWeekly(scheduleAttr: Attr) {
 
 // -----------------------------------------------------------------------------
 function checkScheduleAttrMonthly(scheduleAttr: Attr) {
-  if (
-    Number(scheduleAttr.duration) < 1 || Number(scheduleAttr.duration) > 1440
-  ) {
-    throw new Error("duration is out of range");
-  }
   if (scheduleAttr.rep_end_type !== "at") throw new Error("wrong rep_end_type");
-  if (Number(scheduleAttr.rep_every) < 1) {
+  if (!integerInRange(scheduleAttr.rep_every, 1)) {
     throw new Error("rep_every is out of range");
   }
   if (
@@ -106,15 +91,15 @@ function checkScheduleAttrMonthly(scheduleAttr: Attr) {
   }
   if (isOver(scheduleAttr.rep_end_at, 0)) throw new Error("it is already over");
   if (scheduleAttr.rep_month_mode === "d") {
-    const day = Number(scheduleAttr.rep_month_day);
-    if (day < 1 || day > 31) throw new Error("rep_month_day is out of range");
+    if (!integerInRange(scheduleAttr.rep_month_day, 1, 31)) {
+      throw new Error("rep_month_day is out of range");
+    }
   } else if (scheduleAttr.rep_month_mode === "w") {
     const pos = Number(scheduleAttr.rep_month_pos);
     if (![-2, -1, 1, 2, 3, 4, 5].includes(pos)) {
       throw new Error("rep_month_pos is invalid");
     }
-    const dow = Number(scheduleAttr.rep_month_dow);
-    if (dow < 0 || dow > 6) {
+    if (!integerInRange(scheduleAttr.rep_month_dow, 0, 6)) {
       throw new Error("rep_month_dow is out of range");
     }
   } else {
@@ -134,41 +119,32 @@ export function validateSchedule(attr: Attr) {
       attr.rep_end_type === "at" &&
       !Number.isFinite(Date.parse(attr.rep_end_at))
     ) throw new Error("Invalid end date");
-    for (
-      const key of [
-        "duration",
-        "rep_every",
-        "rep_end_x",
-        "rep_month_day",
-        "rep_month_dow",
-        "rep_month_pos",
-        "timezone_offset",
-      ]
-    ) {
-      if (attr[key] && !Number.isSafeInteger(Number(attr[key]))) {
-        throw new Error("Invalid schedule number");
-      }
-    }
+    if (
+      attr.timezone_offset && !integerInRange(attr.timezone_offset, -900, 900)
+    ) throw new Error("Invalid offset");
     if (attr.timezone) {
-      new Intl.DateTimeFormat("en", { timeZone: attr.timezone });
+      // The formatter rejects unknown IANA zone names before the rule reaches SQL.
+      Intl.DateTimeFormat("en", { timeZone: attr.timezone }).format(0);
     }
   } catch {
     throw new HttpError(400, "Invalid meeting schedule");
   }
 }
 
+const scheduleValidators = new Map([
+  ["o", checkScheduleAttrOnce],
+  ["d", checkScheduleAttrDaily],
+  ["w", checkScheduleAttrWeekly],
+  ["m", checkScheduleAttrMonthly],
+]);
+
 export function checkScheduleAttr(scheduleAttr: Attr) {
-  if (scheduleAttr.type === "o") {
-    checkScheduleAttrOnce(scheduleAttr);
-  } else if (scheduleAttr.type === "d") {
-    checkScheduleAttrDaily(scheduleAttr);
-  } else if (scheduleAttr.type === "w") {
-    checkScheduleAttrWeekly(scheduleAttr);
-  } else if (scheduleAttr.type === "m") {
-    checkScheduleAttrMonthly(scheduleAttr);
-  } else {
-    throw new Error("Unknow schedule type");
+  const validate = scheduleValidators.get(scheduleAttr.type);
+  if (!validate) throw new Error("Unknown schedule type");
+  if (!integerInRange(scheduleAttr.duration, 1, 1440)) {
+    throw new Error("duration is out of range");
   }
+  validate(scheduleAttr);
 }
 
 // -----------------------------------------------------------------------------
