@@ -1,3 +1,5 @@
+import { HttpError } from "../http/error.ts";
+import { organizerCanHost, organizerHasRoom } from "./room-access.ts";
 import { checkAttr, fetch, pool } from "./common.ts";
 import {
   addMeetingSession,
@@ -68,8 +70,7 @@ export async function getMeetingScheduleByMeeting(
       WHERE m.id = $2
         AND m.identity_id = $1
         AND m.enabled
-        AND r.identity_id = $1
-        AND (d.public OR d.identity_id = r.identity_id)
+        AND ${organizerCanHost}
         AND ses.ended_at > now()
       ORDER BY ses.started_at
       LIMIT 1`,
@@ -119,8 +120,7 @@ export async function getMeetingScheduleByMembership(
       WHERE mem.id = $2
         AND mem.identity_id = $1
         AND mem.enabled
-        AND r.identity_id = m.identity_id
-        AND (d.public OR d.identity_id = r.identity_id)
+        AND ${organizerCanHost}
         AND ses.ended_at > now()
       ORDER BY ses.started_at
       LIMIT 1`,
@@ -183,6 +183,14 @@ export async function listMeetingScheduleByMeeting(
 }
 
 // -----------------------------------------------------------------------------
+const schedulableMeetings = `SELECT m.id FROM meeting m
+  JOIN room r ON r.id = m.room_id
+  JOIN domain d ON d.id = r.domain_id
+  JOIN identity ro ON ro.id = r.identity_id
+  JOIN identity dom ON dom.id = d.identity_id
+  WHERE m.identity_id = $1 AND ${organizerHasRoom}
+    AND (m.identity_id = r.identity_id OR (r.enabled AND ro.enabled AND d.enabled AND dom.enabled))`;
+
 export async function addMeetingSchedule(
   identityId: string,
   meetingId: string,
@@ -200,14 +208,8 @@ export async function addMeetingSchedule(
   const sql = {
     text: `
       INSERT INTO meeting_schedule (meeting_id, schedule_attr)
-      VALUES (
-        (SELECT id
-         FROM meeting
-         WHERE id = $2
-           AND ($4 OR identity_id = $1)
-        ),
-        $3::jsonb
-      )
+      SELECT id, $3::jsonb FROM meeting
+      WHERE id = $2 AND ($4 OR id IN (${schedulableMeetings}))
       RETURNING id, now() as at`,
     args: [
       identityId,
@@ -220,6 +222,11 @@ export async function addMeetingSchedule(
     .then((rst) => {
       return rst.rows as Id[];
     });
+
+  if (!rows.length) {
+    await trans.rollback();
+    throw new HttpError(403, "Meeting unavailable");
+  }
 
   // add sessions
   await addMeetingSession(trans, rows[0].id, scheduleAttr);
@@ -276,11 +283,7 @@ export async function updateMeetingSchedule(
       SET
         schedule_attr = $3
       WHERE id = $2
-        AND ($4 OR EXISTS (SELECT 1
-                    FROM meeting
-                    WHERE id = s.meeting_id
-                      AND identity_id = $1
-                   ))
+        AND ($4 OR s.meeting_id IN (${schedulableMeetings}))
       RETURNING id, now() as at`,
     args: [
       identityId,
@@ -295,7 +298,10 @@ export async function updateMeetingSchedule(
     });
 
   // dont continue if the schedule was not updated
-  if (rows[0] === undefined) throw new Error("No updated schedule");
+  if (!rows.length) {
+    await trans.rollback();
+    throw new HttpError(403, "Meeting unavailable");
+  }
 
   // delete old sessions
   await delMeetingSessionBySchedule(trans, scheduleId);
@@ -322,11 +328,7 @@ export async function updateMeetingScheduleEnabled(
         enabled = $3,
         updated_at = now()
       WHERE id = $2
-        AND ($4 OR EXISTS (SELECT 1
-                    FROM meeting
-                    WHERE id = s.meeting_id
-                      AND identity_id = $1
-                   ))
+        AND ($4 OR s.meeting_id IN (${schedulableMeetings}))
       RETURNING id, updated_at as at`,
     args: [
       identityId,
@@ -351,11 +353,7 @@ export async function resetMeetingScheduleHostKey(
       SET host_key = substr(md5(gen_random_uuid()::text), 1, 9),
           updated_at = now()
       WHERE id = $2
-        AND ($3 OR EXISTS (SELECT 1
-                    FROM meeting
-                    WHERE id = s.meeting_id
-                      AND identity_id = $1
-                   ))
+        AND ($3 OR s.meeting_id IN (${schedulableMeetings}))
       RETURNING id, host_key, updated_at as at`,
     args: [
       identityId,

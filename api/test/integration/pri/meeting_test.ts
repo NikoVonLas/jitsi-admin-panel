@@ -1,4 +1,4 @@
-import { assertEquals } from "@std/assert";
+import { assertEquals, assertRejects } from "@std/assert";
 import {
   afterAll,
   beforeAll,
@@ -112,6 +112,99 @@ describe(
       assertEquals(Array.isArray(body.items), true);
       assertEquals(typeof body.total, "number");
       assertEquals(body.total, 0);
+    });
+
+    it("schedules a moderator's own meeting and withdraws room access on revocation", async () => {
+      const { fetch, query } = await import("../../../lib/database/common.ts");
+      const { addProfile } = await import("../../../lib/database/profile.ts");
+      const { addMeetingSchedule, getMeetingScheduleByMeeting } = await import(
+        "../../../lib/database/meeting-schedule.ts"
+      );
+      const { listSessionForIcal, listSessionByMonth } = await import(
+        "../../../lib/database/calendar.ts"
+      );
+      const { getRoomLinksetByMeetingAndHostKey } = await import(
+        "../../../lib/database/room.ts"
+      );
+      const { getMeetingLinkset, getMeetingLinksetByShortCode } = await import(
+        "../../../lib/database/meeting.ts"
+      );
+      const mod = crypto.randomUUID();
+      await query({
+        text: "INSERT INTO identity(id) VALUES ($1)",
+        args: [mod],
+      });
+      const profile =
+        (await addProfile(mod, "Organizer", "organizer@meeting.test", true))[0]
+          .id;
+      const endpoint = "/api/pri/meeting/add";
+      const payload = {
+        profile_id: profile,
+        room_id: roomId,
+        name: "Shared room meeting",
+        info: "",
+        hidden: false,
+        subscribable: false,
+      };
+      const create = () =>
+        routeMeeting(makeRequest("POST", endpoint, payload), endpoint, mod);
+      assertEquals((await create()).status, 403);
+      await query({
+        text: "INSERT INTO room_partner(room_id,identity_id) VALUES ($1,$2)",
+        args: [roomId, mod],
+      });
+      const added = await create();
+      assertEquals(added.status, 200);
+      const id = (await added.json())[0].id;
+      const own = await fetch({
+        text: "SELECT identity_id,short_code FROM meeting WHERE id=$1",
+        args: [id],
+      }) as { identity_id: string; short_code: string }[];
+      assertEquals(own[0].identity_id, mod);
+      const start = new Date(Date.now() + 3600000).toISOString();
+      const spec = { type: "o", duration: "60", started_at: start };
+      const ownerMeeting = await addTestMeeting(identityId, profileId, roomId);
+      await assertRejects(
+        () => addMeetingSchedule(mod, ownerMeeting, spec),
+        Error,
+        "Meeting unavailable",
+      );
+      const schedule = (await addMeetingSchedule(mod, id, spec))[0].id;
+      const keys = await fetch({
+        text: "SELECT host_key FROM meeting_schedule WHERE id=$1",
+        args: [schedule],
+      }) as { host_key: string }[];
+      const verify = async (expected: number) => {
+        assertEquals(
+          (await listSessionByMonth(mod, start.slice(0, 10), 50, 0)).length,
+          expected,
+        );
+        assertEquals((await listSessionForIcal(mod, 50, 0)).length, expected);
+        assertEquals(
+          (await getMeetingScheduleByMeeting(mod, id)).length,
+          expected,
+        );
+        assertEquals((await getMeetingLinkset(mod, id)).length, expected);
+        assertEquals(
+          (await getMeetingLinksetByShortCode(own[0].short_code)).length,
+          expected,
+        );
+        assertEquals(
+          (await getRoomLinksetByMeetingAndHostKey(id, keys[0].host_key))
+            .length,
+          expected,
+        );
+      };
+      await verify(1);
+      await query({
+        text: "DELETE FROM room_partner WHERE room_id=$1 AND identity_id=$2",
+        args: [roomId, mod],
+      });
+      await verify(0);
+      assertEquals((await create()).status, 403);
+
+      await assertRejects(() => addMeetingSchedule(mod, id, spec));
+      await query({ text: "DELETE FROM identity WHERE id=$1", args: [mod] });
     });
 
     it("adds a new meeting", async () => {

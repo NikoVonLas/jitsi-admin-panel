@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Form } from 'antd';
-import { action, get, list } from '../../../lib/api';
+import { action, get, list, listFiltered } from '../../../lib/api';
 import { isRoomNameTaken } from '../../../lib/apiError';
 import { useTr } from '../../../i18n';
 import { toLocaleDate, toLocaleTime } from '../../../lib/common';
@@ -84,7 +84,11 @@ export default function MeetingAdd({ onCancel, onSuccess }: Props) {
       try {
         const [p, rooms, domains] = await Promise.all([
           get('/api/pri/profile/get/default').catch(() => null),
-          list('/api/pri/room/list', 500).catch(() => ({ items: [] })),
+          listFiltered<Room333>('/api/pri/room/list', {
+            limit: 500,
+            offset: 0,
+            include_shared: true,
+          }).catch(() => ({ items: [] })),
           list('/api/pri/domain/list', 100).catch(() => []),
         ]);
         if (p) setProfileId((p as Profile).id);

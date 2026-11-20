@@ -1,3 +1,4 @@
+import { organizerHasRoom } from "./room-access.ts";
 import { Transaction } from "@db/postgres";
 import { fetch } from "./common.ts";
 import type { Attr, MeetingSessionForReminder } from "./types.ts";
@@ -483,7 +484,8 @@ export async function listMeetingSessionForReminder() {
         JOIN meeting_schedule s ON m.id = s.meeting_id
                                    AND s.enabled
         JOIN meeting_session ses ON s.id = ses.meeting_schedule_id
-      WHERE ses.reminder_sent_at IS NULL
+      WHERE ${organizerHasRoom}
+        AND ses.reminder_sent_at IS NULL
         AND ses.started_at > now() + interval '25 minutes'
         AND ses.started_at < now() + interval '31 minutes'
         AND m.enabled

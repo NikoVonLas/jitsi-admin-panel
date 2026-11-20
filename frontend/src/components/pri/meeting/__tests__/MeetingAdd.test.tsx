@@ -9,6 +9,7 @@ vi.mock('../../../../i18n', () => ({
 vi.mock('../../../../lib/api', () => ({
   action: vi.fn().mockResolvedValue({ id: 'new-meeting' }),
   get: vi.fn().mockResolvedValue({ id: 'p1', name: 'Alice', email: 'alice@example.com' }),
+  listFiltered: vi.fn().mockResolvedValue({ items: [], total: 0 }),
   list: vi.fn().mockResolvedValue({ items: [] }),
 }));
 
@@ -21,7 +22,7 @@ import * as api from '../../../../lib/api';
 describe('MeetingAdd', () => {
   it('shows loading spinner initially', () => {
     vi.mocked(api.get).mockReturnValueOnce(new Promise(() => {}));
-    vi.mocked(api.list).mockReturnValueOnce(new Promise(() => {}));
+    vi.mocked(api.listFiltered).mockReturnValueOnce(new Promise(() => {}));
     vi.mocked(api.list).mockReturnValueOnce(new Promise(() => {}));
     render(<MeetingAdd />);
     // The loading hourglass is shown
@@ -59,13 +60,13 @@ describe('MeetingAdd', () => {
     expect(onCancel).toHaveBeenCalled();
   });
 
-  it('advances to schedule step when next is clicked with existing room', async () => {
-    // Mock list to return a room so the dropdown defaults to an existing room
-    const { list } = await import('../../../../lib/api');
-    (list as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+  it('advances to scheduling with an assigned room', async () => {
+    vi.mocked(api.listFiltered).mockResolvedValueOnce({
+      total: 1,
       items: [
         {
           id: 'r1',
+          shared: true,
           name: 'my-room',
           label: 'My Room',
           domain_url: 'https://meet.example.com',
@@ -78,6 +79,10 @@ describe('MeetingAdd', () => {
 
     render(<MeetingAdd />);
     await waitFor(() => screen.getByText('btn.next'));
+    expect(api.listFiltered).toHaveBeenCalledWith(
+      '/api/pri/room/list',
+      expect.objectContaining({ include_shared: true })
+    );
     const nextBtn = screen.getByText('btn.next').closest('button');
     if (nextBtn) fireEvent.click(nextBtn);
     await waitFor(() => {

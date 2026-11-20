@@ -1,3 +1,8 @@
+import {
+  activeRoomModerator,
+  organizerHasRoom,
+  ownerCanUseDomain,
+} from "./room-access.ts";
 import { fetch } from "./common.ts";
 import { generateRoomUrl } from "../common/helper.ts";
 import { getDefaultProfile } from "./profile.ts";
@@ -29,19 +34,6 @@ export interface ListRoomOptions {
   includeShared?: boolean;
   ownerIdentityId?: string | null;
 }
-
-// The actor is $1 and r is the room in each query using this predicate.
-const activeModerator = `EXISTS (
-  SELECT 1 FROM room_partner rp
-  JOIN identity actor ON actor.id = rp.identity_id AND actor.enabled
-  WHERE rp.room_id = r.id AND rp.identity_id = $1 AND rp.enabled
-)`;
-
-const ownerCanUseDomain =
-  `(d.public OR d.identity_id = r.identity_id OR EXISTS (
-  SELECT 1 FROM domain_member dm JOIN identity owner ON owner.id = r.identity_id
-  WHERE dm.domain_id = d.id AND dm.email = owner.identity_attr->>'email'
-))`;
 
 // -----------------------------------------------------------------------------
 // True when a room write was refused because another room in the domain, of
@@ -97,7 +89,7 @@ export async function getRoomLinkset(
       WHERE r.id = $2 AND r.enabled AND r.domain_id = d.id AND d.enabled
         AND EXISTS (SELECT 1 FROM identity owner WHERE owner.id = r.identity_id AND owner.enabled)
         AND ($3 OR (r.identity_id = $1 AND ${ownerCanUseDomain})
-             OR ${activeModerator})
+             OR ${activeRoomModerator("$1")})
       RETURNING r.name, r.label, r.has_suffix, r.suffix, d.auth_type, d.domain_attr`,
     args: [
       identityId,
@@ -213,7 +205,7 @@ export async function getRoomIdByName(
                              AND i.enabled
         WHERE r.enabled
           AND ((r.identity_id = $1 AND ${ownerCanUseDomain})
-               OR ${activeModerator})
+               OR ${activeRoomModerator("$1")})
       )
       SELECT id, now() as at
       FROM room_owner
@@ -301,6 +293,7 @@ export async function getRoomLinksetByHostKey(
         JOIN identity i2 ON r.identity_id = i2.id AND i2.enabled
         JOIN meeting_session ses ON ms.id = ses.meeting_schedule_id
       WHERE r.id = $1
+        AND ${organizerHasRoom}
         AND ms.host_key = $2
         AND ms.enabled
         AND ses.ended_at > now()
@@ -332,6 +325,7 @@ export async function getRoomLinksetByMeetingAndHostKey(
         JOIN identity i2 ON r.identity_id = i2.id AND i2.enabled
         JOIN meeting_session ses ON ms.id = ses.meeting_schedule_id
       WHERE m.id = $1
+        AND ${organizerHasRoom}
         AND ms.host_key = $2
         AND ms.enabled
         AND ses.ended_at > now()
@@ -419,7 +413,7 @@ export async function listRoom(
         JOIN domain d ON r.domain_id = d.id
         JOIN identity i ON d.identity_id = i.id
         JOIN identity owner ON owner.id = r.identity_id
-      WHERE (r.identity_id = $1 OR ($7 AND ${activeModerator}))
+      WHERE (r.identity_id = $1 OR ($7 AND ${activeRoomModerator("$1")}))
         AND ($4::text IS NULL OR (r.name ILIKE $4 OR r.label ILIKE $4 OR r.short_code ILIKE $4 OR d.name ILIKE $4))
         AND ($5::boolean IS NULL OR r.enabled = $5)
         AND ($6::uuid IS NULL OR r.domain_id = $6::uuid)
@@ -442,7 +436,7 @@ export async function listRoom(
       FROM room r
         JOIN domain d ON r.domain_id = d.id
         JOIN identity i ON d.identity_id = i.id
-      WHERE (r.identity_id = $1 OR ($5 AND ${activeModerator}))
+      WHERE (r.identity_id = $1 OR ($5 AND ${activeRoomModerator("$1")}))
         AND ($2::text IS NULL OR (r.name ILIKE $2 OR r.label ILIKE $2 OR r.short_code ILIKE $2 OR d.name ILIKE $2))
         AND ($3::boolean IS NULL OR r.enabled = $3)
         AND ($4::uuid IS NULL OR r.domain_id = $4::uuid)`,

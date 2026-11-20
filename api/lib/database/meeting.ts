@@ -1,3 +1,9 @@
+import {
+  activeRoomModerator,
+  organizerCanHost,
+  organizerHasRoom,
+} from "./room-access.ts";
+import { HttpError } from "../http/error.ts";
 import { fetch } from "./common.ts";
 import type {
   Id,
@@ -150,8 +156,8 @@ export async function getMeetingLinkset(
         LEFT JOIN profile pr ON m.profile_id = pr.id
       WHERE m.id = $2
         AND ($3 OR m.identity_id = $1)
-        AND ($3 OR r.identity_id = $1)
-        AND (d.public OR d.identity_id = r.identity_id)
+        AND ($3 OR ${organizerCanHost})
+        AND m.enabled
         AND ses.ended_at > now()
       ORDER BY ses.started_at
       LIMIT 1
@@ -164,6 +170,7 @@ export async function getMeetingLinkset(
   };
 
   const linkset = await fetch(sql) as MeetingLinkset[];
+  if (!linkset.length) return [];
   await updateMeetingRoomSuffix(linkset[0].id);
   await updateMeetingRoomAccessTime(linkset[0].id);
   await updateMeetingAccessTime(linkset[0].id);
@@ -197,6 +204,7 @@ export async function getMeetingLinksetByShortCode(shortCode: string) {
                                         AND s.enabled
         LEFT JOIN meeting_session ses ON s.id = ses.meeting_schedule_id
       WHERE m.short_code = $1
+        AND ${organizerHasRoom}
         AND m.enabled
         AND ses.ended_at > now()
       ORDER BY ses.started_at
@@ -245,8 +253,7 @@ export async function getMeeting222ById(
         ) as session_at,
         m.hidden, m.subscribable, m.enabled,
         (r.enabled AND i2.enabled AND d.enabled AND i1.enabled
-         AND (r.identity_id = $1 OR $3)
-         AND (d.identity_id = r.identity_id OR d.public)
+         AND ($3 OR ${organizerCanHost})
         ) as chain_enabled, m.updated_at, 'owner' as ownership,
         m.id as membership_id, 'host' as join_as
       FROM meeting m
@@ -311,8 +318,7 @@ export async function listMeeting(
         m.hidden, m.subscribable, m.enabled,
         (r.enabled AND i2.enabled
          AND d.enabled AND i1.enabled
-         AND (r.identity_id = $1 OR $4)
-         AND (d.identity_id = r.identity_id OR d.public)
+         AND ($4 OR ${organizerCanHost})
         ) as chain_enabled, m.updated_at, 'owner' as ownership,
         m.id as membership_id, 'host' as join_as
       FROM meeting m
@@ -429,6 +435,7 @@ export async function listPublicMeeting(
         JOIN identity i3 ON m.identity_id = i3.id
                             AND i3.enabled
       WHERE NOT m.hidden
+        AND ${organizerHasRoom}
         AND m.enabled
       ORDER BY m.created_at DESC
       LIMIT $1 OFFSET $2`,
@@ -442,6 +449,17 @@ export async function listPublicMeeting(
 }
 
 // -----------------------------------------------------------------------------
+// Owner/admin assignment keeps its existing behavior. Delegated scheduling
+// additionally requires an enabled room, domain and both owning identities.
+const sharedRoomAvailable = `(r.enabled AND ${
+  activeRoomModerator("$1")
+} AND EXISTS (
+  SELECT 1 FROM domain d
+  JOIN identity domain_owner ON domain_owner.id = d.identity_id AND domain_owner.enabled
+  JOIN identity room_owner ON room_owner.id = r.identity_id AND room_owner.enabled
+  WHERE d.id = r.domain_id AND d.enabled
+))`;
+
 export async function addMeeting(opts: AddMeetingOptions) {
   const {
     identityId,
@@ -458,19 +476,9 @@ export async function addMeeting(opts: AddMeetingOptions) {
     text: `
       INSERT INTO meeting (identity_id, profile_id, room_id, name, info,
         hidden, subscribable)
-      VALUES (
-        $1,
-        (SELECT id
-         FROM profile
-         WHERE id = $2
-           AND ($8 OR identity_id = $1)
-        ),
-        (SELECT id
-         FROM room
-         WHERE id = $3
-           AND ($8 OR identity_id = $1)
-        ),
-        $4, $5, $6, $7)
+      SELECT $1, pr.id, r.id, $4, $5, $6, $7 FROM room r, profile pr
+      WHERE pr.id = $2 AND ($8 OR pr.identity_id = $1)
+        AND r.id = $3 AND ($8 OR r.identity_id = $1 OR ${sharedRoomAvailable})
       RETURNING id, created_at as at`,
     args: [
       identityId,
@@ -484,7 +492,9 @@ export async function addMeeting(opts: AddMeetingOptions) {
     ],
   };
 
-  return await fetch(sql) as Id[];
+  const created = await fetch(sql) as Id[];
+  if (!created.length) throw new HttpError(403, "Room or profile unavailable");
+  return created;
 }
 
 // -----------------------------------------------------------------------------
@@ -525,26 +535,14 @@ export async function updateMeeting(opts: UpdateMeetingOptions) {
 
   const sql = {
     text: `
-      UPDATE meeting
-      SET
-        profile_id= (SELECT id
-                     FROM profile
-                     WHERE id = $3
-                       AND ($9 OR identity_id = $1)
-                    ),
-        room_id = (SELECT id
-                   FROM room
-                   WHERE id = $4
-                     AND ($9 OR identity_id = $1)
-                  ),
-        name = $5,
-        info = $6,
-        hidden = $7,
-        subscribable = $8,
-        updated_at = now()
-      WHERE id = $2
-        AND ($9 OR identity_id = $1)
-      RETURNING id, updated_at as at`,
+      UPDATE meeting m
+      SET profile_id = pr.id, room_id = r.id, name = $5, info = $6,
+          hidden = $7, subscribable = $8, updated_at = now()
+      FROM room r, profile pr
+      WHERE m.id = $2 AND ($9 OR m.identity_id = $1)
+        AND pr.id = $3 AND ($9 OR pr.identity_id = $1)
+        AND r.id = $4 AND ($9 OR r.identity_id = $1 OR ${sharedRoomAvailable})
+      RETURNING m.id, m.updated_at as at`,
     args: [
       identityId,
       meetingId,
