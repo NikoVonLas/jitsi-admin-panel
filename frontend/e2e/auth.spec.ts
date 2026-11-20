@@ -235,13 +235,7 @@ async function waitForConference(page: Page, remoteParticipants: number) {
     .toMatchObject({ joined: true, remoteParticipants });
 }
 
-async function exerciseJitsi(page: Page, browser: Browser, request: APIRequestContext) {
-  await waitForHttp(request, `${jitsiBaseUrl}/config.js`);
-  const room = await createJitsiRoom(page);
-  const meetingId = await exerciseEmailReminder(page, request, room.roomId);
-  const details = await request.post('/api/pub/meeting/get/formod', { data: { id: meetingId } });
-  const [{ short_code: code }] = await details.json();
-  const meetingLink = `http://web/j/${code}`;
+async function verifyEarlyGuestWaits(browser: Browser, meetingLink: string) {
   const early = await browser.newContext({ ignoreHTTPSErrors: true });
   const waiting = await early.newPage();
   await waiting.goto(meetingLink);
@@ -250,6 +244,17 @@ async function exerciseJitsi(page: Page, browser: Browser, request: APIRequestCo
   ).toBeVisible({ timeout: 60_000 });
   expect((await conferenceStatus(waiting)).joined).toBe(false);
   await early.close();
+}
+
+async function exerciseJitsi(page: Page, browser: Browser, request: APIRequestContext) {
+  await waitForHttp(request, `${jitsiBaseUrl}/config.js`);
+  const room = await createJitsiRoom(page);
+  const meetingId = await exerciseEmailReminder(page, request, room.roomId);
+  const details = await request.post('/api/pub/meeting/get/formod', { data: { id: meetingId } });
+  const [{ short_code: code }] = await details.json();
+  const meetingLink = `http://web/j/${code}`;
+  // Exercise both an early visitor and a conference nobody has opened before.
+  if (mode === 'local') await verifyEarlyGuestWaits(browser, meetingLink);
 
   const active = await page.context().request.post('/api/pri/meeting/schedule/add', {
     data: {
