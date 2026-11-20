@@ -208,7 +208,7 @@ export async function getMeetingLinksetByShortCode(shortCode: string) {
                                         AND s.enabled
         LEFT JOIN meeting_session ses ON s.id = ses.meeting_schedule_id
       WHERE m.short_code = $1
-        AND ${organizerHasRoom}
+        AND ${organizerCanHost}
         AND m.enabled
         AND ses.ended_at > now()
       ORDER BY ses.started_at

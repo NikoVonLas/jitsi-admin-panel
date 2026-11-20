@@ -175,6 +175,15 @@ describe(
       const host = new URL((await privateLinks())[0].moderator_url);
       assertEquals(first.pathname, host.pathname);
       await verify(true);
+      await query({
+        text: "UPDATE identity SET is_superadmin=false WHERE id=$1",
+        args: [identityId],
+      });
+      assertEquals(await publicLinks(), []);
+      await query({
+        text: "UPDATE identity SET is_superadmin=true WHERE id=$1",
+        args: [identityId],
+      });
       const roomEndpoint = "/api/pri/room/get/link";
       const roomLink = await routeRoom(
         makeRequest("POST", roomEndpoint, { id: roomId }),
