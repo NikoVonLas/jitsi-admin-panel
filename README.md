@@ -25,6 +25,25 @@ Self-hosted admin panel for [Jitsi Meet](https://jitsi.org/) — manage domains,
   - For local use, `localhost` works with Caddy's internal CA or plain HTTP
 - Node.js 20 for local frontend development and tests
 
+## Let participants start a scheduled meeting
+
+On a self-hosted JWT domain, anyone with the meeting’s participant link (`/j/<code>`) can be the first to enter while an enabled session is in progress. The first participant has the ordinary participant role. The organizer or an assigned room moderator can join later with their moderator link.
+
+**Panel setting.** In **System Settings → Domains**, edit a **Token** domain and find **Allow participants to start scheduled meetings**. It is on by default, including for existing JWT domains after an upgrade. Turn it off to keep guests waiting for a host in an empty room. For an existing production domain, configure Jitsi before upgrading the panel. A server that automatically promotes authenticated users can give the first participant moderator rights.
+
+**Jitsi server.** The integration stack uses `docker-jitsi-meet stable-11146-2`. On the Jitsi deployment, use JWT authentication (`ENABLE_AUTH=1`, `AUTH_TYPE=jwt`) with matching signing credentials and a separate anonymous guest domain (`ENABLE_GUESTS=1`). Apply the following settings to the indicated services and recreate the affected containers.
+
+| Service | Setting | Purpose |
+| --- | --- | --- |
+| Prosody | `JWT_TOKEN_AUTH_MODULE=token_verification`, `JWT_ALLOW_EMPTY=0` | Verify signed tokens on the authenticated domain. |
+| Prosody | `ENABLE_LOBBY=1`, `XMPP_MODULES=persistent_lobby`, `XMPP_MUC_MODULES=muc_wait_for_host,token_affiliation` | Hold anonymous guests until an authenticated participant arrives. Assign the role from the verified token. Append modules to any existing lists. |
+| Prosody | `WAIT_FOR_HOST_DISABLE_AUTO_OWNERS=1` | Allow a verified participant to open the room with the member role. |
+| Jicofo | `JICOFO_ENABLE_AUTH=0`, `ENABLE_AUTO_OWNER=0` | Let Prosody enforce JWT authentication and roles. Jicofo’s separate authentication mode can promote authenticated participants even with auto-owner disabled. |
+
+**Check the result.** Schedule a meeting in an empty room. Before its start, open the meeting link in a private window and verify that the guest waits. Open the same link again during the session. The guest should enter alone, with no moderator controls. Join with the moderator link in a second browser and verify its moderator controls. Repeat with the domain setting off to verify the original guest behavior.
+
+The panel issues a signed token for that room only, from the start time up to the end time. Opening the link after the last session ends returns no conference link. Token expiry controls new connections. An ongoing call can continue. Permanent room participant links (`/r/<code>`) and domains using **None** keep their ordinary guest behavior.
+
 ## Quick Start
 
 ### Production (pre-built images from GHCR)

@@ -84,6 +84,7 @@ const en: Record<string, string> = {
   'domain.auth_token': 'Token',
   'domain.public': 'Public',
   'domain.private': 'Private',
+  'domain.scheduled_guest_start': 'Allow participants to start scheduled meetings',
   'domain.public_access': 'Available to all users',
   'form.name': 'Name',
   'form.label': 'Display name (shown in Jitsi)',

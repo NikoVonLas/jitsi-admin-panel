@@ -62,7 +62,7 @@ async function createJitsiRoom(page: Page) {
   const suffix = `${mode}-${Date.now().toString(36)}`;
   const domainName = `E2E Jitsi ${suffix}`;
   const roomLabel = `E2E Conference ${suffix}`;
-  const roomSlug = `e2e-${suffix}`;
+  const roomSlug = `КИТ-${suffix}`;
 
   await page.goto('/setting?tab=domains');
   await expect(page.getByRole('heading', { name: 'System Settings' })).toBeVisible();
@@ -191,6 +191,7 @@ async function exerciseEmailReminder(page: Page, request: APIRequestContext, roo
   expect(messageResponse.ok()).toBe(true);
   const message = (await messageResponse.json()) as { Text?: string };
   expect(message.Text).toContain(`http://web/jm/${meetingId}`);
+  return meetingId;
 }
 
 async function conferenceStatus(page: Page) {
@@ -198,6 +199,7 @@ async function conferenceStatus(page: Page) {
     interface Conference {
       getParticipants?: () => unknown[];
       isJoined?: () => boolean;
+      isModerator?: () => boolean;
     }
     interface JitsiApp {
       conference?: { _room?: Conference };
@@ -208,6 +210,7 @@ async function conferenceStatus(page: Page) {
     const conference = stateConference || app?.conference?._room;
     return {
       joined: conference?.isJoined?.() === true,
+      moderator: conference?.isModerator?.(),
       remoteParticipants: conference?.getParticipants?.().length ?? -1,
     };
   });
@@ -232,10 +235,46 @@ async function waitForConference(page: Page, remoteParticipants: number) {
     .toMatchObject({ joined: true, remoteParticipants });
 }
 
+async function verifyEarlyGuestWaits(browser: Browser, meetingLink: string) {
+  const early = await browser.newContext({ ignoreHTTPSErrors: true });
+  const waiting = await early.newPage();
+  await waiting.goto(meetingLink);
+  await expect(
+    waiting.getByText(/waiting for a moderator|conference has not yet started|ask to join/i).first()
+  ).toBeVisible({ timeout: 60_000 });
+  expect((await conferenceStatus(waiting)).joined).toBe(false);
+  await early.close();
+}
+
 async function exerciseJitsi(page: Page, browser: Browser, request: APIRequestContext) {
   await waitForHttp(request, `${jitsiBaseUrl}/config.js`);
   const room = await createJitsiRoom(page);
-  await exerciseEmailReminder(page, request, room.roomId);
+  const meetingId = await exerciseEmailReminder(page, request, room.roomId);
+  const details = await request.post('/api/pub/meeting/get/formod', { data: { id: meetingId } });
+  const [{ short_code: code }] = await details.json();
+  const meetingLink = `http://web/j/${code}`;
+  // Exercise both an early visitor and a conference nobody has opened before.
+  if (mode === 'local') await verifyEarlyGuestWaits(browser, meetingLink);
+
+  const active = await page.context().request.post('/api/pri/meeting/schedule/add', {
+    data: {
+      meeting_id: meetingId,
+      schedule_attr: {
+        type: 'o',
+        duration: '30',
+        started_at: new Date(Date.now() - 60000).toISOString(),
+      },
+    },
+  });
+  expect(active.ok()).toBe(true);
+  const scheduled = await browser.newContext({
+    ignoreHTTPSErrors: true,
+    permissions: ['camera', 'microphone'],
+  });
+  const first = await scheduled.newPage();
+  await first.goto(meetingLink);
+  await waitForConference(first, 0);
+  expect((await conferenceStatus(first)).moderator).toBe(false);
 
   const moderatorPage = await page.context().newPage();
   await moderatorPage.goto(room.moderatorUrl);
@@ -246,9 +285,15 @@ async function exerciseJitsi(page: Page, browser: Browser, request: APIRequestCo
   await keyInputs.nth(2).fill(room.hostKey.slice(6, 9));
   await moderatorPage.getByRole('button', { name: 'Join' }).click();
   await expect(moderatorPage).toHaveURL(
-    new RegExp(`^${jitsiBaseUrl.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&')}/${room.roomSlug}`),
+    new RegExp(
+      `^${jitsiBaseUrl.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&')}/${encodeURIComponent(room.roomSlug)}`
+    ),
     { timeout: 60_000 }
   );
+  await waitForConference(moderatorPage, 1);
+  await expect.poll(async () => (await conferenceStatus(moderatorPage)).moderator).toBe(true);
+  expect((await conferenceStatus(first)).moderator).toBe(false);
+  await scheduled.close();
   await waitForConference(moderatorPage, 0);
 
   const participantContext = await browser.newContext({
@@ -258,7 +303,9 @@ async function exerciseJitsi(page: Page, browser: Browser, request: APIRequestCo
   const participantPage = await participantContext.newPage();
   await participantPage.goto(room.participantUrl);
   await expect(participantPage).toHaveURL(
-    new RegExp(`^${jitsiBaseUrl.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&')}/${room.roomSlug}`),
+    new RegExp(
+      `^${jitsiBaseUrl.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&')}/${encodeURIComponent(room.roomSlug)}`
+    ),
     { timeout: 60_000 }
   );
   await waitForConference(participantPage, 1);

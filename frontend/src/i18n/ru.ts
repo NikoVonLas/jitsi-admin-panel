@@ -74,6 +74,7 @@ const ru: Record<string, string> = {
   'domain.auth_token': 'Токен',
   'domain.public': 'Публичный',
   'domain.private': 'Приватный',
+  'domain.scheduled_guest_start': 'Участники могут начать встречу по расписанию',
   'domain.public_access': 'Доступен всем пользователям',
   'form.name': 'Название',
   'form.label': 'Отображаемое название (в интерфейсе Jitsi)',

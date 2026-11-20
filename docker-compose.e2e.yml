@@ -198,6 +198,10 @@ services:
       JWT_ALLOW_EMPTY: "0"
       JWT_AUTH_TYPE: token
       JWT_TOKEN_AUTH_MODULE: token_verification
+      ENABLE_LOBBY: "1"
+      XMPP_MODULES: persistent_lobby
+      XMPP_MUC_MODULES: muc_wait_for_host,token_affiliation
+      WAIT_FOR_HOST_DISABLE_AUTO_OWNERS: "1"
     networks:
       e2e:
         aliases:
@@ -207,7 +211,8 @@ services:
     image: ghcr.io/jitsi/jicofo:stable-11146-2
     environment:
       <<: *jitsi-environment
-      ENABLE_AUTO_OWNER: "1"
+      JICOFO_ENABLE_AUTH: "0"
+      ENABLE_AUTO_OWNER: "0"
     depends_on:
       - prosody
     networks:

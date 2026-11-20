@@ -390,7 +390,7 @@ describe("pri/room", { sanitizeResources: false, sanitizeOps: false }, () => {
         const claims = JSON.parse(
           atob(encoded.replaceAll("-", "+").replaceAll("_", "/")),
         );
-        assertEquals(claims.room, "shared-KIT");
+        assertEquals(claims.room, "shared-kit");
         assertEquals(claims.context.user.moderator, true);
         assertEquals(claims.context.user.email, email);
       }

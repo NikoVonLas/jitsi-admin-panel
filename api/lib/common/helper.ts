@@ -35,10 +35,10 @@ async function generateRoomUrlToken(
   exp: number,
 ): Promise<string> {
   let url = encodeURI(linkset.domain_attr.url);
-  let roomName = encodeURIComponent(linkset.name);
+  let roomName = linkset.name;
 
   if (linkset.has_suffix) roomName = `${roomName}-${linkset.suffix}`;
-  url = `${url}/${roomName}`;
+  url = `${url}/${encodeURIComponent(roomName)}`;
 
   if (affiliation === "host") {
     const jwt = await generateHostTokenHS({
@@ -117,12 +117,13 @@ async function generateMeetingUrlToken(
   linkset: MeetingLinkset,
   exp: number,
   isHost: boolean,
+  expiresAt?: number,
 ): Promise<string> {
   let url = encodeURI(linkset.domain_attr.url);
-  let roomName = encodeURIComponent(linkset.room_name);
+  let roomName = linkset.room_name;
 
   if (linkset.has_suffix) roomName = `${roomName}-${linkset.suffix}`;
-  url = `${url}/${roomName}`;
+  url = `${url}/${encodeURIComponent(roomName)}`;
 
   const tokenArgs = {
     appId: linkset.domain_attr.app_id,
@@ -132,6 +133,7 @@ async function generateMeetingUrlToken(
     username: linkset.profile_name,
     email: linkset.profile_email,
     exp,
+    expiresAt,
     avatar: linkset.profile_avatar_url,
   };
   const jwt = isHost
@@ -208,6 +210,32 @@ export async function generateMeetingUrl(
   if (normalized.domain_attr.url === "https://meet.jit.si") return url;
 
   return url + buildMeetingFragment(normalized, additionalHash);
+}
+
+// -----------------------------------------------------------------------------
+export async function generateMeetingParticipantUrl(
+  linkset: MeetingLinkset,
+  now = Date.now(),
+) {
+  const participant: MeetingLinkset = {
+    ...linkset,
+    join_as: "guest",
+    profile_name: "",
+    profile_email: "",
+    profile_avatar_url: "",
+  };
+  const expiresAt = Math.floor(new Date(linkset.ended_at).getTime() / 1000);
+  const exactRoom = linkset.room_name.normalize("NFKC").trim();
+  if (
+    linkset.auth_type === "token" &&
+    linkset.domain_attr.scheduled_guest_start !== "false" &&
+    exactRoom && exactRoom !== "*" &&
+    new Date(linkset.started_at).getTime() <= now && now < expiresAt * 1000
+  ) {
+    const url = await generateMeetingUrlToken(participant, 0, false, expiresAt);
+    return url + buildMeetingFragment(participant, "");
+  }
+  return await generateMeetingUrl({ ...participant, auth_type: "none" });
 }
 
 // -----------------------------------------------------------------------------

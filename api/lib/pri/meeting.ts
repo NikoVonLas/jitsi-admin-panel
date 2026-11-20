@@ -1,11 +1,13 @@
 import { notFound } from "../http/response.ts";
 import { pri as wrapper } from "../http/wrapper.ts";
-import { generateMeetingUrl } from "../common/helper.ts";
+import {
+  generateMeetingParticipantUrl,
+  generateMeetingUrl,
+} from "../common/helper.ts";
 import { parseEnabledFilter } from "../common/parse.ts";
 import { getLimit, getOffset } from "../database/common.ts";
 import { getIsSuperAdmin } from "../database/identity.ts";
 import { getDefaultProfile } from "../database/profile.ts";
-import type { DomainAuthType } from "../database/types.ts";
 import {
   addMeeting,
   delMeeting,
@@ -55,14 +57,7 @@ async function getLink(req: Request, identityId: string): Promise<unknown> {
   if (linkset.remaining) remaining = linkset.remaining;
 
   const moderator_url = await generateMeetingUrl(linkset, remaining);
-  const participantLinkset = {
-    ...linkset,
-    auth_type: "none" as DomainAuthType,
-    profile_name: "",
-    profile_email: "",
-    profile_avatar_url: "",
-  };
-  const url = await generateMeetingUrl(participantLinkset, remaining);
+  const url = await generateMeetingParticipantUrl(linkset);
 
   return [{ url, moderator_url }];
 }

@@ -176,8 +176,7 @@ export async function getMeetingLinkset(
 
   const linkset = await fetch(sql) as MeetingLinkset[];
   if (!linkset.length) return [];
-  await updateMeetingRoomSuffix(linkset[0].id);
-  await updateMeetingRoomAccessTime(linkset[0].id);
+  linkset[0].suffix = await recordMeetingRoomAccess(linkset[0].id);
   await updateMeetingAccessTime(linkset[0].id);
 
   return await fetch(sql) as MeetingLinkset[];
@@ -209,7 +208,7 @@ export async function getMeetingLinksetByShortCode(shortCode: string) {
                                         AND s.enabled
         LEFT JOIN meeting_session ses ON s.id = ses.meeting_schedule_id
       WHERE m.short_code = $1
-        AND ${organizerHasRoom}
+        AND ${organizerCanHost}
         AND m.enabled
         AND ses.ended_at > now()
       ORDER BY ses.started_at
@@ -219,8 +218,7 @@ export async function getMeetingLinksetByShortCode(shortCode: string) {
 
   const linkset = await fetch(sql) as MeetingLinkset[];
   if (linkset[0]) {
-    await updateMeetingRoomSuffix(linkset[0].id);
-    await updateMeetingRoomAccessTime(linkset[0].id);
+    linkset[0].suffix = await recordMeetingRoomAccess(linkset[0].id);
     await updateMeetingAccessTime(linkset[0].id);
   }
 
@@ -630,46 +628,15 @@ export async function updateMeetingEnabled(
 }
 
 // -----------------------------------------------------------------------------
-export async function updateMeetingRoomSuffix(meetingId: string) {
-  const sql = {
-    text: `
-      UPDATE room
-      SET
-        suffix = DEFAULT
-      WHERE id = (SELECT room_id
-                  FROM meeting
-                  WHERE id = $1
-                 )
-        AND has_suffix
-        AND accessed_at + interval '4 hours' < now()
-      RETURNING id, accessed_at as at`,
-    args: [
-      meetingId,
-    ],
-  };
-
-  return await fetch(sql) as Id[];
-}
-
-// -----------------------------------------------------------------------------
-export async function updateMeetingRoomAccessTime(meetingId: string) {
-  const sql = {
-    text: `
-      UPDATE room
-      SET
-        accessed_at = now(),
-        attendance = attendance + 1
-      WHERE id = (SELECT room_id
-                  FROM meeting
-                  WHERE id = $1
-                 )
-      RETURNING id, accessed_at as at`,
-    args: [
-      meetingId,
-    ],
-  };
-
-  return await fetch(sql) as Id[];
+async function recordMeetingRoomAccess(meetingId: string) {
+  const [room] = await fetch({
+    text: `UPDATE room r SET accessed_at=now(), attendance=r.attendance+1,
+      suffix=CASE WHEN r.has_suffix AND r.accessed_at + interval '4 hours' < now()
+        THEN md5(gen_random_uuid()::text) ELSE r.suffix END
+      FROM meeting m WHERE m.id=$1 AND m.room_id=r.id RETURNING r.suffix`,
+    args: [meetingId],
+  }) as { suffix: string }[];
+  return room.suffix;
 }
 
 // -----------------------------------------------------------------------------

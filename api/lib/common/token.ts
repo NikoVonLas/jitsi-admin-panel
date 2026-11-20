@@ -11,6 +11,7 @@ export interface HsTokenOptions {
   username: string;
   email: string;
   exp: number;
+  expiresAt?: number;
   avatar?: string;
 }
 
@@ -47,15 +48,20 @@ async function buildTokenHS(
   const { appId, appSecret, appAlg, roomName, username, email, exp } = opts;
   const resolved = resolveHsAlg(appAlg);
 
+  const conference = roomName.normalize("NFKC").toLowerCase();
+  if (!conference.trim() || conference.trim() === "*") {
+    throw new Error("A specific conference name is required");
+  }
   const header = { alg: resolved.alg, typ: "JWT" };
   const cryptoKey = await generateCryptoKeyHS(appSecret, resolved.hash);
   const payload: Payload = {
     aud: appId,
     iss: appId,
     sub: "*",
-    room: roomName,
+    // Jitsi uses the URL-encoded, lower-case room name as its XMPP node.
+    room: encodeURIComponent(conference),
     iat: getNumericDate(0),
-    exp: getNumericDate(exp),
+    exp: opts.expiresAt ?? getNumericDate(exp),
     context: {
       user: {
         name: username,

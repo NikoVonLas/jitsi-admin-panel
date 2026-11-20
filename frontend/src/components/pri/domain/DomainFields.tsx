@@ -10,10 +10,17 @@ export interface DomainAttr {
   app_id: string;
   app_secret: string;
   app_alg: string;
+  scheduled_guest_start?: string;
 }
 
 export function getDefaultDomainAttr(): DomainAttr {
-  return { url: '', app_id: '', app_secret: '', app_alg: TOKEN_ALGO };
+  return {
+    url: '',
+    app_id: '',
+    app_secret: '',
+    app_alg: TOKEN_ALGO,
+    scheduled_guest_start: 'true',
+  };
 }
 
 interface Props {
@@ -93,6 +100,14 @@ export default function DomainFields({
             required
             disabled={disabled}
           />
+          <Form.Item label={t('domain.scheduled_guest_start')}>
+            <Switch
+              aria-label={t('domain.scheduled_guest_start')}
+              checked={domainAttr.scheduled_guest_start !== 'false'}
+              onChange={(value) => setAttr('scheduled_guest_start', String(value))}
+              disabled={disabled}
+            />
+          </Form.Item>
         </>
       ) : (
         <FormUrl
