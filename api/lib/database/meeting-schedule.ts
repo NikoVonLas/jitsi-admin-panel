@@ -1,10 +1,10 @@
 import { HttpError } from "../http/error.ts";
 import { organizerCanHost, organizerHasRoom } from "./room-access.ts";
-import { checkAttr, fetch, pool } from "./common.ts";
+import { fetch, pool } from "./common.ts";
 import {
   addMeetingSession,
-  checkScheduleAttr,
   delMeetingSessionBySchedule,
+  validateSchedule,
 } from "./meeting-session.ts";
 import type { Attr, Id, MeetingSchedule, MeetingSchedule222 } from "./types.ts";
 
@@ -197,9 +197,7 @@ export async function addMeetingSchedule(
   scheduleAttr: Attr,
   isSuperAdmin = false,
 ) {
-  // it will throw an error if it is not valid
-  checkAttr(scheduleAttr);
-  checkScheduleAttr(scheduleAttr);
+  validateSchedule(scheduleAttr);
 
   using client = await pool.connect();
   const trans = client.createTransaction("transaction");
@@ -218,22 +216,26 @@ export async function addMeetingSchedule(
       isSuperAdmin,
     ],
   };
-  const rows = await trans.queryObject(sql)
-    .then((rst) => {
-      return rst.rows as Id[];
-    });
+  try {
+    const rows = await trans.queryObject(sql)
+      .then((rst) => {
+        return rst.rows as Id[];
+      });
 
-  if (!rows.length) {
+    if (!rows.length) {
+      throw new HttpError(403, "Meeting unavailable");
+    }
+
+    // add sessions
+    await addMeetingSession(trans, rows[0].id);
+
+    await trans.commit();
+
+    return rows;
+  } catch (error) {
     await trans.rollback();
-    throw new HttpError(403, "Meeting unavailable");
+    throw error;
   }
-
-  // add sessions
-  await addMeetingSession(trans, rows[0].id, scheduleAttr);
-
-  await trans.commit();
-
-  return rows;
 }
 
 // -----------------------------------------------------------------------------
@@ -269,9 +271,7 @@ export async function updateMeetingSchedule(
   scheduleAttr: Attr,
   isSuperAdmin = false,
 ) {
-  // it will throw an error if it is not valid
-  checkAttr(scheduleAttr);
-  checkScheduleAttr(scheduleAttr);
+  validateSchedule(scheduleAttr);
 
   using client = await pool.connect();
   const trans = client.createTransaction("transaction");
@@ -292,26 +292,30 @@ export async function updateMeetingSchedule(
       isSuperAdmin,
     ],
   };
-  const rows = await trans.queryObject(sql)
-    .then((rst) => {
-      return rst.rows as Id[];
-    });
+  try {
+    const rows = await trans.queryObject(sql)
+      .then((rst) => {
+        return rst.rows as Id[];
+      });
 
-  // dont continue if the schedule was not updated
-  if (!rows.length) {
+    // dont continue if the schedule was not updated
+    if (!rows.length) {
+      throw new HttpError(403, "Meeting unavailable");
+    }
+
+    // delete old sessions
+    await delMeetingSessionBySchedule(trans, scheduleId);
+
+    // add new sessions
+    await addMeetingSession(trans, rows[0].id);
+
+    await trans.commit();
+
+    return rows;
+  } catch (error) {
     await trans.rollback();
-    throw new HttpError(403, "Meeting unavailable");
+    throw error;
   }
-
-  // delete old sessions
-  await delMeetingSessionBySchedule(trans, scheduleId);
-
-  // add new sessions
-  await addMeetingSession(trans, rows[0].id, scheduleAttr);
-
-  await trans.commit();
-
-  return rows;
 }
 
 // -----------------------------------------------------------------------------

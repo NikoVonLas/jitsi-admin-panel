@@ -207,6 +207,70 @@ describe(
       await query({ text: "DELETE FROM identity WHERE id=$1", args: [mod] });
     });
 
+    it("saves all schedules atomically and recognizes concurrent retries", async () => {
+      const { query } = await import("../../../lib/database/common.ts");
+      const request_id = crypto.randomUUID();
+      const schedule = {
+        type: "o",
+        duration: "30",
+        started_at: new Date(Date.now() + 86400000).toISOString(),
+      };
+      const path = "/api/pri/meeting/add";
+      const save = (schedules: unknown[]) =>
+        routeMeeting(
+          makeRequest("POST", path, {
+            request_id,
+            room_id: roomId,
+            profile_id: profileId,
+            name: "Atomic meeting",
+            info: "",
+            hidden: true,
+            subscribable: false,
+            schedules,
+          }),
+          path,
+          identityId,
+        );
+      // The second rule passes field validation but selects no date in its one-day window.
+      const day = schedule.started_at.slice(0, 10);
+      const excluded = new Date(schedule.started_at).getUTCDay();
+      const mask = Array.from(
+        { length: 7 },
+        (_, i) => i === (excluded + 1) % 7 ? "1" : "0",
+      ).join("");
+      assertEquals(
+        (await save([schedule, {
+          ...schedule,
+          type: "w",
+          rep_every: "1",
+          timezone_offset: "0",
+          rep_end_type: "at",
+          rep_end_at: day + "T23:59:59.999Z",
+          rep_days: mask,
+        }])).status,
+        400,
+      );
+      assertEquals(
+        (await query({
+          text: "SELECT id FROM meeting WHERE name='Atomic meeting'",
+        })).rows.length,
+        0,
+      );
+      const attempts = await Promise.all([
+        save([schedule, schedule]),
+        save([schedule, schedule]),
+      ]);
+      for (const response of attempts) {
+        assertEquals(response.status, 200);
+        assertEquals((await response.json())[0].id, request_id);
+      }
+      const stored = await query({
+        text:
+          "SELECT s.id FROM meeting_schedule s JOIN meeting m ON s.meeting_id=m.id WHERE m.name='Atomic meeting'",
+      });
+      assertEquals(stored.rows.length, 2);
+    });
+
     it("adds a new meeting", async () => {
       const req = makeRequest("POST", "/api/pri/meeting/add", {
         profile_id: profileId,

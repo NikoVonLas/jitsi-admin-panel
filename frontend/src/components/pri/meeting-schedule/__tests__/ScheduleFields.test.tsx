@@ -1,3 +1,5 @@
+import { createRef } from 'react';
+import type { ScheduleFieldsRef } from '../ScheduleFields';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
@@ -24,6 +26,14 @@ vi.mock('../../../../lib/common', () => ({
 import ScheduleFields from '../ScheduleFields';
 
 describe('ScheduleFields', () => {
+  it('sends the organizer time zone with the schedule', () => {
+    const ref = createRef<ScheduleFieldsRef>();
+    render(<ScheduleFields ref={ref} />);
+    const attr: Record<string, string> = {};
+    ref.current!.normalizeInto(attr);
+    expect(attr.timezone).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  });
+
   it('renders without crashing', () => {
     render(<ScheduleFields />);
   });

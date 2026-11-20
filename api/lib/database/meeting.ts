@@ -1,11 +1,14 @@
+import { v4 as uuid } from "@std/uuid";
 import {
   activeRoomModerator,
   organizerCanHost,
   organizerHasRoom,
 } from "./room-access.ts";
 import { HttpError } from "../http/error.ts";
-import { fetch } from "./common.ts";
+import { fetch, pool } from "./common.ts";
+import { addMeetingSession, validateSchedule } from "./meeting-session.ts";
 import type {
+  Attr,
   Id,
   Meeting,
   Meeting000,
@@ -43,6 +46,8 @@ export interface AddMeetingOptions {
   info: string;
   hidden: boolean;
   subscribable: boolean;
+  requestId?: string;
+  schedules?: Attr[];
   isSuperAdmin?: boolean;
 }
 
@@ -472,13 +477,21 @@ export async function addMeeting(opts: AddMeetingOptions) {
     isSuperAdmin = false,
   } = opts;
 
+  const { requestId, schedules = [] } = opts;
+  if (
+    requestId !== undefined &&
+    (typeof requestId !== "string" ||
+      !uuid.validate(requestId))
+  ) throw new HttpError(400, "Invalid request ID");
+  if (!Array.isArray(schedules)) throw new HttpError(400, "Invalid schedules");
   const sql = {
     text: `
-      INSERT INTO meeting (identity_id, profile_id, room_id, name, info,
+      INSERT INTO meeting (id,identity_id, profile_id, room_id, name, info,
         hidden, subscribable)
-      SELECT $1, pr.id, r.id, $4, $5, $6, $7 FROM room r, profile pr
+      SELECT coalesce($9::uuid,gen_random_uuid()),$1, pr.id, r.id, $4, $5, $6, $7 FROM room r, profile pr
       WHERE pr.id = $2 AND ($8 OR pr.identity_id = $1)
         AND r.id = $3 AND ($8 OR r.identity_id = $1 OR ${sharedRoomAvailable})
+      ON CONFLICT (id) DO NOTHING
       RETURNING id, created_at as at`,
     args: [
       identityId,
@@ -489,12 +502,42 @@ export async function addMeeting(opts: AddMeetingOptions) {
       hidden,
       subscribable,
       isSuperAdmin,
+      requestId ?? null,
     ],
   };
 
-  const created = await fetch(sql) as Id[];
-  if (!created.length) throw new HttpError(403, "Room or profile unavailable");
-  return created;
+  using client = await pool.connect();
+  const tx = client.createTransaction("create_meeting");
+  await tx.begin();
+  try {
+    const created = (await tx.queryObject<Id>(sql)).rows;
+    if (!created.length) {
+      const existing = await tx.queryObject<Id>({
+        text:
+          "SELECT id, created_at AS at FROM meeting WHERE id=$1 AND identity_id=$2",
+        args: [requestId ?? null, identityId],
+      });
+      if (!existing.rows.length) {
+        throw new HttpError(403, "Room or profile unavailable");
+      }
+      await tx.commit();
+      return existing.rows;
+    }
+    for (const attr of schedules) {
+      validateSchedule(attr);
+      const result = await tx.queryObject<{ id: string }>({
+        text:
+          "INSERT INTO meeting_schedule(meeting_id,schedule_attr) VALUES ($1,$2::jsonb) RETURNING id",
+        args: [created[0].id, attr],
+      });
+      await addMeetingSession(tx, result.rows[0].id);
+    }
+    await tx.commit();
+    return created;
+  } catch (error) {
+    await tx.rollback();
+    throw error;
+  }
 }
 
 // -----------------------------------------------------------------------------

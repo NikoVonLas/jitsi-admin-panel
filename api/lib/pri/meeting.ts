@@ -118,6 +118,8 @@ async function add(req: Request, identityId: string): Promise<unknown> {
   const isSuperAdmin = await getIsSuperAdmin(identityId);
 
   return await addMeeting({
+    requestId: pl.request_id,
+    schedules: pl.schedules,
     identityId,
     profileId,
     roomId,

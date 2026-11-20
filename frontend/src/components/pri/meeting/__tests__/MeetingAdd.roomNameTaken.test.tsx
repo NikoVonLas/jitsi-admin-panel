@@ -11,6 +11,7 @@ vi.mock('../../../../i18n', () => ({
 vi.mock('../../../../lib/api', () => ({
   action: vi.fn(),
   get: vi.fn().mockResolvedValue({ id: 'p1', name: 'Alice', email: 'alice@example.com' }),
+  listFiltered: vi.fn().mockResolvedValue({ items: [], total: 0 }),
   list: vi.fn().mockResolvedValue({ items: [] }),
 }));
 
@@ -59,8 +60,7 @@ describe('MeetingAdd when the new room slug is taken', () => {
     vi.mocked(action)
       .mockResolvedValueOnce({ id: 'room-1' })
       .mockRejectedValueOnce(new ApiError(500))
-      .mockResolvedValueOnce({ id: 'meeting-1' })
-      .mockResolvedValueOnce({ id: 'schedule-1' });
+      .mockResolvedValueOnce({ id: 'meeting-1' });
     const onSuccess = vi.fn();
     render(<MeetingAdd onSuccess={onSuccess} />);
 
@@ -75,6 +75,13 @@ describe('MeetingAdd when the new room slug is taken', () => {
 
     const urls = vi.mocked(action).mock.calls.map(([url]) => url);
     expect(urls.filter((url) => url === '/api/pri/room/add')).toHaveLength(1);
+    const first = vi.mocked(action).mock.calls[1][1];
+    expect(first).toMatchObject({
+      request_id: expect.any(String),
+      schedules: [expect.objectContaining({ type: 'o' })],
+    });
+    expect(vi.mocked(action).mock.calls[2][1]).toEqual(first);
+    expect(urls).toHaveLength(3);
     expect(vi.mocked(action).mock.calls[2]).toEqual([
       '/api/pri/meeting/add',
       expect.objectContaining({ room_id: 'room-1' }),
