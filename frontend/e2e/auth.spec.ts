@@ -62,7 +62,7 @@ async function createJitsiRoom(page: Page) {
   const suffix = `${mode}-${Date.now().toString(36)}`;
   const domainName = `E2E Jitsi ${suffix}`;
   const roomLabel = `E2E Conference ${suffix}`;
-  const roomSlug = `e2e-${suffix}`;
+  const roomSlug = `КИТ-${suffix}`;
 
   await page.goto('/setting?tab=domains');
   await expect(page.getByRole('heading', { name: 'System Settings' })).toBeVisible();
@@ -280,7 +280,9 @@ async function exerciseJitsi(page: Page, browser: Browser, request: APIRequestCo
   await keyInputs.nth(2).fill(room.hostKey.slice(6, 9));
   await moderatorPage.getByRole('button', { name: 'Join' }).click();
   await expect(moderatorPage).toHaveURL(
-    new RegExp(`^${jitsiBaseUrl.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&')}/${room.roomSlug}`),
+    new RegExp(
+      `^${jitsiBaseUrl.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&')}/${encodeURIComponent(room.roomSlug)}`
+    ),
     { timeout: 60_000 }
   );
   await waitForConference(moderatorPage, 1);
@@ -296,7 +298,9 @@ async function exerciseJitsi(page: Page, browser: Browser, request: APIRequestCo
   const participantPage = await participantContext.newPage();
   await participantPage.goto(room.participantUrl);
   await expect(participantPage).toHaveURL(
-    new RegExp(`^${jitsiBaseUrl.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&')}/${room.roomSlug}`),
+    new RegExp(
+      `^${jitsiBaseUrl.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&')}/${encodeURIComponent(room.roomSlug)}`
+    ),
     { timeout: 60_000 }
   );
   await waitForConference(participantPage, 1);

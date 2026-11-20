@@ -35,10 +35,10 @@ async function generateRoomUrlToken(
   exp: number,
 ): Promise<string> {
   let url = encodeURI(linkset.domain_attr.url);
-  let roomName = encodeURIComponent(linkset.name);
+  let roomName = linkset.name;
 
   if (linkset.has_suffix) roomName = `${roomName}-${linkset.suffix}`;
-  url = `${url}/${roomName}`;
+  url = `${url}/${encodeURIComponent(roomName)}`;
 
   if (affiliation === "host") {
     const jwt = await generateHostTokenHS({
@@ -129,7 +129,7 @@ async function generateMeetingUrlToken(
     appId: linkset.domain_attr.app_id,
     appSecret: linkset.domain_attr.app_secret,
     appAlg: linkset.domain_attr.app_alg,
-    roomName: roomName.normalize("NFKC").toLowerCase(),
+    roomName,
     username: linkset.profile_name,
     email: linkset.profile_email,
     exp,

@@ -1,3 +1,4 @@
+import { decodeBase64Url } from "@std/encoding/base64url";
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import { describe, it } from "@std/testing/bdd";
 import {
@@ -316,6 +317,13 @@ describe("generateMeetingUrl — auth_type: token", () => {
   });
 });
 
+function readClaims(url: URL) {
+  const token = url.searchParams.get("jwt")!;
+  return JSON.parse(
+    new TextDecoder().decode(decodeBase64Url(token.split(".")[1])),
+  );
+}
+
 describe("scheduled participant links", () => {
   const start = Date.UTC(2030, 0, 1, 10);
   const end = start + 3600000;
@@ -337,15 +345,7 @@ describe("scheduled participant links", () => {
   });
   it("grants a room-scoped member token from the first instant to the absolute end", async () => {
     const u = new URL(await generateMeetingParticipantUrl(meeting, start));
-    const token = u.searchParams.get("jwt")!;
-    const claims = JSON.parse(
-      new TextDecoder().decode(
-        Uint8Array.from(
-          atob(token.split(".")[1].replaceAll("-", "+").replaceAll("_", "/")),
-          (c) => c.charCodeAt(0),
-        ),
-      ),
-    );
+    const claims = readClaims(u);
     assertEquals(claims.room, "кит-123");
     assertEquals(claims.exp, end / 1000);
     assertEquals(claims.context.user, {
@@ -355,6 +355,22 @@ describe("scheduled participant links", () => {
       moderator: false,
     });
     assertEquals(decodeURIComponent(u.pathname), "/КИТ-123");
+  });
+  it("uses the same Unicode conference for the scheduled participant and the room moderator", async () => {
+    const guest = readClaims(
+      new URL(await generateMeetingParticipantUrl(meeting, start)),
+    );
+    const room = makeRoomLinkset({
+      name: meeting.room_name,
+      has_suffix: true,
+      suffix: meeting.suffix,
+      auth_type: "token",
+      domain_attr: meeting.domain_attr,
+    });
+    const host = readClaims(
+      new URL(await generateRoomUrl(room, EMPTY_PROFILE, "host")),
+    );
+    assertEquals(host.room, guest.room);
   });
   it("returns ordinary guest links before and after, and on excluded domains or rooms", async () => {
     for (
