@@ -150,6 +150,7 @@ export interface Room {
 
 // -----------------------------------------------------------------------------
 export interface Room333 {
+  shared?: boolean;
   id: string;
   name: string;
   label: string;

@@ -5,6 +5,12 @@ import {
   ok,
 } from "../http/response.ts";
 import { pri as wrapper } from "../http/wrapper.ts";
+import { HttpError } from "../http/error.ts";
+import {
+  addRoomModerator,
+  listRoomModerators,
+  removeRoomModerator,
+} from "../database/room-moderator.ts";
 import { generateRoomUrl } from "../common/helper.ts";
 import { parseEnabledFilter } from "../common/parse.ts";
 import { getLimit, getOffset } from "../database/common.ts";
@@ -162,6 +168,7 @@ async function list(req: Request, identityId: string): Promise<unknown> {
     enabled,
     domainId,
     ownerIdentityId,
+    includeShared: pl.include_shared === true,
   });
 }
 
@@ -264,12 +271,55 @@ function handleUpdate(req: Request, identityId: string): Promise<Response> {
   return handleWrite(update, req, identityId);
 }
 
+function moderatorId(value: unknown): string {
+  if (
+    typeof value !== "string" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      value,
+    )
+  ) {
+    throw new HttpError(400, "Invalid ID");
+  }
+  return value;
+}
+
+async function listModerators(req: Request, actor: string) {
+  const body = await req.json();
+  return listRoomModerators(actor, moderatorId(body?.id));
+}
+
+async function addModerator(req: Request, actor: string) {
+  const body = await req.json();
+  const room = moderatorId(body?.id);
+  const email = typeof body.email === "string" ? body.email.trim() : "";
+  if (!email || email.length > 320) throw new HttpError(400, "Invalid email");
+  return addRoomModerator(actor, room, email);
+}
+
+async function removeModerator(req: Request, actor: string) {
+  const body = await req.json();
+  return removeRoomModerator(
+    actor,
+    moderatorId(body?.id),
+    moderatorId(body?.identity_id),
+  );
+}
+
 // -----------------------------------------------------------------------------
 export default function routeRoom(
   req: Request,
   path: string,
   identityId: string,
 ): Promise<Response> {
+  if (path === `${PRE}/moderators/list`) {
+    return wrapper(listModerators, req, identityId);
+  }
+  if (path === `${PRE}/moderators/add`) {
+    return wrapper(addModerator, req, identityId);
+  }
+  if (path === `${PRE}/moderators/remove`) {
+    return wrapper(removeModerator, req, identityId);
+  }
   if (path === `${PRE}/get`) {
     return wrapper(get, req, identityId);
   } else if (path === `${PRE}/get/link`) {

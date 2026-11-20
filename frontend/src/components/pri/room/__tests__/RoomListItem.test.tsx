@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { Room333 } from '../../../../types';
 
 vi.mock('qrcode', () => ({
@@ -7,6 +7,7 @@ vi.mock('qrcode', () => ({
 }));
 
 vi.mock('../../../../lib/api', () => ({
+  listById: vi.fn().mockResolvedValue([]),
   action: vi.fn().mockResolvedValue({}),
   actionById: vi.fn().mockResolvedValue({}),
   getById: vi.fn().mockResolvedValue({}),
@@ -98,4 +99,53 @@ describe('RoomListItem', () => {
     render(<RoomListItem room={makeRoom()} onRefresh={onRefresh} />);
     expect(document.querySelector('.ant-card')).toBeInTheDocument();
   });
+});
+
+it('lets managers list, add and remove moderators in the room card', async () => {
+  const { listById, action } = await import('../../../../lib/api');
+  vi.mocked(listById)
+    .mockResolvedValueOnce([])
+    .mockResolvedValueOnce([{ id: 'member', email: 'mod@example.org' }])
+    .mockResolvedValueOnce([]);
+  render(<RoomListItem room={makeRoom()} />);
+  fireEvent.click(screen.getByRole('button', { name: 'room.moderators' }));
+  const input = await screen.findByRole('textbox', { name: 'room.moderator_email' });
+  fireEvent.change(input, { target: { value: 'mod@example.org' } });
+  fireEvent.click(screen.getByRole('button', { name: 'btn.add' }));
+  await screen.findByText('mod@example.org');
+  expect(action).toHaveBeenCalledWith('/api/pri/room/moderators/add', {
+    id: 'room-1',
+    email: 'mod@example.org',
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'room.revoke_moderator' }));
+  await waitFor(() =>
+    expect(action).toHaveBeenCalledWith('/api/pri/room/moderators/remove', {
+      id: 'room-1',
+      identity_id: 'member',
+    })
+  );
+});
+
+it('shows a host entry point without management actions on a shared room', () => {
+  render(<RoomListItem room={makeRoom({ shared: true })} />);
+  expect(screen.getByRole('link', { name: 'meeting.join_as_mod' })).toHaveAttribute(
+    'href',
+    globalThis.location.origin + '/rm/room-1'
+  );
+  expect(screen.queryByRole('button', { name: 'room.moderators' })).not.toBeInTheDocument();
+  expect(document.querySelector('.bi-pencil')).toBeNull();
+});
+
+it('reports a failed moderator grant and keeps the address for correction', async () => {
+  const { listById, action } = await import('../../../../lib/api');
+  vi.mocked(listById).mockResolvedValueOnce([]);
+  vi.mocked(action).mockRejectedValueOnce(new Error('Unavailable'));
+  render(<RoomListItem room={makeRoom()} />);
+  fireEvent.click(screen.getByRole('button', { name: 'room.moderators' }));
+  const input = await screen.findByRole('textbox', { name: 'room.moderator_email' });
+  await waitFor(() => expect(input).toBeEnabled());
+  fireEvent.change(input, { target: { value: 'absent@example.org' } });
+  fireEvent.click(screen.getByRole('button', { name: 'btn.add' }));
+  expect(await screen.findByText('room.moderator_add_error')).toBeInTheDocument();
+  expect(input).toHaveValue('absent@example.org');
 });

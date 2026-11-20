@@ -126,6 +126,34 @@ describe(
   "historical database upgrade",
   { sanitizeResources: false, sanitizeOps: false },
   () => {
+    it("recreates missing legacy moderator storage on upgrade", async () => {
+      const database = "jitsi_partners_" +
+        crypto.randomUUID().replaceAll("-", "");
+      await createDatabase(database);
+      try {
+        const setup = await initializeBaseSchema(database);
+        await setup.end();
+        await runMigrations(database);
+        const db = databasePool(database);
+        try {
+          {
+            using client = await db.connect();
+            await client.queryArray(`DROP TABLE room_partner;
+              UPDATE metadata SET mvalue='20261119.01' WHERE mkey='database_version'`);
+          }
+          await runMigrations(database);
+          assertEquals(
+            await schemaFingerprint(db),
+            await freshInstallFingerprint(),
+          );
+        } finally {
+          await db.end();
+        }
+      } finally {
+        await dropDatabase(database);
+      }
+    });
+
     it("preserves meeting membership while upgrading from 20260321.03", async () => {
       const database = `jitsi_upgrade_${
         crypto.randomUUID().replaceAll("-", "")

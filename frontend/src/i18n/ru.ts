@@ -1,4 +1,8 @@
 const ru: Record<string, string> = {
+  'room.moderators': 'Модераторы',
+  'room.moderator_email': 'Email пользователя панели',
+  'room.revoke_moderator': 'Отозвать доступ',
+  'room.moderator_add_error': 'Не удалось добавить модератора. Проверьте email активной учётной записи.',
   'nav.calendar': 'Календарь',
   'nav.meetings': 'Собрания',
   'nav.rooms': 'Комнаты',
