@@ -40,7 +40,7 @@ export default function Layout() {
 
   useEffect(() => {
     if (authenticated) {
-      ping();
+      void ping();
     }
   }, [authenticated]);
 

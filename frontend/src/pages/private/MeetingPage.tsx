@@ -30,7 +30,7 @@ export default function MeetingPage() {
   const [addOpen, setAddOpen] = useState(false);
 
   useEffect(() => {
-    Promise.all([
+    void Promise.all([
       listFiltered<Room333>('/api/pri/room/list', {
         limit: 500,
         offset: 0,
@@ -38,8 +38,8 @@ export default function MeetingPage() {
       }).catch(() => ({ items: [] })),
       list('/api/pri/domain/list', 500).catch(() => ({ items: [] })),
     ]).then(([r, d]) => {
-      setRooms(Array.isArray(r) ? r : (r.items ?? []));
-      setDomains(Array.isArray(d) ? d : (d.items ?? []));
+      setRooms(Array.isArray(r) ? r : (r?.items ?? []));
+      setDomains(Array.isArray(d) ? d : (d?.items ?? []));
     });
   }, []);
 
@@ -67,7 +67,7 @@ export default function MeetingPage() {
   }
 
   useEffect(() => {
-    loadMeetings();
+    void loadMeetings();
   }, [page, search, enabledFilter, roomFilter, domainFilter, dateFilter]);
 
   return (
@@ -129,7 +129,7 @@ export default function MeetingPage() {
           onSuccess={() => {
             setAddOpen(false);
             setPage(0);
-            loadMeetings();
+            void loadMeetings();
           }}
         />
       </Modal>

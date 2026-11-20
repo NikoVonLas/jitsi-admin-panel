@@ -9,17 +9,15 @@ export class HttpError extends Error {
 }
 
 export function asHttpErrorResponse(error: unknown): Response | undefined {
-  const httpError = error instanceof HttpError
-    ? error
-    : error instanceof SyntaxError
-    ? new HttpError(400, "Invalid JSON body")
-    : undefined;
-  if (!httpError) return undefined;
+  if (error instanceof SyntaxError) {
+    error = new HttpError(400, "Invalid JSON body");
+  }
+  if (!(error instanceof HttpError)) return undefined;
 
   return new Response(
-    JSON.stringify({ error: { message: httpError.message } }),
+    JSON.stringify({ error: { message: error.message } }),
     {
-      status: httpError.status,
+      status: error.status,
       headers: { "Content-Type": "application/json" },
     },
   );

@@ -6,7 +6,7 @@ import {
 } from "./room-access.ts";
 import { HttpError } from "../http/error.ts";
 import { fetch, pool } from "./common.ts";
-import { addMeetingSession, validateSchedule } from "./meeting-session.ts";
+import { addMeetingSessions, validateSchedule } from "./meeting-session.ts";
 import type {
   Attr,
   Id,
@@ -521,14 +521,14 @@ export async function addMeeting(opts: AddMeetingOptions) {
       await tx.commit();
       return existing.rows;
     }
-    for (const attr of schedules) {
-      validateSchedule(attr);
-      const result = await tx.queryObject<{ id: string }>({
-        text:
-          "INSERT INTO meeting_schedule(meeting_id,schedule_attr) VALUES ($1,$2::jsonb) RETURNING id",
-        args: [created[0].id, attr],
+    if (schedules.length) {
+      schedules.forEach(validateSchedule);
+      const inserted = await tx.queryObject<{ id: string }>({
+        text: `INSERT INTO meeting_schedule(meeting_id, schedule_attr)
+          SELECT $1, value FROM jsonb_array_elements($2::jsonb) RETURNING id`,
+        args: [created[0].id, JSON.stringify(schedules)],
       });
-      await addMeetingSession(tx, result.rows[0].id);
+      await addMeetingSessions(tx, inserted.rows.map((row) => row.id));
     }
     await tx.commit();
     return created;

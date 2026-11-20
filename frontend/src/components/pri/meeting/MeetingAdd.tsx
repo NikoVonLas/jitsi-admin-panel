@@ -107,7 +107,7 @@ export default function MeetingAdd({ onCancel, onSuccess }: Props) {
         setLoading(false);
       }
     }
-    init();
+    void init();
   }, []);
 
   const roomOptions: [string, string][] = [
@@ -143,7 +143,7 @@ export default function MeetingAdd({ onCancel, onSuccess }: Props) {
     onCancel?.();
   }
 
-  async function handleNext() {
+  function handleNext() {
     setError(null);
     if (step === 'meeting') {
       if (roomId === NEW_ROOM) {

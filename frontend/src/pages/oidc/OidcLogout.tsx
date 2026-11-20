@@ -21,7 +21,7 @@ export default function OidcLogout() {
       } catch {}
       globalThis.location.replace('/oidc/clean');
     }
-    load();
+    void load();
   }, []);
   return null;
 }

@@ -60,26 +60,21 @@ export async function initLogoDefaults() {
 }
 
 // -----------------------------------------------------------------------------
-export async function initFaviconDefaults() {
+export async function initFaviconDefaults(directory = FAVICON_DIR) {
   try {
-    await Deno.mkdir(FAVICON_DIR, { recursive: true });
+    await Deno.mkdir(directory, { recursive: true });
     const data = await Deno.readFile(FAVICON_DEFAULT_SRC);
-    for (const name of FAVICON_FILENAMES) {
-      const dest = `${FAVICON_DIR}/${name}`;
-      try {
-        await Deno.stat(dest);
-        // file exists — skip
-      } catch {
-        await Deno.writeFile(dest, data);
-      }
-    }
-    // also ensure favicon_default.png is in FAVICON_DIR for the reset endpoint
-    const defaultDest = `${FAVICON_DIR}/favicon_default.png`;
-    try {
-      await Deno.stat(defaultDest);
-    } catch {
-      await Deno.writeFile(defaultDest, data);
-    }
+    await Promise.all(
+      [...FAVICON_FILENAMES, "favicon_default.png"].map(async (name) => {
+        try {
+          await Deno.writeFile(`${directory}/${name}`, data, {
+            createNew: true,
+          });
+        } catch (error) {
+          if (!(error instanceof Deno.errors.AlreadyExists)) throw error;
+        }
+      }),
+    );
   } catch (e) {
     console.error("initFaviconDefaults failed:", e);
   }
@@ -289,12 +284,14 @@ async function uploadFavicon(req: Request): Promise<Response> {
 
     await Deno.mkdir(FAVICON_DIR, { recursive: true });
 
-    for (const img of result.images) {
-      await Deno.writeFile(`${FAVICON_DIR}/${img.name}`, img.contents);
-    }
-    for (const f of result.files) {
-      await Deno.writeTextFile(`${FAVICON_DIR}/${f.name}`, f.contents);
-    }
+    await Promise.all([
+      ...result.images.map(({ name, contents }) =>
+        Deno.writeFile(`${FAVICON_DIR}/${name}`, contents)
+      ),
+      ...result.files.map(({ name, contents }) =>
+        Deno.writeTextFile(`${FAVICON_DIR}/${name}`, contents)
+      ),
+    ]);
 
     const html = result.html.join("\n");
     await upsertSetting("favicon_html", html);
@@ -313,9 +310,11 @@ async function uploadFavicon(req: Request): Promise<Response> {
 async function resetFavicon(_req: Request): Promise<Response> {
   try {
     const data = await Deno.readFile(`${FAVICON_DIR}/favicon_default.png`);
-    for (const name of FAVICON_FILENAMES) {
-      await Deno.writeFile(`${FAVICON_DIR}/${name}`, data);
-    }
+    await Promise.all(
+      FAVICON_FILENAMES.map((name) =>
+        Deno.writeFile(`${FAVICON_DIR}/${name}`, data)
+      ),
+    );
     await upsertSetting("favicon_html", "");
     return new Response(JSON.stringify([{ ok: true }]), {
       status: 200,
@@ -374,6 +373,6 @@ export default async function routeProfile(
   } else if (path === `${PRE}/favicon/reset`) {
     return resetFavicon(req);
   } else {
-    return Promise.resolve(notFound());
+    return notFound();
   }
 }

@@ -11,7 +11,7 @@ export default function OidcClean() {
       } catch {}
       globalThis.location.replace('/login');
     }
-    load();
+    void load();
   }, []);
   return null;
 }

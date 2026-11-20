@@ -43,7 +43,7 @@ export default function SettingAuth({ addOpen = false, onAddClose }: Props) {
   }
 
   useEffect(() => {
-    loadProviders();
+    void loadProviders();
   }, []);
 
   function closeAdd() {

@@ -41,7 +41,7 @@ export default function SettingUsers({ addOpen = false, onAddClose }: Props) {
   }
 
   useEffect(() => {
-    load();
+    void load();
   }, []);
 
   function closeAdd() {

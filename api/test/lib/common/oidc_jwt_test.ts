@@ -74,6 +74,40 @@ describe("OIDC JWT validation", () => {
     assertEquals(claims.sub, "user-1");
   });
 
+  it("identifies a malformed header as a type error", async () => {
+    const token = [base64Url("{}"), base64Url("{}"), "AA"].join(".");
+    await assertRejects(
+      () => verifyOidcJwt(token, { keys: [] }, { issuer: "issuer" }),
+      TypeError,
+      "invalid OIDC token header",
+    );
+  });
+
+  it("checks the audience and authorized party for multiple recipients", async () => {
+    const { jwks, sign } = await fixture();
+    const options = { issuer: "issuer", audience: "panel", now: 1000 };
+    const claims = {
+      iss: "issuer",
+      sub: "user",
+      exp: 1500,
+      aud: ["second", "panel"],
+    };
+    const token = await sign({ ...claims, azp: "panel" });
+    assertEquals((await verifyOidcJwt(token, jwks, options)).sub, "user");
+    const wrongParty = await sign({ ...claims, azp: "second" });
+    await assertRejects(
+      () => verifyOidcJwt(wrongParty, jwks, options),
+      Error,
+      "invalid authorized party",
+    );
+    const missingAudience = await sign({ ...claims, aud: null });
+    await assertRejects(
+      () => verifyOidcJwt(missingAudience, jwks, options),
+      Error,
+      "invalid token audience",
+    );
+  });
+
   it("rejects an invalid nonce", async () => {
     const { jwks, sign } = await fixture();
     const now = 1_700_000_000;

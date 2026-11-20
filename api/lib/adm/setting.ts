@@ -1,7 +1,6 @@
 import { notFound } from "../http/response.ts";
 import { adm as wrapper } from "../http/wrapper.ts";
-import { upsertSetting } from "../database/setting.ts";
-import { ALLOWED_KEYS, getFiltered, SECRET_KEYS } from "../common/setting.ts";
+import { getFiltered, updateSettings } from "../common/setting.ts";
 
 const PRE = "/api/adm/setting";
 
@@ -12,16 +11,7 @@ async function get(_req: Request): Promise<unknown> {
 
 // -----------------------------------------------------------------------------
 async function update(req: Request): Promise<unknown> {
-  const pl = await req.json();
-
-  for (const key of ALLOWED_KEYS) {
-    if (pl[key] === undefined) continue;
-    // Never overwrite a secret with an empty string
-    if (SECRET_KEYS.has(key) && pl[key] === "") continue;
-    await upsertSetting(key, String(pl[key]));
-  }
-
-  return getFiltered();
+  return await updateSettings(await req.json());
 }
 
 // -----------------------------------------------------------------------------

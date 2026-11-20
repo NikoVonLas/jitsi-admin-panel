@@ -1,4 +1,4 @@
-import { getSettings } from "../database/setting.ts";
+import { getSettings, upsertSettings } from "../database/setting.ts";
 import { LANG } from "../../config.ts";
 import { MAILER_FROM, MAILER_TRANSPORT_OPTIONS } from "../../config.mailer.ts";
 
@@ -34,6 +34,17 @@ export const ENV_DEFAULTS: Record<string, string> = {
   mailer_user: MAILER_TRANSPORT_OPTIONS.auth.user,
   mailer_from: MAILER_FROM,
 };
+
+export async function updateSettings(input: Record<string, unknown>) {
+  const values: Record<string, string> = {};
+  for (const key of ALLOWED_KEYS) {
+    const value = input[key];
+    if (value === undefined || (SECRET_KEYS.has(key) && value === "")) continue;
+    values[key] = String(value);
+  }
+  await upsertSettings(values);
+  return await getFiltered();
+}
 
 // -----------------------------------------------------------------------------
 export async function getFiltered() {

@@ -1,3 +1,4 @@
+import { decodeBase64Url, encodeBase64Url } from "@std/encoding/base64url";
 import { getCookies, setCookie } from "@std/http/cookie";
 import { API_SECRET } from "../../config.oidc.ts";
 import { SESSION_COOKIE_SECURE } from "../../config.ts";
@@ -19,27 +20,8 @@ export interface OidcTransaction extends StoredTransaction {
   codeChallenge: string;
 }
 
-function base64Url(bytes: Uint8Array): string {
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary)
-    .replaceAll("+", "-")
-    .replaceAll("/", "_")
-    .replace(/=+$/, "");
-}
-
-function decodeBase64Url(value: string): Uint8Array<ArrayBuffer> {
-  const normalized = value.replaceAll("-", "+").replaceAll("_", "/");
-  const padded = normalized.padEnd(
-    normalized.length + ((4 - normalized.length % 4) % 4),
-    "=",
-  );
-  const binary = atob(padded);
-  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
-}
-
 function randomBase64Url(length = 32): string {
-  return base64Url(crypto.getRandomValues(new Uint8Array(length)));
+  return encodeBase64Url(crypto.getRandomValues(new Uint8Array(length)));
 }
 
 async function hmacKey(): Promise<CryptoKey> {
@@ -58,7 +40,7 @@ async function sign(value: string): Promise<string> {
     await hmacKey(),
     encoder.encode(value),
   );
-  return base64Url(new Uint8Array(signature));
+  return encodeBase64Url(new Uint8Array(signature));
 }
 
 async function verify(value: string, signature: string): Promise<boolean> {
@@ -114,7 +96,7 @@ export async function createOidcTransaction(
     verifier,
     expiresAt: Math.floor(now / 1000) + TRANSACTION_TTL_SECONDS,
   };
-  const payload = base64Url(encoder.encode(JSON.stringify(stored)));
+  const payload = encodeBase64Url(encoder.encode(JSON.stringify(stored)));
   const value = `${payload}.${await sign(payload)}`;
 
   setCookie(headers, {
@@ -127,7 +109,7 @@ export async function createOidcTransaction(
     sameSite: "Lax",
   });
 
-  return { ...stored, codeChallenge: base64Url(new Uint8Array(digest)) };
+  return { ...stored, codeChallenge: encodeBase64Url(new Uint8Array(digest)) };
 }
 
 export async function readOidcTransaction(

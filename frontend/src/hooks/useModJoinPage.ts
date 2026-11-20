@@ -74,7 +74,7 @@ export function useModJoinPage(config: ModJoinPageConfig) {
       setReady(true);
     }
 
-    init();
+    void init();
   }, [uuid]);
 
   async function onSubmit(hostKey: string) {

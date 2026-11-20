@@ -56,7 +56,7 @@ export default function JitsiTokenAuthPage() {
         setError(t('jitsi.err_no_resource'));
       }
     }
-    load();
+    void load();
   }, []);
 
   return (

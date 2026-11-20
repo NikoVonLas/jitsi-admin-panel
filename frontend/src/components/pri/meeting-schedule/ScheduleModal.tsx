@@ -40,7 +40,7 @@ export default function ScheduleModal({ meetingId }: Props) {
   }
 
   useEffect(() => {
-    load();
+    void load();
   }, [meetingId]);
 
   async function handleAddSchedule() {

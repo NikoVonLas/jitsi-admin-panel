@@ -42,7 +42,7 @@ interface AppConfigStore {
 
 let dynamicStyleEl: HTMLStyleElement | null = null;
 let appliedFaviconHtml = '';
-const HEX_COLOR = /^#[0-9a-f]{3}(?:[0-9a-f]{1}|[0-9a-f]{3}|[0-9a-f]{5})?$/i;
+const HEX_COLOR = /^#[0-9a-f]{3}(?:[0-9a-f]|[0-9a-f]{3}|[0-9a-f]{5})?$/i;
 const ALLOWED_FAVICON_RELS = new Set(['icon', 'shortcut icon', 'apple-touch-icon']);
 const FAVICON_PATH_PREFIX = '/api/pub/favicon/';
 

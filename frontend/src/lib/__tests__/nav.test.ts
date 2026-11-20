@@ -73,6 +73,14 @@ describe('ping', () => {
     expect(localStorage.getItem('pinged_at')).toBe(String(now));
   });
 
+  it('retries the heartbeat after a network failure', async () => {
+    const { get } = await import('../api');
+    vi.mocked(get).mockClear().mockRejectedValueOnce(new Error('offline'));
+    await expect(ping()).resolves.toBeUndefined();
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(get).toHaveBeenCalledTimes(2);
+  });
+
   it('resets pinged_at when value is NaN', async () => {
     localStorage.setItem('pinged_at', 'not-a-number');
     await ping();
