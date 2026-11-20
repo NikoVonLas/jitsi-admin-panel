@@ -36,9 +36,9 @@ On a self-hosted JWT domain, anyone with the meeting’s participant link (`/j/<
 | Service | Setting | Purpose |
 | --- | --- | --- |
 | Prosody | `JWT_TOKEN_AUTH_MODULE=token_verification`, `JWT_ALLOW_EMPTY=0` | Verify signed tokens on the authenticated domain. |
-| Prosody | `XMPP_MUC_MODULES=token_affiliation` | Assign the role from the verified token. Append this module to any existing list. |
-| Prosody | `WAIT_FOR_HOST_DISABLE_AUTO_OWNERS=1` | Disable automatic owner promotion if the wait-for-host module is loaded. |
-| Jicofo | `ENABLE_AUTO_OWNER=0` | Disable promotion of the first participant to moderator. |
+| Prosody | `ENABLE_LOBBY=1`, `XMPP_MODULES=persistent_lobby`, `XMPP_MUC_MODULES=muc_wait_for_host,token_affiliation` | Hold anonymous guests until an authenticated participant arrives. Assign the role from the verified token. Append modules to any existing lists. |
+| Prosody | `WAIT_FOR_HOST_DISABLE_AUTO_OWNERS=1` | Allow a verified participant to open the room with the member role. |
+| Jicofo | `JICOFO_ENABLE_AUTH=0`, `ENABLE_AUTO_OWNER=0` | Let Prosody enforce JWT authentication and roles. Jicofo’s separate authentication mode can promote authenticated participants even with auto-owner disabled. |
 
 **Check the result.** Schedule a meeting in an empty room. Before its start, open the meeting link in a private window and verify that the guest waits. Open the same link again during the session. The guest should enter alone, with no moderator controls. Join with the moderator link in a second browser and verify its moderator controls. Repeat with the domain setting off to verify the original guest behavior.
 
