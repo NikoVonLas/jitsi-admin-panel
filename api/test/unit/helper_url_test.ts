@@ -346,7 +346,7 @@ describe("scheduled participant links", () => {
   it("grants a room-scoped member token from the first instant to the absolute end", async () => {
     const u = new URL(await generateMeetingParticipantUrl(meeting, start));
     const claims = readClaims(u);
-    assertEquals(claims.room, "кит-123");
+    assertEquals(claims.room, encodeURIComponent("кит-123"));
     assertEquals(claims.exp, end / 1000);
     assertEquals(claims.context.user, {
       name: "",

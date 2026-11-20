@@ -58,7 +58,8 @@ async function buildTokenHS(
     aud: appId,
     iss: appId,
     sub: "*",
-    room: conference,
+    // Jitsi uses the URL-encoded, lower-case room name as its XMPP node.
+    room: encodeURIComponent(conference),
     iat: getNumericDate(0),
     exp: opts.expiresAt ?? getNumericDate(exp),
     context: {
