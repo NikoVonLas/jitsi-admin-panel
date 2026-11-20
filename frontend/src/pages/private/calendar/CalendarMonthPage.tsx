@@ -67,7 +67,7 @@ export default function CalendarMonthPage() {
   }
 
   useEffect(() => {
-    loadCalendar();
+    void loadCalendar();
   }, [date]);
 
   async function openSyncModal() {
@@ -155,7 +155,7 @@ export default function CalendarMonthPage() {
           onCancel={() => setAddOpen(false)}
           onSuccess={() => {
             setAddOpen(false);
-            loadCalendar();
+            void loadCalendar();
           }}
         />
       </Modal>

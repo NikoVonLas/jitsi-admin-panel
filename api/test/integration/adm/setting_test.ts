@@ -68,6 +68,50 @@ describe(
       assertEquals(secret, undefined);
     });
 
+    it("updates multiple keys while preserving an existing secret on empty input", async () => {
+      const { getSettingValue } = await import(
+        "../../../lib/database/setting.ts"
+      );
+      const path = "/api/adm/setting/update";
+      await handleSetting(
+        makeRequest("POST", path, { mailer_pass: "fixture" }),
+        path,
+      );
+      const res = await handleSetting(
+        makeRequest("POST", path, {
+          mailer_host: "smtp.example",
+          mailer_port: 2525,
+          mailer_pass: "",
+          unknown: "skip",
+        }),
+        path,
+      );
+      assertEquals(res.status, 200);
+      assertEquals(await getSettingValue("mailer_port"), "2525");
+      assertEquals(await getSettingValue("mailer_host"), "smtp.example");
+      assertEquals(await getSettingValue("mailer_pass"), "fixture");
+      assertEquals(await getSettingValue("unknown"), "");
+    });
+
+    it("rejects structured setting values without saving other keys", async () => {
+      const { getSettingValue } = await import(
+        "../../../lib/database/setting.ts"
+      );
+      const path = "/api/adm/setting/update";
+      const originalHost = await getSettingValue("mailer_host");
+      for (const invalid of [{ nested: true }, ["a", "b"]]) {
+        const res = await handleSetting(
+          makeRequest("POST", path, {
+            mailer_host: "unexpected.example",
+            logo_url: invalid,
+          }),
+          path,
+        );
+        assertEquals(res.status, 400);
+        assertEquals(await getSettingValue("mailer_host"), originalHost);
+      }
+    });
+
     it("getSettingValue returns empty string for missing key", async () => {
       const { getSettingValue } = await import(
         "../../../lib/database/setting.ts"

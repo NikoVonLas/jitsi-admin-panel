@@ -60,7 +60,7 @@ export default function SettingPage() {
   }
 
   useEffect(() => {
-    loadDomains();
+    void loadDomains();
   }, []);
 
   function switchTab(tab: Tab) {
@@ -131,7 +131,7 @@ export default function SettingPage() {
           onCancel={() => setAddOpen(false)}
           onDone={() => {
             setAddOpen(false);
-            loadDomains();
+            void loadDomains();
           }}
         />
       </Modal>

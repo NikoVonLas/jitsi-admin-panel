@@ -2,7 +2,7 @@ import { HttpError } from "../http/error.ts";
 import { organizerCanHost, organizerHasRoom } from "./room-access.ts";
 import { fetch, pool } from "./common.ts";
 import {
-  addMeetingSession,
+  addMeetingSessions,
   delMeetingSessionBySchedule,
   validateSchedule,
 } from "./meeting-session.ts";
@@ -227,7 +227,7 @@ export async function addMeetingSchedule(
     }
 
     // add sessions
-    await addMeetingSession(trans, rows[0].id);
+    await addMeetingSessions(trans, [rows[0].id]);
 
     await trans.commit();
 
@@ -307,7 +307,7 @@ export async function updateMeetingSchedule(
     await delMeetingSessionBySchedule(trans, scheduleId);
 
     // add new sessions
-    await addMeetingSession(trans, rows[0].id);
+    await addMeetingSessions(trans, [rows[0].id]);
 
     await trans.commit();
 

@@ -113,7 +113,7 @@ export function validateSchedule(attr: Attr) {
     checkAttr(attr);
     checkScheduleAttr(attr);
     if (!Number.isFinite(Date.parse(attr.started_at))) {
-      throw new Error("Invalid date");
+      throw new TypeError("Invalid date");
     }
     if (
       attr.rep_end_type === "at" &&
@@ -209,18 +209,19 @@ const occurrenceSql = `
   FROM sessions
   WHERE (until IS NULL OR instant <= until) AND finish > now()
   ON CONFLICT (meeting_schedule_id, started_at) DO NOTHING
-  RETURNING id, created_at AS at`;
+  RETURNING id, created_at AS at, meeting_schedule_id`;
 
-export async function addMeetingSession(
+export async function addMeetingSessions(
   trans: Transaction,
-  meetingScheduleId: string,
+  scheduleIds: string[],
 ) {
-  const result = await trans.queryObject({
+  const result = await trans.queryObject<{ meeting_schedule_id: string }>({
     text:
-      `WITH selected AS (SELECT id,schedule_attr,false AS refill FROM meeting_schedule WHERE id=$1) ${occurrenceSql}`,
-    args: [meetingScheduleId],
+      `WITH selected AS (SELECT id,schedule_attr,false AS refill FROM meeting_schedule WHERE id=ANY($1::uuid[])) ${occurrenceSql}`,
+    args: [scheduleIds],
   });
-  if (!result.rows.length) {
+  const populated = new Set(result.rows.map((row) => row.meeting_schedule_id));
+  if (populated.size !== scheduleIds.length) {
     throw new HttpError(400, "Schedule has no upcoming sessions");
   }
 }

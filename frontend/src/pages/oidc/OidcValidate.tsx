@@ -38,7 +38,7 @@ export default function OidcValidate() {
         globalThis.location.replace('/login');
       }
     }
-    load();
+    void load();
   }, []);
   return null;
 }

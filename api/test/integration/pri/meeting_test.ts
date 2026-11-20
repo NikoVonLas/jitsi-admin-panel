@@ -266,7 +266,7 @@ describe(
       }
       const stored = await query({
         text:
-          "SELECT s.id FROM meeting_schedule s JOIN meeting m ON s.meeting_id=m.id WHERE m.name='Atomic meeting'",
+          "SELECT DISTINCT s.id FROM meeting_schedule s JOIN meeting_session ses ON ses.meeting_schedule_id=s.id JOIN meeting m ON s.meeting_id=m.id WHERE m.name='Atomic meeting'",
       });
       assertEquals(stored.rows.length, 2);
     });

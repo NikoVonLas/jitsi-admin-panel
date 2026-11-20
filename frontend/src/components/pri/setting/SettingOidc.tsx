@@ -61,7 +61,7 @@ export default function SettingOidc() {
   }
 
   useEffect(() => {
-    loadProviders();
+    void loadProviders();
   }, []);
 
   function openAdd() {

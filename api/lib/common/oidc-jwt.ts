@@ -1,3 +1,5 @@
+import { decodeBase64Url } from "@std/encoding/base64url";
+
 const encoder = new TextEncoder();
 
 export interface OidcJwk extends JsonWebKey {
@@ -18,16 +20,6 @@ export interface VerifyOidcJwtOptions {
   requireSubject?: boolean;
 }
 
-function decodeBase64Url(value: string): Uint8Array<ArrayBuffer> {
-  const normalized = value.replaceAll("-", "+").replaceAll("_", "/");
-  const padded = normalized.padEnd(
-    normalized.length + ((4 - normalized.length % 4) % 4),
-    "=",
-  );
-  const binary = atob(padded);
-  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
-}
-
 function decodeJson(value: string): Record<string, unknown> {
   return JSON.parse(new TextDecoder().decode(decodeBase64Url(value)));
 }
@@ -36,11 +28,7 @@ function rsaAlgorithm(alg: string): {
   importAlgorithm: RsaHashedImportParams;
   verifyAlgorithm: AlgorithmIdentifier | RsaPssParams;
 } {
-  const hash = alg.endsWith("256")
-    ? "SHA-256"
-    : alg.endsWith("384")
-    ? "SHA-384"
-    : "SHA-512";
+  const hash = `SHA-${alg.slice(2)}`;
   if (["RS256", "RS384", "RS512"].includes(alg)) {
     return {
       importAlgorithm: { name: "RSASSA-PKCS1-v1_5", hash },
@@ -57,6 +45,17 @@ function rsaAlgorithm(alg: string): {
     };
   }
   throw new Error("unsupported OIDC signing algorithm");
+}
+
+function validateAudience(claims: Record<string, unknown>, audience: string) {
+  const values = Array.isArray(claims.aud) ? claims.aud : [claims.aud];
+  const audiences = values.filter((value) => typeof value === "string");
+  if (!audiences.includes(audience)) throw new Error("invalid token audience");
+  if (
+    audiences.length > 1 && claims.azp !== undefined && claims.azp !== audience
+  ) {
+    throw new Error("invalid authorized party");
+  }
 }
 
 function validateClaims(
@@ -82,20 +81,7 @@ function validateClaims(
     throw new Error("token issued in the future");
   }
 
-  if (options.audience) {
-    const audiences = typeof claims.aud === "string"
-      ? [claims.aud]
-      : Array.isArray(claims.aud)
-      ? claims.aud.filter((value): value is string => typeof value === "string")
-      : [];
-    if (!audiences.includes(options.audience)) {
-      throw new Error("invalid token audience");
-    }
-    if (
-      audiences.length > 1 && claims.azp !== undefined &&
-      claims.azp !== options.audience
-    ) throw new Error("invalid authorized party");
-  }
+  if (options.audience) validateAudience(claims, options.audience);
 
   if (options.nonce !== undefined && claims.nonce !== options.nonce) {
     throw new Error("invalid token nonce");
@@ -115,7 +101,7 @@ export async function verifyOidcJwt(
   const header = decodeJson(parts[0]);
   const claims = decodeJson(parts[1]);
   if (typeof header.alg !== "string" || typeof header.kid !== "string") {
-    throw new Error("invalid OIDC token header");
+    throw new TypeError("invalid OIDC token header");
   }
   const jwk = jwks.keys.find((key) => key.kid === header.kid);
   if (!jwk || (jwk.use && jwk.use !== "sig")) {

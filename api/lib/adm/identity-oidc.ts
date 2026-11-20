@@ -111,7 +111,7 @@ async function getToken(
     if (
       typeof json.access_token !== "string" || typeof json.id_token !== "string"
     ) {
-      throw new Error("OIDC token response is incomplete");
+      throw new TypeError("OIDC token response is incomplete");
     }
     return { accessToken: json.access_token, idToken: json.id_token };
   } catch (e) {

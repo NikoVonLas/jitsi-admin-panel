@@ -17,10 +17,12 @@ export async function ping(): Promise<void> {
     if (Number.isNaN(Number(pingedAt))) {
       localStorage.setItem('pinged_at', String(now));
     }
-    if (now - Number(pingedAt) > 60000) {
+    if (now - Number(pingedAt) >= 60000) {
       localStorage.setItem('pinged_at', String(now));
       await get('/api/pri/identity/ping');
     }
+  } catch {
+    // The next heartbeat retries after a network or storage failure.
   } finally {
     setTimeout(ping, 60000);
   }

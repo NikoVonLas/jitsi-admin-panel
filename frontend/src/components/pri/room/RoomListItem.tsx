@@ -84,7 +84,7 @@ export default function RoomListItem({ room: p, onRefresh }: Props) {
     setTimeout(() => setKeyCopied(false), 1500);
   }
 
-  async function downloadQr() {
+  function downloadQr() {
     if (!qrDataUrl) return;
     const a = document.createElement('a');
     a.href = qrDataUrl;

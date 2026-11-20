@@ -52,7 +52,7 @@ export default function RoomPage() {
   }
 
   useEffect(() => {
-    loadRooms();
+    void loadRooms();
   }, [page, search, enabledFilter, domainFilter]);
 
   return (
@@ -101,7 +101,7 @@ export default function RoomPage() {
           onDone={() => {
             setAddOpen(false);
             setPage(0);
-            loadRooms();
+            void loadRooms();
           }}
         />
       </Modal>

@@ -27,13 +27,16 @@ export async function getSettingValue(key: string): Promise<string> {
 
 // -----------------------------------------------------------------------------
 export async function upsertSetting(key: string, value: string): Promise<void> {
-  const sql = {
-    text: `
-      INSERT INTO setting (mkey, mvalue)
-        VALUES ($1, $2)
-        ON CONFLICT (mkey) DO UPDATE SET mvalue = $2`,
-    args: [key, value],
-  };
+  await upsertSettings({ [key]: value });
+}
 
-  await query(sql);
+export async function upsertSettings(
+  values: Record<string, string>,
+): Promise<void> {
+  await query({
+    text: `INSERT INTO setting (mkey, mvalue)
+      SELECT key, value FROM jsonb_each_text($1::jsonb) ORDER BY key
+      ON CONFLICT (mkey) DO UPDATE SET mvalue = EXCLUDED.mvalue`,
+    args: [values],
+  });
 }

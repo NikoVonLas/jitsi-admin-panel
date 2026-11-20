@@ -2,8 +2,7 @@ import { notFound } from "../http/response.ts";
 import { HttpError } from "../http/error.ts";
 import { pri as wrapper } from "../http/wrapper.ts";
 import { getIdentityRole } from "../database/identity.ts";
-import { upsertSetting } from "../database/setting.ts";
-import { ALLOWED_KEYS, getFiltered, SECRET_KEYS } from "../common/setting.ts";
+import { getFiltered, updateSettings } from "../common/setting.ts";
 
 const PRE = "/api/pri/setting";
 
@@ -23,15 +22,7 @@ async function get(_req: Request, identityId: string): Promise<unknown> {
 async function update(req: Request, identityId: string): Promise<unknown> {
   await assertSuperAdmin(identityId);
 
-  const pl = await req.json();
-
-  for (const key of ALLOWED_KEYS) {
-    if (pl[key] === undefined) continue;
-    if (SECRET_KEYS.has(key) && pl[key] === "") continue;
-    await upsertSetting(key, String(pl[key]));
-  }
-
-  return await getFiltered();
+  return await updateSettings(await req.json());
 }
 
 // -----------------------------------------------------------------------------
